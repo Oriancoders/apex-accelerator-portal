@@ -15,12 +15,28 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Separator } from "@/components/ui/separator";
 
 export default function CreditsPage() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { settings, isLoading } = useCreditSettings();
   const [searchParams, setSearchParams] = useSearchParams();
   const [purchasingIndex, setPurchasingIndex] = useState<number | null>(null);
   const [verifying, setVerifying] = useState(false);
   const queryClient = useQueryClient();
+
+  const { data: transactions = [], isLoading: txLoading } = useQuery({
+    queryKey: ["credit-transactions", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("credit_transactions")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user?.id,
+  });
 
   // Handle Stripe success redirect
   useEffect(() => {
