@@ -72,7 +72,7 @@ export default function CreditsPage() {
           toast.info("This payment was already processed.");
         } else if (data?.success) {
           toast.success(`${data.credits_added} credits added to your account!`);
-          queryClient.invalidateQueries({ queryKey: ["profile"] });
+          await refreshProfile();
           queryClient.invalidateQueries({ queryKey: ["credit-transactions"] });
         }
       })
