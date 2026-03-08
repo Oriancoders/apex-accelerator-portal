@@ -21,7 +21,7 @@ import ProposalBuilder from "@/components/ProposalBuilder";
 import TicketChat from "@/components/TicketChat";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Search, Eye, Send, Ticket, Filter } from "lucide-react";
+import { Search, Eye, Send, Ticket, Filter, Lock } from "lucide-react";
 import type { Tables, Database } from "@/integrations/supabase/types";
 
 type TicketType = Tables<"tickets">;
@@ -273,6 +273,28 @@ export default function AdminTicketsPage() {
                     <div>
                       <h4 className="text-sm font-semibold mb-2">Expert Opinion</h4>
                       <p className="text-sm text-foreground bg-muted/50 p-4 rounded-xl">{selectedTicket.expert_opinion}</p>
+                    </div>
+                  )}
+                  {/* Close Ticket button for completed tickets */}
+                  {selectedTicket.status === "completed" && (
+                    <div className="p-4 rounded-xl border border-muted bg-muted/30">
+                      <h4 className="text-sm font-semibold mb-1 flex items-center gap-2">
+                        <Lock className="h-4 w-4 text-muted-foreground" />
+                        Close Ticket
+                      </h4>
+                      <p className="text-xs text-muted-foreground mb-3">
+                        The ticket has been completed. Close it to archive and finalise.
+                      </p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-lg gap-2 border-muted-foreground/40"
+                        onClick={() => updateStatusMutation.mutate({ id: selectedTicket.id, status: "closed" })}
+                        disabled={updateStatusMutation.isPending}
+                      >
+                        <Lock className="h-3.5 w-3.5" />
+                        Mark as Closed
+                      </Button>
                     </div>
                   )}
                   <div>
