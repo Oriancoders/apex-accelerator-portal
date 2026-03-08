@@ -18,9 +18,18 @@ export default function CreditsPage() {
   const { profile, user } = useAuth();
   const { settings, isLoading } = useCreditSettings();
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const [purchasingIndex, setPurchasingIndex] = useState<number | null>(null);
   const [verifying, setVerifying] = useState(false);
   const queryClient = useQueryClient();
+  const historyRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to history section if hash is #history
+  useEffect(() => {
+    if (location.hash === "#history" && historyRef.current) {
+      setTimeout(() => historyRef.current?.scrollIntoView({ behavior: "smooth" }), 300);
+    }
+  }, [location.hash, isLoading]);
 
   const PAGE_SIZE = 10;
   const [page, setPage] = useState(0);
