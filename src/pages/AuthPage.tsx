@@ -61,11 +61,70 @@ function EmailDivider() {
   );
 }
 
+function ForgotPasswordForm() {
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) {
+      toast.error(error.message);
+    } else {
+      setSent(true);
+      toast.success("Password reset link sent to your email!");
+    }
+    setLoading(false);
+  };
+
+  if (sent) {
+    return (
+      <div className="text-center py-4 space-y-2">
+        <Mail className="h-10 w-10 text-primary mx-auto" />
+        <p className="text-sm text-foreground font-medium">Check your email</p>
+        <p className="text-xs text-muted-foreground">We sent a password reset link to {email}</p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="reset-email">Email</Label>
+        <div className="relative">
+          <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+          <Input id="reset-email" type="email" placeholder="you@company.com" className="pl-9" value={email} onChange={(e) => setEmail(e.target.value)} required />
+        </div>
+      </div>
+      <Button type="submit" className="w-full" disabled={loading}>
+        {loading ? "Sending..." : "Send Reset Link"}
+      </Button>
+    </form>
+  );
+}
+
 function SignInForm({ email, setEmail, password, setPassword, loading, onSubmit }: {
   email: string; setEmail: (v: string) => void;
   password: string; setPassword: (v: string) => void;
   loading: boolean; onSubmit: (e: React.FormEvent) => void;
 }) {
+  const [showForgot, setShowForgot] = useState(false);
+
+  if (showForgot) {
+    return (
+      <div className="space-y-4">
+        <ForgotPasswordForm />
+        <Button variant="link" className="w-full text-xs" onClick={() => setShowForgot(false)}>
+          Back to Sign In
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="space-y-2">
@@ -76,7 +135,12 @@ function SignInForm({ email, setEmail, password, setPassword, loading, onSubmit 
         </div>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="signin-password">Password</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="signin-password">Password</Label>
+          <button type="button" className="text-xs text-primary hover:underline" onClick={() => setShowForgot(true)}>
+            Forgot password?
+          </button>
+        </div>
         <div className="relative">
           <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input id="signin-password" type="password" placeholder="••••••••" className="pl-9" value={password} onChange={(e) => setPassword(e.target.value)} required />
