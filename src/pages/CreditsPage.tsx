@@ -3,13 +3,16 @@ import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Coins, CreditCard, Sparkles, Gift, Loader2, CheckCircle } from "lucide-react";
+import { Coins, CreditCard, Sparkles, Gift, Loader2, ArrowUpRight, ArrowDownRight, History } from "lucide-react";
 import { toast } from "sonner";
 import { useCreditSettings } from "@/hooks/useCreditSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
 
 export default function CreditsPage() {
   const { profile } = useAuth();
