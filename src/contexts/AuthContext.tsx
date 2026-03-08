@@ -81,10 +81,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setProfile(null);
+    setIsGuest(false);
+  };
+
+  const loginAsGuest = () => {
+    setIsGuest(true);
+    setLoading(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, isGuest, signOut, refreshProfile, loginAsGuest }}>
       {children}
     </AuthContext.Provider>
   );
