@@ -150,6 +150,10 @@ export default function Navbar() {
                     <DollarSign className="mr-2 h-4 w-4" />
                     Pricing Guide
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/credits#history")} className="h-10 cursor-pointer">
+                    <History className="mr-2 h-4 w-4" />
+                    Transaction History
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                 </>
               )}
