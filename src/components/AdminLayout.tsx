@@ -12,6 +12,7 @@ import { NavLink } from "@/components/NavLink";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { LayoutDashboard, Ticket, Users, FileText, Coins, Shield, ArrowLeft, Bell, Menu } from "lucide-react";
+import NotificationBell from "@/components/NotificationBell";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -225,6 +226,7 @@ function AdminHeader() {
       </div>
 
       <div className="flex items-center gap-2">
+        <NotificationBell />
         <Avatar className="h-8 w-8">
           <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">{initials}</AvatarFallback>
         </Avatar>

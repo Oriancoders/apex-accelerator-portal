@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/sheet";
 import { Cloud, Coins, LogOut, User, LayoutDashboard, Shield, Ticket, BookOpen, Menu, ArrowRight } from "lucide-react";
 import { useState } from "react";
+import NotificationBell from "@/components/NotificationBell";
 
 /*
  * HCI Principles:
@@ -114,6 +115,8 @@ export default function Navbar() {
               <span className="text-xs text-muted-foreground hidden lg:inline">credits</span>
             </div>
           )}
+
+          {!isGuest && <NotificationBell />}
 
           {/* Desktop dropdown */}
           <DropdownMenu>
