@@ -64,7 +64,7 @@ export default function CreditsPage() {
     setVerifying(true);
     supabase.functions
       .invoke("verify-credit-payment", { body: { sessionId } })
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (error) {
           toast.error("Payment verification failed. Please contact support.");
           console.error(error);
