@@ -8,17 +8,24 @@ import TimelineView from "@/components/TimelineView";
 import TicketChat from "@/components/TicketChat";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, FileText, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, FileText, Clock, CheckCircle, XCircle, Coins, Timer, Info } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Ticket = Tables<"tickets">;
+
+interface SubTask {
+  title: string;
+}
 
 interface RoadmapItem {
   hour: number;
   title: string;
   description: string;
+  subtasks?: SubTask[];
 }
 
 const priorityColors: Record<string, string> = {
@@ -26,6 +33,13 @@ const priorityColors: Record<string, string> = {
   medium: "bg-warning/10 text-warning",
   high: "bg-accent/10 text-accent",
   critical: "bg-destructive/10 text-destructive",
+};
+
+const difficultyLabels: Record<string, string> = {
+  easy: "🟢 Easy",
+  medium: "🟡 Medium",
+  hard: "🟠 Hard",
+  expert: "🔴 Expert",
 };
 
 export default function TicketDetailPage() {
@@ -122,6 +136,11 @@ export default function TicketDetailPage() {
           <CardHeader>
             <div className="flex items-center gap-2 mb-2">
               <span className={`status-badge ${priorityColors[ticket.priority]}`}>{ticket.priority}</span>
+              {ticket.difficulty_level && (
+                <Badge variant="outline" className="text-xs">
+                  {difficultyLabels[ticket.difficulty_level] || ticket.difficulty_level}
+                </Badge>
+              )}
               <span className="text-xs text-muted-foreground">
                 Created {format(new Date(ticket.created_at), "MMM d, yyyy 'at' h:mm a")}
               </span>
@@ -130,6 +149,27 @@ export default function TicketDetailPage() {
           </CardHeader>
           <CardContent>
             <PathTracker status={ticket.status} />
+
+            {/* Summary bar: Total Hours + Total Credits */}
+            {hasProposal && (
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-3 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                  <Timer className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Estimated Time</p>
+                    <p className="text-lg font-bold text-foreground">{ticket.estimated_hours} hour{ticket.estimated_hours !== 1 ? "s" : ""}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 bg-accent/5 border border-accent/20 rounded-lg">
+                  <Coins className="h-5 w-5 text-accent" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total Cost</p>
+                    <p className="text-lg font-bold text-foreground">{ticket.credit_cost} credits</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="mt-5 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: ticket.description }} />
 
             {ticket.file_urls && ticket.file_urls.length > 0 && (
@@ -159,13 +199,13 @@ export default function TicketDetailPage() {
           </Card>
         )}
 
-        {/* Proposal Timeline */}
+        {/* Proposal Timeline with subtasks */}
         {hasProposal && (
           <Card className="mb-5">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <Clock className="h-4 w-4 text-primary" />
-                Solution Proposal
+                Solution Roadmap
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -179,6 +219,9 @@ export default function TicketDetailPage() {
                   </div>
                   <div className="text-right text-sm text-muted-foreground">
                     <p>Your balance: <span className="font-semibold text-foreground">{profile?.credits ?? 0} credits</span></p>
+                    <Link to="/pricing" className="text-xs text-primary hover:underline inline-flex items-center gap-1 mt-1">
+                      <Info className="h-3 w-3" /> How pricing works
+                    </Link>
                   </div>
                 </div>
 
