@@ -120,9 +120,21 @@ export default function TicketDetailPage() {
     );
   }
 
+  const handleMarkCompleted = async () => {
+    if (!ticket) return;
+    const { error } = await supabase.from("tickets").update({ status: "completed" }).eq("id", ticket.id);
+    if (error) {
+      toast.error("Failed to mark as completed: " + error.message);
+    } else {
+      toast.success("Ticket marked as completed!");
+      refetch();
+    }
+  };
+
   const roadmap = (ticket.solution_roadmap as unknown) as RoadmapItem[] | null;
   const hasProposal = roadmap && roadmap.length > 0 && ticket.credit_cost;
   const isUnderReview = ticket.status === "under_review";
+  const isUAT = ticket.status === "uat";
   const isActive = ["in_progress", "approved", "under_review", "uat"].includes(ticket.status);
 
   return (
@@ -239,6 +251,27 @@ export default function TicketDetailPage() {
                   </div>
                 )}
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* UAT: Allow user to mark as completed */}
+        {isUAT && (
+          <Card className="mb-5 border-success/40 bg-success/5">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2 text-success">
+                <CheckCircle className="h-4 w-4" />
+                User Acceptance Testing (UAT)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                The solution is ready for your review. Please test the deliverables and confirm if everything meets your expectations.
+              </p>
+              <Button size="lg" onClick={handleMarkCompleted} className="w-full gap-2 bg-success hover:bg-success/90 text-success-foreground">
+                <CheckCircle className="h-4 w-4" />
+                Confirm & Mark as Completed
+              </Button>
             </CardContent>
           </Card>
         )}
