@@ -116,8 +116,9 @@ export default function Navbar() {
             </div>
           )}
 
+          {!isGuest && <NotificationBell />}
+
           {/* Desktop dropdown */}
-          <DropdownMenu>
             <DropdownMenuTrigger asChild>
               {/* Fitts's Law: Large round target */}
               <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0">
