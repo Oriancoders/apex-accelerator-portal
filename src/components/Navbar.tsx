@@ -207,13 +207,22 @@ export default function Navbar() {
                   </button>
                 ))}
                 {!isGuest && (
-                  <button
-                    onClick={() => { navigate("/credits"); setMobileOpen(false); }}
-                    className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
-                  >
-                    <Coins className="h-5 w-5" />
-                    Buy Credits
-                  </button>
+                  <>
+                    <button
+                      onClick={() => { navigate("/credits"); setMobileOpen(false); }}
+                      className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                    >
+                      <Coins className="h-5 w-5" />
+                      Buy Credits
+                    </button>
+                    <button
+                      onClick={() => { navigate("/pricing"); setMobileOpen(false); }}
+                      className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                    >
+                      <DollarSign className="h-5 w-5" />
+                      Pricing Guide
+                    </button>
+                  </>
                 )}
                 {isAdmin && (
                   <button
