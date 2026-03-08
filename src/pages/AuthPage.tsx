@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Cloud, Mail, Lock, User, Building2, Shield, Eye } from "lucide-react";
+import { Cloud, Mail, Lock, User, Building2, Eye } from "lucide-react";
 import { motion } from "framer-motion";
 
 function OAuthButtons() {
@@ -204,40 +204,19 @@ export default function AuthPage() {
         <Card className="border-border shadow-lg">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg">Welcome</CardTitle>
-            <CardDescription>Sign in, use admin credentials, or explore as a guest</CardDescription>
+            <CardDescription>Sign in to access your dashboard or explore as a guest</CardDescription>
           </CardHeader>
           <CardContent>
             <OAuthButtons />
             <EmailDivider />
 
             <Tabs defaultValue="signin">
-              <TabsList className="grid w-full grid-cols-3 mb-4">
+              <TabsList className="grid w-full grid-cols-2 mb-4">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
-                <TabsTrigger value="admin" className="gap-1">
-                  <Shield className="h-3 w-3" />
-                  Admin
-                </TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
               </TabsList>
 
               <TabsContent value="signin">
-                <SignInForm
-                  email={email} setEmail={setEmail}
-                  password={password} setPassword={setPassword}
-                  loading={loading} onSubmit={handleEmailSignIn}
-                />
-              </TabsContent>
-
-              <TabsContent value="admin">
-                <div className="mb-4 p-3 rounded-lg bg-primary/5 border border-primary/20">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Shield className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-semibold text-foreground">Admin Login</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Sign in with your admin credentials. Admin access is determined by your assigned role.
-                  </p>
-                </div>
                 <SignInForm
                   email={email} setEmail={setEmail}
                   password={password} setPassword={setPassword}
