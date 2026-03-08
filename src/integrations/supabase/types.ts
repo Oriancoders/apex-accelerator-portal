@@ -390,7 +390,9 @@ export type Database = {
         | "under_review"
         | "approved"
         | "in_progress"
+        | "uat"
         | "completed"
+        | "closed"
         | "cancelled"
     }
     CompositeTypes: {
@@ -527,7 +529,9 @@ export const Constants = {
         "under_review",
         "approved",
         "in_progress",
+        "uat",
         "completed",
+        "closed",
         "cancelled",
       ],
     },
