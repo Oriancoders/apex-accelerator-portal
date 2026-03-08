@@ -292,10 +292,12 @@ export default function AdminTicketsPage() {
 
                 <TabsContent value="proposal" className="mt-4">
                   <ProposalBuilder
+                    priority={selectedTicket.priority}
                     initialSteps={(selectedTicket.solution_roadmap as unknown as RoadmapItem[]) || undefined}
                     initialHours={selectedTicket.estimated_hours || undefined}
                     initialCost={selectedTicket.credit_cost || undefined}
                     initialOpinion={selectedTicket.expert_opinion || ""}
+                    initialDifficulty={(selectedTicket as any).difficulty_level || undefined}
                     loading={submitProposalMutation.isPending}
                     onSubmit={(data) =>
                       submitProposalMutation.mutate({
@@ -304,6 +306,7 @@ export default function AdminTicketsPage() {
                         estimatedHours: data.estimatedHours,
                         creditCost: data.creditCost,
                         expertOpinion: data.expertOpinion,
+                        difficultyLevel: data.difficultyLevel,
                       })
                     }
                   />
