@@ -55,6 +55,7 @@ export default function CreditsPage() {
         } else if (data?.success) {
           toast.success(`${data.credits_added} credits added to your account!`);
           queryClient.invalidateQueries({ queryKey: ["profile"] });
+          queryClient.invalidateQueries({ queryKey: ["credit-transactions"] });
         }
       })
       .finally(() => {
