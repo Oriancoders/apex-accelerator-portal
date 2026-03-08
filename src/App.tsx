@@ -16,6 +16,7 @@ import AdminTicketsPage from "./pages/admin/AdminTicketsPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import AdminArticlesPage from "./pages/admin/AdminArticlesPage";
 import AdminCreditsPage from "./pages/admin/AdminCreditsPage";
+import AdminNotificationsPage from "./pages/admin/AdminNotificationsPage";
 
 const queryClient = new QueryClient();
 
@@ -37,6 +38,7 @@ const App = () => (
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboardPage />} />
             <Route path="/admin/tickets" element={<AdminTicketsPage />} />
+            <Route path="/admin/notifications" element={<AdminNotificationsPage />} />
             <Route path="/admin/users" element={<AdminUsersPage />} />
             <Route path="/admin/articles" element={<AdminArticlesPage />} />
             <Route path="/admin/credits" element={<AdminCreditsPage />} />

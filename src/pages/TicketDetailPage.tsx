@@ -5,12 +5,13 @@ import { supabase } from "@/integrations/supabase/client";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import PathTracker from "@/components/PathTracker";
 import TimelineView from "@/components/TimelineView";
+import TicketChat from "@/components/TicketChat";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, FileText, Clock } from "lucide-react";
+import { ArrowLeft, FileText, Clock, CheckCircle, XCircle } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import type { Tables, Json } from "@/integrations/supabase/types";
+import type { Tables } from "@/integrations/supabase/types";
 
 type Ticket = Tables<"tickets">;
 
@@ -29,7 +30,7 @@ const priorityColors: Record<string, string> = {
 
 export default function TicketDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { user, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
 
   const { data: ticket, isLoading, refetch } = useQuery({
@@ -49,6 +50,13 @@ export default function TicketDetailPage() {
       return;
     }
 
+    const currentCredits = profile?.credits ?? 0;
+    if (currentCredits < ticket.credit_cost) {
+      toast.error(`Insufficient credits (${currentCredits}/${ticket.credit_cost}). Purchase more credits first.`);
+      navigate("/credits");
+      return;
+    }
+
     const { data, error } = await supabase.rpc("deduct_credits", {
       p_user_id: user.id,
       p_amount: ticket.credit_cost,
@@ -64,6 +72,17 @@ export default function TicketDetailPage() {
     } else {
       toast.success("Credits deducted! Work is now in progress.");
       await refreshProfile();
+      refetch();
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!ticket) return;
+    const { error } = await supabase.from("tickets").update({ status: "cancelled" }).eq("id", ticket.id);
+    if (error) {
+      toast.error("Failed to cancel: " + error.message);
+    } else {
+      toast.success("Ticket cancelled.");
       refetch();
     }
   };
@@ -88,6 +107,9 @@ export default function TicketDetailPage() {
   }
 
   const roadmap = (ticket.solution_roadmap as unknown) as RoadmapItem[] | null;
+  const hasProposal = roadmap && roadmap.length > 0 && ticket.credit_cost;
+  const isUnderReview = ticket.status === "under_review";
+  const isActive = ["in_progress", "approved", "under_review"].includes(ticket.status);
 
   return (
     <ProtectedLayout>
@@ -99,9 +121,7 @@ export default function TicketDetailPage() {
         <Card className="mb-5">
           <CardHeader>
             <div className="flex items-center gap-2 mb-2">
-              <span className={`status-badge ${priorityColors[ticket.priority]}`}>
-                {ticket.priority}
-              </span>
+              <span className={`status-badge ${priorityColors[ticket.priority]}`}>{ticket.priority}</span>
               <span className="text-xs text-muted-foreground">
                 Created {format(new Date(ticket.created_at), "MMM d, yyyy 'at' h:mm a")}
               </span>
@@ -110,7 +130,6 @@ export default function TicketDetailPage() {
           </CardHeader>
           <CardContent>
             <PathTracker status={ticket.status} />
-
             <div className="mt-5 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: ticket.description }} />
 
             {ticket.file_urls && ticket.file_urls.length > 0 && (
@@ -140,32 +159,52 @@ export default function TicketDetailPage() {
           </Card>
         )}
 
-        {roadmap && roadmap.length > 0 && (
+        {/* Proposal Timeline */}
+        {hasProposal && (
           <Card className="mb-5">
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <Clock className="h-4 w-4 text-primary" />
-                Solution Roadmap
+                Solution Proposal
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <TimelineView roadmap={roadmap} />
-              {ticket.credit_cost && (
-                <div className="mt-5 p-4 bg-muted rounded-lg flex items-center justify-between">
+              <TimelineView roadmap={roadmap!} />
+              <div className="mt-5 p-4 bg-muted rounded-lg">
+                <div className="flex items-center justify-between mb-3">
                   <div>
                     <p className="text-sm font-medium text-foreground">Total Cost</p>
                     <p className="text-2xl font-bold text-accent">{ticket.credit_cost} credits</p>
                     <p className="text-xs text-muted-foreground">{ticket.estimated_hours} business hours</p>
                   </div>
-                  {ticket.status === "approved" && (
-                    <Button size="lg" onClick={handleProceed} className="gap-2 shadow-primary">
-                      Proceed & Start Work
-                    </Button>
-                  )}
+                  <div className="text-right text-sm text-muted-foreground">
+                    <p>Your balance: <span className="font-semibold text-foreground">{profile?.credits ?? 0} credits</span></p>
+                  </div>
                 </div>
-              )}
+
+                {/* Proceed / Cancel buttons for under_review status */}
+                {isUnderReview && (
+                  <div className="flex gap-3 mt-3">
+                    <Button size="lg" onClick={handleProceed} className="flex-1 gap-2">
+                      <CheckCircle className="h-4 w-4" />
+                      Proceed & Pay {ticket.credit_cost} Credits
+                    </Button>
+                    <Button size="lg" variant="destructive" onClick={handleCancel} className="gap-2">
+                      <XCircle className="h-4 w-4" />
+                      Cancel
+                    </Button>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
+        )}
+
+        {/* Chat for active tickets */}
+        {isActive && user && (
+          <div className="mb-5">
+            <TicketChat ticketId={ticket.id} />
+          </div>
         )}
       </div>
     </ProtectedLayout>

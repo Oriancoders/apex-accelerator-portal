@@ -3,33 +3,20 @@ import { Navigate, Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminRole } from "@/hooks/useAdminRole";
 import {
-  SidebarProvider,
-  SidebarTrigger,
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupLabel,
-  SidebarGroupContent,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  useSidebar,
+  SidebarProvider, SidebarTrigger, Sidebar, SidebarContent, SidebarGroup,
+  SidebarGroupLabel, SidebarGroupContent, SidebarMenu, SidebarMenuItem,
+  SidebarMenuButton, useSidebar,
 } from "@/components/ui/sidebar";
 import { NavLink } from "@/components/NavLink";
-import {
-  LayoutDashboard,
-  Ticket,
-  Users,
-  FileText,
-  Coins,
-  Shield,
-  ArrowLeft,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { LayoutDashboard, Ticket, Users, FileText, Coins, Shield, ArrowLeft, Bell } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
 
 const adminMenuItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Tickets", url: "/admin/tickets", icon: Ticket },
+  { title: "Notifications", url: "/admin/notifications", icon: Bell },
   { title: "Users", url: "/admin/users", icon: Users },
   { title: "Articles", url: "/admin/articles", icon: FileText },
   { title: "Credits", url: "/admin/credits", icon: Coins },
@@ -38,7 +25,18 @@ const adminMenuItems = [
 function AdminSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
-  const location = useLocation();
+
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ["admin-unread-notifications"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("notifications")
+        .select("*", { count: "exact", head: true })
+        .eq("is_read", false);
+      return count || 0;
+    },
+    refetchInterval: 15000,
+  });
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -53,14 +51,12 @@ function AdminSidebar() {
               {adminMenuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      end={item.url === "/admin"}
-                      className="hover:bg-sidebar-accent/50"
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-medium"
-                    >
+                    <NavLink to={item.url} end={item.url === "/admin"} className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
                       <item.icon className="mr-2 h-4 w-4" />
                       {!collapsed && <span>{item.title}</span>}
+                      {item.title === "Notifications" && unreadCount > 0 && !collapsed && (
+                        <Badge variant="destructive" className="ml-auto text-[10px] h-5 min-w-5 flex items-center justify-center">{unreadCount}</Badge>
+                      )}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
