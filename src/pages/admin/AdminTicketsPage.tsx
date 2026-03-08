@@ -32,7 +32,9 @@ const statusColors: Record<string, string> = {
   under_review: "bg-[hsl(var(--info))]/10 text-[hsl(var(--info))]",
   approved: "bg-primary/10 text-primary",
   in_progress: "bg-accent/10 text-accent",
+  uat: "bg-[hsl(var(--info))]/10 text-[hsl(var(--info))]",
   completed: "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]",
+  closed: "bg-muted text-muted-foreground",
   cancelled: "bg-destructive/10 text-destructive",
 };
 
