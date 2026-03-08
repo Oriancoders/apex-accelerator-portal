@@ -130,15 +130,17 @@ export default function AdminTicketsPage() {
                   <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
                   <SelectValue placeholder="Filter status" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="submitted">Submitted</SelectItem>
-                  <SelectItem value="under_review">Under Review</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
+                 <SelectContent>
+                   <SelectItem value="all">All Statuses</SelectItem>
+                   <SelectItem value="submitted">Submitted</SelectItem>
+                   <SelectItem value="under_review">Under Review</SelectItem>
+                   <SelectItem value="approved">Approved</SelectItem>
+                   <SelectItem value="in_progress">In Progress</SelectItem>
+                   <SelectItem value="uat">UAT</SelectItem>
+                   <SelectItem value="completed">Completed</SelectItem>
+                   <SelectItem value="closed">Closed</SelectItem>
+                   <SelectItem value="cancelled">Cancelled</SelectItem>
+                 </SelectContent>
               </Select>
             </div>
           </CardHeader>
