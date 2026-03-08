@@ -21,7 +21,7 @@ import ProposalBuilder from "@/components/ProposalBuilder";
 import TicketChat from "@/components/TicketChat";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Search, Eye, Send, Ticket, Filter } from "lucide-react";
+import { Search, Eye, Send, Ticket, Filter, Lock } from "lucide-react";
 import type { Tables, Database } from "@/integrations/supabase/types";
 
 type TicketType = Tables<"tickets">;
