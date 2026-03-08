@@ -168,6 +168,64 @@ export default function CreditsPage() {
             );
           })}
         </div>
+
+        {/* Transaction History */}
+        <Separator className="my-10" />
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <History className="h-5 w-5 text-muted-foreground" />
+            <h2 className="text-xl font-bold text-foreground">Transaction History</h2>
+          </div>
+
+          {txLoading ? (
+            <div className="text-center py-8 text-muted-foreground">Loading transactions...</div>
+          ) : transactions.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                No transactions yet. Purchase credits to get started!
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead className="text-right">Credits</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transactions.map((tx) => {
+                    const isPositive = tx.amount > 0;
+                    return (
+                      <TableRow key={tx.id}>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {format(new Date(tx.created_at), "MMM d, yyyy h:mm a")}
+                        </TableCell>
+                        <TableCell className="text-foreground">
+                          {tx.description || tx.type}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">
+                            {tx.type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          <span className={`inline-flex items-center gap-1 ${isPositive ? "text-[hsl(var(--success))]" : "text-destructive"}`}>
+                            {isPositive ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+                            {isPositive ? "+" : ""}{tx.amount}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
+        </div>
       </div>
     </ProtectedLayout>
   );
