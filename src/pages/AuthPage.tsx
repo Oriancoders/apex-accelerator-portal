@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Cloud, Mail, Lock, User, Building2, Shield, Eye } from "lucide-react";
+import { Cloud, Mail, Lock, User, Building2, Eye } from "lucide-react";
 import { motion } from "framer-motion";
 
 function OAuthButtons() {
