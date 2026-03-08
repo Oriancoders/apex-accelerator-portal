@@ -204,7 +204,7 @@ export default function AuthPage() {
         <Card className="border-border shadow-lg">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg">Welcome</CardTitle>
-            <CardDescription>Sign in, use admin credentials, or explore as a guest</CardDescription>
+            <CardDescription>Sign in to access your dashboard or explore as a guest</CardDescription>
           </CardHeader>
           <CardContent>
             <OAuthButtons />
