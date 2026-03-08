@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,6 +21,39 @@ export default function NotificationBell() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
 
+  const invalidateAll = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["notification-bell"] });
+    queryClient.invalidateQueries({ queryKey: ["notification-bell-count"] });
+    queryClient.invalidateQueries({ queryKey: ["admin-notifications"] });
+    queryClient.invalidateQueries({ queryKey: ["admin-unread-notifications"] });
+    queryClient.invalidateQueries({ queryKey: ["user-notifications"] });
+  }, [queryClient]);
+
+  // Realtime subscription — instantly refetch on any change to notifications table
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel("notification-bell-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "notifications",
+        },
+        () => {
+          // Any INSERT, UPDATE, DELETE → refetch queries instantly
+          invalidateAll();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, invalidateAll]);
+
   const { data: notifications = [] } = useQuery({
     queryKey: ["notification-bell", user?.id, isAdmin],
     queryFn: async () => {
@@ -31,7 +64,6 @@ export default function NotificationBell() {
         .order("created_at", { ascending: false })
         .limit(5);
 
-      // Users only see their own notifications
       if (!isAdmin) {
         query = query.eq("user_id", user.id);
       }
@@ -40,7 +72,7 @@ export default function NotificationBell() {
       return data || [];
     },
     enabled: !!user,
-    refetchInterval: 15000,
+    refetchInterval: 30000, // Fallback polling every 30s
   });
 
   const { data: unreadCount = 0 } = useQuery({
@@ -60,19 +92,14 @@ export default function NotificationBell() {
       return count || 0;
     },
     enabled: !!user,
-    refetchInterval: 15000,
+    refetchInterval: 30000,
   });
 
   const markReadMutation = useMutation({
     mutationFn: async (id: string) => {
       await supabase.from("notifications").update({ is_read: true }).eq("id", id);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notification-bell"] });
-      queryClient.invalidateQueries({ queryKey: ["notification-bell-count"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["admin-unread-notifications"] });
-    },
+    onSuccess: invalidateAll,
   });
 
   // Auto-mark all visible notifications as read when popover opens
@@ -82,23 +109,17 @@ export default function NotificationBell() {
       const unreadIds = notifications.filter((n) => !n.is_read).map((n) => n.id);
       if (unreadIds.length > 0) {
         const markAll = async () => {
-          let query = supabase
+          await supabase
             .from("notifications")
             .update({ is_read: true })
             .in("id", unreadIds);
-          await query;
-          queryClient.invalidateQueries({ queryKey: ["notification-bell"] });
-          queryClient.invalidateQueries({ queryKey: ["notification-bell-count"] });
-          queryClient.invalidateQueries({ queryKey: ["admin-notifications"] });
-          queryClient.invalidateQueries({ queryKey: ["admin-unread-notifications"] });
-          queryClient.invalidateQueries({ queryKey: ["user-notifications"] });
+          // Realtime will handle the refetch automatically
         };
-        // Small delay so user sees the unread state briefly
         setTimeout(markAll, 1500);
       }
     }
     prevOpen.current = open;
-  }, [open, notifications, queryClient]);
+  }, [open, notifications]);
 
   if (!user) return null;
 
