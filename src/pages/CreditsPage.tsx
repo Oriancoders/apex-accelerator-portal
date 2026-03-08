@@ -3,21 +3,40 @@ import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Coins, CreditCard, Sparkles, Gift, Loader2, CheckCircle } from "lucide-react";
+import { Coins, CreditCard, Sparkles, Gift, Loader2, ArrowUpRight, ArrowDownRight, History } from "lucide-react";
 import { toast } from "sonner";
 import { useCreditSettings } from "@/hooks/useCreditSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
 
 export default function CreditsPage() {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { settings, isLoading } = useCreditSettings();
   const [searchParams, setSearchParams] = useSearchParams();
   const [purchasingIndex, setPurchasingIndex] = useState<number | null>(null);
   const [verifying, setVerifying] = useState(false);
   const queryClient = useQueryClient();
+
+  const { data: transactions = [], isLoading: txLoading } = useQuery({
+    queryKey: ["credit-transactions", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("credit_transactions")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user?.id,
+  });
 
   // Handle Stripe success redirect
   useEffect(() => {
@@ -36,6 +55,7 @@ export default function CreditsPage() {
         } else if (data?.success) {
           toast.success(`${data.credits_added} credits added to your account!`);
           queryClient.invalidateQueries({ queryKey: ["profile"] });
+          queryClient.invalidateQueries({ queryKey: ["credit-transactions"] });
         }
       })
       .finally(() => {
@@ -148,6 +168,64 @@ export default function CreditsPage() {
               </Card>
             );
           })}
+        </div>
+
+        {/* Transaction History */}
+        <Separator className="my-10" />
+        <div>
+          <div className="flex items-center gap-2 mb-4">
+            <History className="h-5 w-5 text-muted-foreground" />
+            <h2 className="text-xl font-bold text-foreground">Transaction History</h2>
+          </div>
+
+          {txLoading ? (
+            <div className="text-center py-8 text-muted-foreground">Loading transactions...</div>
+          ) : transactions.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                No transactions yet. Purchase credits to get started!
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead className="text-right">Credits</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transactions.map((tx) => {
+                    const isPositive = tx.amount > 0;
+                    return (
+                      <TableRow key={tx.id}>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {format(new Date(tx.created_at), "MMM d, yyyy h:mm a")}
+                        </TableCell>
+                        <TableCell className="text-foreground">
+                          {tx.description || tx.type}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="capitalize">
+                            {tx.type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          <span className={`inline-flex items-center gap-1 ${isPositive ? "text-[hsl(var(--success))]" : "text-destructive"}`}>
+                            {isPositive ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+                            {isPositive ? "+" : ""}{tx.amount}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </Card>
+          )}
         </div>
       </div>
     </ProtectedLayout>
