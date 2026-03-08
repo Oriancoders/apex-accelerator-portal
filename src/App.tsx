@@ -11,6 +11,7 @@ import TicketsPage from "./pages/TicketsPage";
 import NewTicketPage from "./pages/NewTicketPage";
 import TicketDetailPage from "./pages/TicketDetailPage";
 import CreditsPage from "./pages/CreditsPage";
+import PricingGuidePage from "./pages/PricingGuidePage";
 import NotFound from "./pages/NotFound";
 import NotificationsPage from "./pages/NotificationsPage";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
