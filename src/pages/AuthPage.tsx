@@ -211,33 +211,12 @@ export default function AuthPage() {
             <EmailDivider />
 
             <Tabs defaultValue="signin">
-              <TabsList className="grid w-full grid-cols-3 mb-4">
+              <TabsList className="grid w-full grid-cols-2 mb-4">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
-                <TabsTrigger value="admin" className="gap-1">
-                  <Shield className="h-3 w-3" />
-                  Admin
-                </TabsTrigger>
                 <TabsTrigger value="signup">Sign Up</TabsTrigger>
               </TabsList>
 
               <TabsContent value="signin">
-                <SignInForm
-                  email={email} setEmail={setEmail}
-                  password={password} setPassword={setPassword}
-                  loading={loading} onSubmit={handleEmailSignIn}
-                />
-              </TabsContent>
-
-              <TabsContent value="admin">
-                <div className="mb-4 p-3 rounded-lg bg-primary/5 border border-primary/20">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Shield className="h-4 w-4 text-primary" />
-                    <span className="text-sm font-semibold text-foreground">Admin Login</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Sign in with your admin credentials. Admin access is determined by your assigned role.
-                  </p>
-                </div>
                 <SignInForm
                   email={email} setEmail={setEmail}
                   password={password} setPassword={setPassword}
