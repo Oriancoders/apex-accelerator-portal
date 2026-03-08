@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/sheet";
 import { Cloud, Coins, LogOut, User, LayoutDashboard, Shield, Ticket, BookOpen, Menu, ArrowRight } from "lucide-react";
 import { useState } from "react";
+import NotificationBell from "@/components/NotificationBell";
 
 /*
  * HCI Principles:
