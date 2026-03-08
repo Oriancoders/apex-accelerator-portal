@@ -146,6 +146,10 @@ export default function Navbar() {
                     <Coins className="mr-2 h-4 w-4" />
                     Buy Credits
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/pricing")} className="h-10 cursor-pointer">
+                    <DollarSign className="mr-2 h-4 w-4" />
+                    Pricing Guide
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                 </>
               )}
