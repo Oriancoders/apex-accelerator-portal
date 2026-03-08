@@ -7,8 +7,8 @@ import { Coins, CreditCard, Sparkles, Gift, Loader2, ArrowUpRight, ArrowDownRigh
 import { toast } from "sonner";
 import { useCreditSettings } from "@/hooks/useCreditSettings";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
