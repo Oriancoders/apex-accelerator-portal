@@ -278,7 +278,7 @@ export default function AdminTicketsPage() {
                   <div>
                     <h4 className="text-sm font-semibold mb-2">Quick Status Update</h4>
                     <div className="flex gap-2 flex-wrap">
-                      {(["submitted", "under_review", "approved", "in_progress", "completed", "cancelled"] as TicketStatus[]).map((s) => (
+                      {(["submitted", "under_review", "approved", "in_progress", "uat", "completed", "closed", "cancelled"] as TicketStatus[]).map((s) => (
                         <Button
                           key={s}
                           variant={selectedTicket.status === s ? "default" : "outline"}
