@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Separator } from "@/components/ui/separator";
 
 export default function CreditsPage() {
-  const { profile, user } = useAuth();
+  const { profile, user, refreshProfile } = useAuth();
   const { settings, isLoading } = useCreditSettings();
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
