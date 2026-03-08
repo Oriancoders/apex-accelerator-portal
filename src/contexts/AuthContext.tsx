@@ -10,8 +10,10 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
+  isGuest: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  loginAsGuest: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -19,8 +21,10 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   profile: null,
   loading: true,
+  isGuest: false,
   signOut: async () => {},
   refreshProfile: async () => {},
+  loginAsGuest: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -30,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isGuest, setIsGuest] = useState(false);
 
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
@@ -76,10 +81,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setProfile(null);
+    setIsGuest(false);
+  };
+
+  const loginAsGuest = () => {
+    setIsGuest(true);
+    setLoading(false);
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, isGuest, signOut, refreshProfile, loginAsGuest }}>
       {children}
     </AuthContext.Provider>
   );
