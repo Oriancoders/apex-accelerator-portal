@@ -68,14 +68,15 @@ export default function AdminTicketsPage() {
   });
 
   const submitProposalMutation = useMutation({
-    mutationFn: async ({ id, steps, estimatedHours, creditCost, expertOpinion }: {
-      id: string; steps: RoadmapItem[]; estimatedHours: number; creditCost: number; expertOpinion: string;
+    mutationFn: async ({ id, steps, estimatedHours, creditCost, expertOpinion, difficultyLevel }: {
+      id: string; steps: RoadmapItem[]; estimatedHours: number; creditCost: number; expertOpinion: string; difficultyLevel: "easy" | "medium" | "hard" | "expert";
     }) => {
       const { error } = await supabase.from("tickets").update({
         solution_roadmap: steps as any,
         estimated_hours: estimatedHours,
         credit_cost: creditCost,
         expert_opinion: expertOpinion,
+        difficulty_level: difficultyLevel as any,
         status: "under_review" as TicketStatus,
       }).eq("id", id);
       if (error) throw error;
@@ -291,10 +292,12 @@ export default function AdminTicketsPage() {
 
                 <TabsContent value="proposal" className="mt-4">
                   <ProposalBuilder
+                    priority={selectedTicket.priority}
                     initialSteps={(selectedTicket.solution_roadmap as unknown as RoadmapItem[]) || undefined}
                     initialHours={selectedTicket.estimated_hours || undefined}
                     initialCost={selectedTicket.credit_cost || undefined}
                     initialOpinion={selectedTicket.expert_opinion || ""}
+                    initialDifficulty={(selectedTicket as any).difficulty_level || undefined}
                     loading={submitProposalMutation.isPending}
                     onSubmit={(data) =>
                       submitProposalMutation.mutate({
@@ -303,6 +306,7 @@ export default function AdminTicketsPage() {
                         estimatedHours: data.estimatedHours,
                         creditCost: data.creditCost,
                         expertOpinion: data.expertOpinion,
+                        difficultyLevel: data.difficultyLevel,
                       })
                     }
                   />
