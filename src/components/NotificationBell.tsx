@@ -154,7 +154,7 @@ export default function NotificationBell() {
             className="w-full h-9 rounded-lg text-xs font-medium text-primary hover:text-primary"
             onClick={() => {
               setOpen(false);
-              navigate(isAdmin ? "/admin/notifications" : "/dashboard");
+              navigate(isAdmin ? "/admin/notifications" : "/notifications");
             }}
           >
             View All Notifications
