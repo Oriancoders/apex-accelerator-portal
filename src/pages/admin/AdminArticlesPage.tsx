@@ -247,63 +247,46 @@ export default function AdminArticlesPage() {
 
       {/* Create / Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={(open) => !open && closeDialog()}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl mx-4 sm:mx-auto">
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit Article" : "New Article"}</DialogTitle>
+            <DialogTitle className="text-base sm:text-lg">{editing ? "Edit Article" : "New Article"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Title</Label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Article title" />
+              <Label className="text-sm">Title</Label>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Article title" className="h-11 rounded-xl mt-1" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label>Category</Label>
+                <Label className="text-sm">Category</Label>
                 <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger className="h-11 rounded-xl mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {categories.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c.replace("-", " ")}
-                      </SelectItem>
-                    ))}
+                    {categories.map((c) => (<SelectItem key={c} value={c}>{c.replace("-", " ")}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>Author</Label>
-                <Input value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="Author name" />
+                <Label className="text-sm">Author</Label>
+                <Input value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="Author name" className="h-11 rounded-xl mt-1" />
               </div>
             </div>
             <div>
-              <Label>Content</Label>
-              <Textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Write the article content..."
-                rows={10}
-              />
+              <Label className="text-sm">Content</Label>
+              <Textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Write the article content..." rows={10} className="rounded-xl mt-1" />
             </div>
             <div>
-              <Label>Tags (comma-separated)</Label>
-              <Input
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-                placeholder="e.g. flows, apex, best-practice"
-              />
+              <Label className="text-sm">Tags (comma-separated)</Label>
+              <Input value={tags} onChange={(e) => setTags(e.target.value)} placeholder="e.g. flows, apex, best-practice" className="h-11 rounded-xl mt-1" />
             </div>
             <div className="flex items-center gap-2">
               <Switch checked={published} onCheckedChange={setPublished} />
-              <Label>Published</Label>
+              <Label className="text-sm">Published</Label>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={closeDialog}>
-              Cancel
-            </Button>
-            <Button onClick={() => saveMutation.mutate()} disabled={!title || !content || saveMutation.isPending}>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={closeDialog} className="rounded-xl">Cancel</Button>
+            <Button onClick={() => saveMutation.mutate()} disabled={!title || !content || saveMutation.isPending} className="rounded-xl">
               {saveMutation.isPending ? "Saving..." : editing ? "Update" : "Create"}
             </Button>
           </DialogFooter>
