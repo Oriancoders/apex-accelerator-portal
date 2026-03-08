@@ -75,6 +75,31 @@ export default function NotificationBell() {
     },
   });
 
+  // Auto-mark all visible notifications as read when popover opens
+  const prevOpen = useRef(false);
+  useEffect(() => {
+    if (open && !prevOpen.current && notifications.length > 0) {
+      const unreadIds = notifications.filter((n) => !n.is_read).map((n) => n.id);
+      if (unreadIds.length > 0) {
+        const markAll = async () => {
+          let query = supabase
+            .from("notifications")
+            .update({ is_read: true })
+            .in("id", unreadIds);
+          await query;
+          queryClient.invalidateQueries({ queryKey: ["notification-bell"] });
+          queryClient.invalidateQueries({ queryKey: ["notification-bell-count"] });
+          queryClient.invalidateQueries({ queryKey: ["admin-notifications"] });
+          queryClient.invalidateQueries({ queryKey: ["admin-unread-notifications"] });
+          queryClient.invalidateQueries({ queryKey: ["user-notifications"] });
+        };
+        // Small delay so user sees the unread state briefly
+        setTimeout(markAll, 1500);
+      }
+    }
+    prevOpen.current = open;
+  }, [open, notifications, queryClient]);
+
   if (!user) return null;
 
   return (
