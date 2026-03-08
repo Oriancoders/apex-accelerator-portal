@@ -22,21 +22,30 @@ export default function CreditsPage() {
   const [verifying, setVerifying] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: transactions = [], isLoading: txLoading } = useQuery({
-    queryKey: ["credit-transactions", user?.id],
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(0);
+
+  const { data: txData, isLoading: txLoading } = useQuery({
+    queryKey: ["credit-transactions", user?.id, page],
     queryFn: async () => {
-      if (!user?.id) return [];
-      const { data, error } = await supabase
+      if (!user?.id) return { rows: [], total: 0 };
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      const { data, error, count } = await supabase
         .from("credit_transactions")
-        .select("*")
+        .select("*", { count: "exact" })
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
-        .limit(50);
+        .range(from, to);
       if (error) throw error;
-      return data || [];
+      return { rows: data || [], total: count || 0 };
     },
     enabled: !!user?.id,
   });
+
+  const transactions = txData?.rows ?? [];
+  const totalCount = txData?.total ?? 0;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   // Handle Stripe success redirect
   useEffect(() => {
