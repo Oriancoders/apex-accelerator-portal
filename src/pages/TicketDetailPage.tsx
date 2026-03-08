@@ -120,9 +120,21 @@ export default function TicketDetailPage() {
     );
   }
 
+  const handleMarkCompleted = async () => {
+    if (!ticket) return;
+    const { error } = await supabase.from("tickets").update({ status: "completed" }).eq("id", ticket.id);
+    if (error) {
+      toast.error("Failed to mark as completed: " + error.message);
+    } else {
+      toast.success("Ticket marked as completed!");
+      refetch();
+    }
+  };
+
   const roadmap = (ticket.solution_roadmap as unknown) as RoadmapItem[] | null;
   const hasProposal = roadmap && roadmap.length > 0 && ticket.credit_cost;
   const isUnderReview = ticket.status === "under_review";
+  const isUAT = ticket.status === "uat";
   const isActive = ["in_progress", "approved", "under_review", "uat"].includes(ticket.status);
 
   return (
