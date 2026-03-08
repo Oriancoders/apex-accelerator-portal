@@ -40,7 +40,6 @@ import { Badge } from "@/components/ui/badge";
 const adminMenuItems = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "Tickets", url: "/admin/tickets", icon: Ticket },
-  { title: "Notifications", url: "/admin/notifications", icon: Bell },
   { title: "Users", url: "/admin/users", icon: Users },
   { title: "Articles", url: "/admin/articles", icon: FileText },
   { title: "Credits", url: "/admin/credits", icon: Coins },
