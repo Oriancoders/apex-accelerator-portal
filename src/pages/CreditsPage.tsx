@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Separator } from "@/components/ui/separator";
 
 export default function CreditsPage() {
-  const { profile, user } = useAuth();
+  const { profile, user, refreshProfile } = useAuth();
   const { settings, isLoading } = useCreditSettings();
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
@@ -64,7 +64,7 @@ export default function CreditsPage() {
     setVerifying(true);
     supabase.functions
       .invoke("verify-credit-payment", { body: { sessionId } })
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (error) {
           toast.error("Payment verification failed. Please contact support.");
           console.error(error);
@@ -72,7 +72,7 @@ export default function CreditsPage() {
           toast.info("This payment was already processed.");
         } else if (data?.success) {
           toast.success(`${data.credits_added} credits added to your account!`);
-          queryClient.invalidateQueries({ queryKey: ["profile"] });
+          await refreshProfile();
           queryClient.invalidateQueries({ queryKey: ["credit-transactions"] });
         }
       })

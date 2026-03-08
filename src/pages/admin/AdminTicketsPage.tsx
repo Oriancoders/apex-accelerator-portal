@@ -32,7 +32,9 @@ const statusColors: Record<string, string> = {
   under_review: "bg-[hsl(var(--info))]/10 text-[hsl(var(--info))]",
   approved: "bg-primary/10 text-primary",
   in_progress: "bg-accent/10 text-accent",
+  uat: "bg-[hsl(var(--info))]/10 text-[hsl(var(--info))]",
   completed: "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]",
+  closed: "bg-muted text-muted-foreground",
   cancelled: "bg-destructive/10 text-destructive",
 };
 
@@ -128,15 +130,17 @@ export default function AdminTicketsPage() {
                   <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
                   <SelectValue placeholder="Filter status" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="submitted">Submitted</SelectItem>
-                  <SelectItem value="under_review">Under Review</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
+                 <SelectContent>
+                   <SelectItem value="all">All Statuses</SelectItem>
+                   <SelectItem value="submitted">Submitted</SelectItem>
+                   <SelectItem value="under_review">Under Review</SelectItem>
+                   <SelectItem value="approved">Approved</SelectItem>
+                   <SelectItem value="in_progress">In Progress</SelectItem>
+                   <SelectItem value="uat">UAT</SelectItem>
+                   <SelectItem value="completed">Completed</SelectItem>
+                   <SelectItem value="closed">Closed</SelectItem>
+                   <SelectItem value="cancelled">Cancelled</SelectItem>
+                 </SelectContent>
               </Select>
             </div>
           </CardHeader>
@@ -274,7 +278,7 @@ export default function AdminTicketsPage() {
                   <div>
                     <h4 className="text-sm font-semibold mb-2">Quick Status Update</h4>
                     <div className="flex gap-2 flex-wrap">
-                      {(["submitted", "under_review", "approved", "in_progress", "completed", "cancelled"] as TicketStatus[]).map((s) => (
+                      {(["submitted", "under_review", "approved", "in_progress", "uat", "completed", "closed", "cancelled"] as TicketStatus[]).map((s) => (
                         <Button
                           key={s}
                           variant={selectedTicket.status === s ? "default" : "outline"}

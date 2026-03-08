@@ -123,7 +123,7 @@ export default function TicketDetailPage() {
   const roadmap = (ticket.solution_roadmap as unknown) as RoadmapItem[] | null;
   const hasProposal = roadmap && roadmap.length > 0 && ticket.credit_cost;
   const isUnderReview = ticket.status === "under_review";
-  const isActive = ["in_progress", "approved", "under_review"].includes(ticket.status);
+  const isActive = ["in_progress", "approved", "under_review", "uat"].includes(ticket.status);
 
   return (
     <ProtectedLayout>
