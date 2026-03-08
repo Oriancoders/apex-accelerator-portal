@@ -1,9 +1,14 @@
-import { Clock } from "lucide-react";
+import { Clock, CheckSquare } from "lucide-react";
+
+interface SubTask {
+  title: string;
+}
 
 interface RoadmapItem {
   hour: number;
   title: string;
   description: string;
+  subtasks?: SubTask[];
 }
 
 export default function TimelineView({ roadmap }: { roadmap: RoadmapItem[] }) {
@@ -22,6 +27,17 @@ export default function TimelineView({ roadmap }: { roadmap: RoadmapItem[] }) {
                 <span className="text-sm font-medium text-foreground">{item.title}</span>
               </div>
               <p className="text-sm text-muted-foreground">{item.description}</p>
+
+              {item.subtasks && item.subtasks.length > 0 && (
+                <div className="mt-2 pl-3 border-l-2 border-primary/20 space-y-1">
+                  {item.subtasks.map((sub, si) => (
+                    <div key={si} className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <CheckSquare className="h-3 w-3 text-primary/60 flex-shrink-0" />
+                      <span>{sub.title}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ))}
