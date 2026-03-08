@@ -3,18 +3,64 @@ import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Coins, CreditCard, Sparkles, Gift } from "lucide-react";
+import { Coins, CreditCard, Sparkles, Gift, Loader2, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useCreditSettings } from "@/hooks/useCreditSettings";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function CreditsPage() {
   const { profile } = useAuth();
   const { settings, isLoading } = useCreditSettings();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [purchasingIndex, setPurchasingIndex] = useState<number | null>(null);
+  const [verifying, setVerifying] = useState(false);
+  const queryClient = useQueryClient();
 
-  const handlePurchase = (buy: number, bonus: number, price: number) => {
-    toast.info(
-      `Stripe Checkout will open for ${buy} credits (+${bonus} free) at $${price.toFixed(2)}. Configure STRIPE_SECRET_KEY and create a Stripe checkout edge function.`
-    );
+  // Handle Stripe success redirect
+  useEffect(() => {
+    const sessionId = searchParams.get("session_id");
+    if (!sessionId) return;
+
+    setVerifying(true);
+    supabase.functions
+      .invoke("verify-credit-payment", { body: { sessionId } })
+      .then(({ data, error }) => {
+        if (error) {
+          toast.error("Payment verification failed. Please contact support.");
+          console.error(error);
+        } else if (data?.already_processed) {
+          toast.info("This payment was already processed.");
+        } else if (data?.success) {
+          toast.success(`${data.credits_added} credits added to your account!`);
+          queryClient.invalidateQueries({ queryKey: ["profile"] });
+        }
+      })
+      .finally(() => {
+        setVerifying(false);
+        setSearchParams({}, { replace: true });
+      });
+  }, []);
+
+  const handlePurchase = async (buy: number, bonus: number, price: number, index: number) => {
+    setPurchasingIndex(index);
+    try {
+      const priceInCents = Math.round(price * 100);
+      const { data, error } = await supabase.functions.invoke("create-credit-checkout", {
+        body: { buyCredits: buy, bonusCredits: bonus, priceInCents },
+      });
+      if (error) throw error;
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error("No checkout URL returned");
+      }
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create checkout session");
+      setPurchasingIndex(null);
+    }
   };
 
   if (isLoading) {
@@ -30,6 +76,13 @@ export default function CreditsPage() {
   return (
     <ProtectedLayout>
       <div className="max-w-4xl mx-auto">
+        {verifying && (
+          <div className="flex items-center justify-center gap-2 mb-6 p-4 bg-muted rounded-lg">
+            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <span className="text-foreground font-medium">Verifying your payment...</span>
+          </div>
+        )}
+
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-foreground">Buy Credits</h1>
           <p className="text-muted-foreground mt-1">Credits are used to pay for Salesforce service requests</p>
@@ -45,6 +98,7 @@ export default function CreditsPage() {
             const price = pkg.buy * settings.dollarPerCredit;
             const totalCredits = pkg.buy + pkg.bonus;
             const isPopular = i === bestValueIndex;
+            const isPurchasing = purchasingIndex === i;
 
             return (
               <Card
@@ -80,10 +134,15 @@ export default function CreditsPage() {
                   <Button
                     className="w-full gap-2"
                     variant={isPopular ? "default" : "outline"}
-                    onClick={() => handlePurchase(pkg.buy, pkg.bonus, price)}
+                    disabled={isPurchasing || purchasingIndex !== null}
+                    onClick={() => handlePurchase(pkg.buy, pkg.bonus, price, i)}
                   >
-                    <CreditCard className="h-4 w-4" />
-                    Purchase
+                    {isPurchasing ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CreditCard className="h-4 w-4" />
+                    )}
+                    {isPurchasing ? "Redirecting..." : "Purchase"}
                   </Button>
                 </CardContent>
               </Card>
