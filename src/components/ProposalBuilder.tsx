@@ -55,6 +55,8 @@ export default function ProposalBuilder({
   onSubmit,
   loading,
 }: ProposalBuilderProps) {
+  const { settings } = useCreditSettings();
+
   const [steps, setSteps] = useState<ProposalStep[]>(
     initialSteps || [{ hour: 1, title: "", description: "", subtasks: [] }]
   );
@@ -63,8 +65,8 @@ export default function ProposalBuilder({
   const [manualCost, setManualCost] = useState(initialCost?.toString() || "");
   const [expertOpinion, setExpertOpinion] = useState(initialOpinion || "");
 
-  const priorityRate = PRIORITY_CREDITS[priority];
-  const difficultyRate = DIFFICULTY_CREDITS[difficulty];
+  const priorityRate = settings.priorityRates[priority] ?? 15;
+  const difficultyRate = settings.difficultyRates[difficulty] ?? 15;
   const perHourRate = priorityRate + difficultyRate;
   const totalHours = steps.length;
   const autoCredit = perHourRate * totalHours;
