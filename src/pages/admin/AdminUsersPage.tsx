@@ -7,24 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Search, Coins, Edit, Plus, Minus } from "lucide-react";
+import { Search, Coins, Edit, Plus, Minus, Users } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Profile = Tables<"profiles">;
@@ -48,28 +39,15 @@ export default function AdminUsersPage() {
   });
 
   const adjustCreditsMutation = useMutation({
-    mutationFn: async ({
-      userId,
-      amount,
-      reason,
-    }: {
-      userId: string;
-      amount: number;
-      reason: string;
-    }) => {
-      // Update credits
+    mutationFn: async ({ userId, amount, reason }: { userId: string; amount: number; reason: string }) => {
       const user = users.find((u) => u.user_id === userId);
       if (!user) throw new Error("User not found");
       const newCredits = user.credits + amount;
       if (newCredits < 0) throw new Error("Cannot set negative credits");
 
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ credits: newCredits })
-        .eq("user_id", userId);
+      const { error: updateError } = await supabase.from("profiles").update({ credits: newCredits }).eq("user_id", userId);
       if (updateError) throw updateError;
 
-      // Log transaction
       const { error: txError } = await supabase.from("credit_transactions").insert({
         user_id: userId,
         amount,
@@ -91,11 +69,7 @@ export default function AdminUsersPage() {
   const handleAdjustCredits = (positive: boolean) => {
     if (!selectedUser || !creditAdjust) return;
     const amount = Math.abs(parseInt(creditAdjust)) * (positive ? 1 : -1);
-    adjustCreditsMutation.mutate({
-      userId: selectedUser.user_id,
-      amount,
-      reason: creditReason,
-    });
+    adjustCreditsMutation.mutate({ userId: selectedUser.user_id, amount, reason: creditReason });
   };
 
   const filtered = users.filter(
@@ -107,154 +81,140 @@ export default function AdminUsersPage() {
 
   return (
     <AdminLayout>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Manage Users</h1>
-        <p className="text-muted-foreground text-sm">{users.length} registered users</p>
+      <div className="space-y-5">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">Manage Users</h1>
+          <p className="text-sm text-muted-foreground mt-1">{users.length} registered users</p>
+        </div>
+
+        <Card className="rounded-2xl">
+          <CardHeader className="px-4 sm:px-6">
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search by name, email, or company..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10 h-11 rounded-xl" />
+            </div>
+          </CardHeader>
+          <CardContent className="px-0 sm:px-6">
+            {isLoading ? (
+              <div className="text-center py-12 text-muted-foreground">Loading...</div>
+            ) : (
+              <>
+                {/* Desktop table */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Company</TableHead>
+                        <TableHead>Credits</TableHead>
+                        <TableHead>Provider</TableHead>
+                        <TableHead>Joined</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filtered.map((user) => (
+                        <TableRow key={user.id}>
+                          <TableCell className="font-medium">{user.full_name || "—"}</TableCell>
+                          <TableCell className="text-sm">{user.email || "—"}</TableCell>
+                          <TableCell className="text-sm">{user.company || "—"}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="bg-accent/10 text-accent">
+                              <Coins className="h-3 w-3 mr-1" />{user.credits}
+                            </Badge>
+                          </TableCell>
+                          <TableCell><Badge variant="secondary" className="text-xs">{user.auth_provider || "email"}</Badge></TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{format(new Date(user.created_at), "MMM d, yyyy")}</TableCell>
+                          <TableCell className="text-right">
+                            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setSelectedUser(user)}>
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {filtered.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                            <Users className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                            No users found
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile card list */}
+                <div className="md:hidden space-y-2 px-4">
+                  {filtered.map((user) => (
+                    <div
+                      key={user.id}
+                      className="p-4 rounded-xl border border-border hover:bg-muted/50 transition-colors cursor-pointer"
+                      onClick={() => setSelectedUser(user)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold text-foreground">{user.full_name || "Unknown"}</p>
+                        <Badge variant="outline" className="bg-accent/10 text-accent text-xs">
+                          <Coins className="h-3 w-3 mr-1" />{user.credits}
+                        </Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">{user.email}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge variant="secondary" className="text-[10px]">{user.auth_provider || "email"}</Badge>
+                        <span className="text-xs text-muted-foreground">{user.company || ""}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {filtered.length === 0 && (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Users className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                      No users found
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search by name, email, or company..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="text-center py-8 text-muted-foreground">Loading...</div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Company</TableHead>
-                  <TableHead>Credits</TableHead>
-                  <TableHead>Provider</TableHead>
-                  <TableHead>Joined</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">{user.full_name || "—"}</TableCell>
-                    <TableCell className="text-sm">{user.email || "—"}</TableCell>
-                    <TableCell className="text-sm">{user.company || "—"}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="bg-accent/10 text-accent">
-                        <Coins className="h-3 w-3 mr-1" />
-                        {user.credits}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="text-xs">
-                        {user.auth_provider || "email"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {format(new Date(user.created_at), "MMM d, yyyy")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setSelectedUser(user)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filtered.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      No users found
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Credit Adjustment Dialog */}
       <Dialog open={!!selectedUser} onOpenChange={(open) => !open && setSelectedUser(null)}>
-        <DialogContent>
+        <DialogContent className="rounded-2xl mx-4 sm:mx-auto">
           {selectedUser && (
             <>
               <DialogHeader>
-                <DialogTitle>Manage User: {selectedUser.full_name || selectedUser.email}</DialogTitle>
+                <DialogTitle className="text-base sm:text-lg">{selectedUser.full_name || selectedUser.email}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="text-muted-foreground">Email:</span> {selectedUser.email}
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Company:</span>{" "}
-                    {selectedUser.company || "—"}
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Phone:</span>{" "}
-                    {selectedUser.phone || "—"}
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground">Current Credits:</span>{" "}
-                    <span className="font-bold text-accent">{selectedUser.credits}</span>
-                  </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-sm">
+                  <div className="p-3 rounded-xl bg-muted/50"><span className="text-muted-foreground">Email:</span> {selectedUser.email}</div>
+                  <div className="p-3 rounded-xl bg-muted/50"><span className="text-muted-foreground">Company:</span> {selectedUser.company || "—"}</div>
+                  <div className="p-3 rounded-xl bg-muted/50"><span className="text-muted-foreground">Phone:</span> {selectedUser.phone || "—"}</div>
+                  <div className="p-3 rounded-xl bg-muted/50"><span className="text-muted-foreground">Credits:</span> <span className="font-bold text-accent">{selectedUser.credits}</span></div>
                 </div>
-
-                <div className="border-t pt-4">
-                  <h4 className="font-medium text-sm mb-3">Adjust Credits</h4>
+                <div className="border-t pt-4 space-y-3">
+                  <h4 className="font-semibold text-sm">Adjust Credits</h4>
                   <div>
-                    <Label>Amount</Label>
-                    <Input
-                      type="number"
-                      value={creditAdjust}
-                      onChange={(e) => setCreditAdjust(e.target.value)}
-                      placeholder="Enter amount"
-                      min="1"
-                    />
+                    <Label className="text-sm">Amount</Label>
+                    <Input type="number" value={creditAdjust} onChange={(e) => setCreditAdjust(e.target.value)} placeholder="Enter amount" min="1" className="h-11 rounded-xl mt-1" />
                   </div>
-                  <div className="mt-2">
-                    <Label>Reason</Label>
-                    <Input
-                      value={creditReason}
-                      onChange={(e) => setCreditReason(e.target.value)}
-                      placeholder="Reason for adjustment"
-                    />
+                  <div>
+                    <Label className="text-sm">Reason</Label>
+                    <Input value={creditReason} onChange={(e) => setCreditReason(e.target.value)} placeholder="Reason for adjustment" className="h-11 rounded-xl mt-1" />
                   </div>
-                  <div className="flex gap-2 mt-3">
-                    <Button
-                      variant="outline"
-                      className="flex-1 text-success"
-                      onClick={() => handleAdjustCredits(true)}
-                      disabled={!creditAdjust || adjustCreditsMutation.isPending}
-                    >
-                      <Plus className="h-4 w-4 mr-1" /> Add Credits
+                  <div className="flex gap-2">
+                    <Button variant="outline" className="flex-1 h-11 rounded-xl text-[hsl(var(--success))]" onClick={() => handleAdjustCredits(true)} disabled={!creditAdjust || adjustCreditsMutation.isPending}>
+                      <Plus className="h-4 w-4 mr-1" /> Add
                     </Button>
-                    <Button
-                      variant="outline"
-                      className="flex-1 text-destructive"
-                      onClick={() => handleAdjustCredits(false)}
-                      disabled={!creditAdjust || adjustCreditsMutation.isPending}
-                    >
-                      <Minus className="h-4 w-4 mr-1" /> Deduct Credits
+                    <Button variant="outline" className="flex-1 h-11 rounded-xl text-destructive" onClick={() => handleAdjustCredits(false)} disabled={!creditAdjust || adjustCreditsMutation.isPending}>
+                      <Minus className="h-4 w-4 mr-1" /> Deduct
                     </Button>
                   </div>
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setSelectedUser(null)}>
-                  Close
-                </Button>
+                <Button variant="outline" onClick={() => setSelectedUser(null)} className="rounded-xl">Close</Button>
               </DialogFooter>
             </>
           )}
