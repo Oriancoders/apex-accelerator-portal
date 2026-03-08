@@ -15,7 +15,7 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Cloud, Coins, LogOut, User, LayoutDashboard, Shield, Ticket, BookOpen, Menu, ArrowRight, DollarSign } from "lucide-react";
+import { Cloud, Coins, LogOut, User, LayoutDashboard, Shield, Ticket, BookOpen, Menu, ArrowRight, DollarSign, History } from "lucide-react";
 import { useState } from "react";
 import NotificationBell from "@/components/NotificationBell";
 
@@ -150,6 +150,10 @@ export default function Navbar() {
                     <DollarSign className="mr-2 h-4 w-4" />
                     Pricing Guide
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/credits#history")} className="h-10 cursor-pointer">
+                    <History className="mr-2 h-4 w-4" />
+                    Transaction History
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                 </>
               )}
@@ -221,6 +225,13 @@ export default function Navbar() {
                     >
                       <DollarSign className="h-5 w-5" />
                       Pricing Guide
+                    </button>
+                    <button
+                      onClick={() => { navigate("/credits#history"); setMobileOpen(false); }}
+                      className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                    >
+                      <History className="h-5 w-5" />
+                      Transaction History
                     </button>
                   </>
                 )}

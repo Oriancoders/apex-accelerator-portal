@@ -7,8 +7,8 @@ import { Coins, CreditCard, Sparkles, Gift, Loader2, ArrowUpRight, ArrowDownRigh
 import { toast } from "sonner";
 import { useCreditSettings } from "@/hooks/useCreditSettings";
 import { supabase } from "@/integrations/supabase/client";
-import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { useSearchParams, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -18,9 +18,18 @@ export default function CreditsPage() {
   const { profile, user } = useAuth();
   const { settings, isLoading } = useCreditSettings();
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const [purchasingIndex, setPurchasingIndex] = useState<number | null>(null);
   const [verifying, setVerifying] = useState(false);
   const queryClient = useQueryClient();
+  const historyRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to history section if hash is #history
+  useEffect(() => {
+    if (location.hash === "#history" && historyRef.current) {
+      setTimeout(() => historyRef.current?.scrollIntoView({ behavior: "smooth" }), 300);
+    }
+  }, [location.hash, isLoading]);
 
   const PAGE_SIZE = 10;
   const [page, setPage] = useState(0);
@@ -181,7 +190,7 @@ export default function CreditsPage() {
 
         {/* Transaction History */}
         <Separator className="my-10" />
-        <div>
+        <div ref={historyRef}>
           <div className="flex items-center gap-2 mb-4">
             <History className="h-5 w-5 text-muted-foreground" />
             <h2 className="text-xl font-bold text-foreground">Transaction History</h2>
