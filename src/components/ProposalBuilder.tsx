@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,25 +9,13 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Plus, Trash2, Send, Calculator, Zap, ListPlus } from "lucide-react";
+import { useCreditSettings } from "@/hooks/useCreditSettings";
 import type { Database } from "@/integrations/supabase/types";
 
 type Priority = Database["public"]["Enums"]["ticket_priority"];
 type Difficulty = "easy" | "medium" | "hard" | "expert";
 
-// Credit rates
-const PRIORITY_CREDITS: Record<Priority, number> = {
-  low: 10,
-  medium: 15,
-  high: 20,
-  critical: 30,
-};
-
-const DIFFICULTY_CREDITS: Record<Difficulty, number> = {
-  easy: 10,
-  medium: 15,
-  hard: 20,
-  expert: 30,
-};
+// Rates are loaded dynamically from settings
 
 interface SubTask {
   title: string;
@@ -67,6 +55,8 @@ export default function ProposalBuilder({
   onSubmit,
   loading,
 }: ProposalBuilderProps) {
+  const { settings } = useCreditSettings();
+
   const [steps, setSteps] = useState<ProposalStep[]>(
     initialSteps || [{ hour: 1, title: "", description: "", subtasks: [] }]
   );
@@ -75,8 +65,8 @@ export default function ProposalBuilder({
   const [manualCost, setManualCost] = useState(initialCost?.toString() || "");
   const [expertOpinion, setExpertOpinion] = useState(initialOpinion || "");
 
-  const priorityRate = PRIORITY_CREDITS[priority];
-  const difficultyRate = DIFFICULTY_CREDITS[difficulty];
+  const priorityRate = settings.priorityRates[priority] ?? 15;
+  const difficultyRate = settings.difficultyRates[difficulty] ?? 15;
   const perHourRate = priorityRate + difficultyRate;
   const totalHours = steps.length;
   const autoCredit = perHourRate * totalHours;
@@ -172,10 +162,10 @@ export default function ProposalBuilder({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="easy">🟢 Easy (10 cr/hr)</SelectItem>
-                  <SelectItem value="medium">🟡 Medium (15 cr/hr)</SelectItem>
-                  <SelectItem value="hard">🟠 Hard (20 cr/hr)</SelectItem>
-                  <SelectItem value="expert">🔴 Expert (30 cr/hr)</SelectItem>
+                  <SelectItem value="easy">🟢 Easy ({settings.difficultyRates.easy ?? 10} cr/hr)</SelectItem>
+                  <SelectItem value="medium">🟡 Medium ({settings.difficultyRates.medium ?? 15} cr/hr)</SelectItem>
+                  <SelectItem value="hard">🟠 Hard ({settings.difficultyRates.hard ?? 20} cr/hr)</SelectItem>
+                  <SelectItem value="expert">🔴 Expert ({settings.difficultyRates.expert ?? 30} cr/hr)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
