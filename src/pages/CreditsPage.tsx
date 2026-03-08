@@ -190,7 +190,7 @@ export default function CreditsPage() {
 
         {/* Transaction History */}
         <Separator className="my-10" />
-        <div>
+        <div ref={historyRef}>
           <div className="flex items-center gap-2 mb-4">
             <History className="h-5 w-5 text-muted-foreground" />
             <h2 className="text-xl font-bold text-foreground">Transaction History</h2>
