@@ -15,7 +15,7 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Cloud, Coins, LogOut, User, LayoutDashboard, Shield, Ticket, BookOpen, Menu, ArrowRight } from "lucide-react";
+import { Cloud, Coins, LogOut, User, LayoutDashboard, Shield, Ticket, BookOpen, Menu, ArrowRight, DollarSign } from "lucide-react";
 import { useState } from "react";
 import NotificationBell from "@/components/NotificationBell";
 
@@ -146,6 +146,10 @@ export default function Navbar() {
                     <Coins className="mr-2 h-4 w-4" />
                     Buy Credits
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/pricing")} className="h-10 cursor-pointer">
+                    <DollarSign className="mr-2 h-4 w-4" />
+                    Pricing Guide
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                 </>
               )}
@@ -203,13 +207,22 @@ export default function Navbar() {
                   </button>
                 ))}
                 {!isGuest && (
-                  <button
-                    onClick={() => { navigate("/credits"); setMobileOpen(false); }}
-                    className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
-                  >
-                    <Coins className="h-5 w-5" />
-                    Buy Credits
-                  </button>
+                  <>
+                    <button
+                      onClick={() => { navigate("/credits"); setMobileOpen(false); }}
+                      className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                    >
+                      <Coins className="h-5 w-5" />
+                      Buy Credits
+                    </button>
+                    <button
+                      onClick={() => { navigate("/pricing"); setMobileOpen(false); }}
+                      className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                    >
+                      <DollarSign className="h-5 w-5" />
+                      Pricing Guide
+                    </button>
+                  </>
                 )}
                 {isAdmin && (
                   <button
