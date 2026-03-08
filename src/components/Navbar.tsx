@@ -1,4 +1,5 @@
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdminRole } from "@/hooks/useAdminRole";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -9,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Cloud, Coins, LogOut, User, LayoutDashboard } from "lucide-react";
+import { Cloud, Coins, LogOut, User, LayoutDashboard, Shield } from "lucide-react";
 
 export default function Navbar() {
   const { user, profile, signOut } = useAuth();
