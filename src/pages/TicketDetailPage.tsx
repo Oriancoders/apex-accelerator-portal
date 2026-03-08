@@ -87,7 +87,7 @@ export default function TicketDetailPage() {
     );
   }
 
-  const roadmap = ticket.solution_roadmap as RoadmapItem[] | null;
+  const roadmap = (ticket.solution_roadmap as unknown) as RoadmapItem[] | null;
 
   return (
     <ProtectedLayout>
