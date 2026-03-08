@@ -3,7 +3,7 @@ import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Coins, CreditCard, Sparkles, Gift, Loader2, ArrowUpRight, ArrowDownRight, History } from "lucide-react";
+import { Coins, CreditCard, Sparkles, Gift, Loader2, ArrowUpRight, ArrowDownRight, History, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { useCreditSettings } from "@/hooks/useCreditSettings";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,21 +22,30 @@ export default function CreditsPage() {
   const [verifying, setVerifying] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: transactions = [], isLoading: txLoading } = useQuery({
-    queryKey: ["credit-transactions", user?.id],
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(0);
+
+  const { data: txData, isLoading: txLoading } = useQuery({
+    queryKey: ["credit-transactions", user?.id, page],
     queryFn: async () => {
-      if (!user?.id) return [];
-      const { data, error } = await supabase
+      if (!user?.id) return { rows: [], total: 0 };
+      const from = page * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+      const { data, error, count } = await supabase
         .from("credit_transactions")
-        .select("*")
+        .select("*", { count: "exact" })
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
-        .limit(50);
+        .range(from, to);
       if (error) throw error;
-      return data || [];
+      return { rows: data || [], total: count || 0 };
     },
     enabled: !!user?.id,
   });
+
+  const transactions = txData?.rows ?? [];
+  const totalCount = txData?.total ?? 0;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   // Handle Stripe success redirect
   useEffect(() => {
@@ -187,44 +196,75 @@ export default function CreditsPage() {
               </CardContent>
             </Card>
           ) : (
-            <Card>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="text-right">Credits</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transactions.map((tx) => {
-                    const isPositive = tx.amount > 0;
-                    return (
-                      <TableRow key={tx.id}>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {format(new Date(tx.created_at), "MMM d, yyyy h:mm a")}
-                        </TableCell>
-                        <TableCell className="text-foreground">
-                          {tx.description || tx.type}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="capitalize">
-                            {tx.type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">
-                          <span className={`inline-flex items-center gap-1 ${isPositive ? "text-[hsl(var(--success))]" : "text-destructive"}`}>
-                            {isPositive ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
-                            {isPositive ? "+" : ""}{tx.amount}
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </Card>
+            <>
+              <Card>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead className="text-right">Credits</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {transactions.map((tx) => {
+                      const isPositive = tx.amount > 0;
+                      return (
+                        <TableRow key={tx.id}>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {format(new Date(tx.created_at), "MMM d, yyyy h:mm a")}
+                          </TableCell>
+                          <TableCell className="text-foreground">
+                            {tx.description || tx.type}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize">
+                              {tx.type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right font-semibold">
+                            <span className={`inline-flex items-center gap-1 ${isPositive ? "text-[hsl(var(--success))]" : "text-destructive"}`}>
+                              {isPositive ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
+                              {isPositive ? "+" : ""}{tx.amount}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </Card>
+
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-4">
+                  <p className="text-sm text-muted-foreground">
+                    Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, totalCount)} of {totalCount}
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={page === 0}
+                      onClick={() => setPage((p) => p - 1)}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm text-muted-foreground">
+                      Page {page + 1} of {totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={page >= totalPages - 1}
+                      onClick={() => setPage((p) => p + 1)}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
