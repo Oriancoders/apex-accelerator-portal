@@ -14,6 +14,7 @@ import { Cloud, Coins, LogOut, User, LayoutDashboard, Shield } from "lucide-reac
 
 export default function Navbar() {
   const { user, profile, signOut } = useAuth();
+  const { isAdmin } = useAdminRole();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
