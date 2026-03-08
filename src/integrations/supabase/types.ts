@@ -251,6 +251,9 @@ export type Database = {
           created_at: string
           credit_cost: number | null
           description: string
+          difficulty_level:
+            | Database["public"]["Enums"]["ticket_difficulty"]
+            | null
           estimated_hours: number | null
           expert_opinion: string | null
           file_urls: string[] | null
@@ -268,6 +271,9 @@ export type Database = {
           created_at?: string
           credit_cost?: number | null
           description: string
+          difficulty_level?:
+            | Database["public"]["Enums"]["ticket_difficulty"]
+            | null
           estimated_hours?: number | null
           expert_opinion?: string | null
           file_urls?: string[] | null
@@ -285,6 +291,9 @@ export type Database = {
           created_at?: string
           credit_cost?: number | null
           description?: string
+          difficulty_level?:
+            | Database["public"]["Enums"]["ticket_difficulty"]
+            | null
           estimated_hours?: number | null
           expert_opinion?: string | null
           file_urls?: string[] | null
@@ -353,6 +362,7 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      ticket_difficulty: "easy" | "medium" | "hard" | "expert"
       ticket_priority: "low" | "medium" | "high" | "critical"
       ticket_status:
         | "submitted"
@@ -489,6 +499,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      ticket_difficulty: ["easy", "medium", "hard", "expert"],
       ticket_priority: ["low", "medium", "high", "critical"],
       ticket_status: [
         "submitted",
