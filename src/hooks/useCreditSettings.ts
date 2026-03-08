@@ -1,16 +1,28 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+export interface CreditPackage {
+  buy: number;
+  bonus: number;
+}
+
 export interface CreditRates {
   dollarPerCredit: number;
   priorityRates: Record<string, number>;
   difficultyRates: Record<string, number>;
+  packages: CreditPackage[];
 }
 
 const DEFAULTS: CreditRates = {
   dollarPerCredit: 2.5,
   priorityRates: { low: 10, medium: 15, high: 20, critical: 30 },
   difficultyRates: { easy: 10, medium: 15, hard: 20, expert: 30 },
+  packages: [
+    { buy: 10, bonus: 2 },
+    { buy: 25, bonus: 6 },
+    { buy: 50, bonus: 15 },
+    { buy: 100, bonus: 35 },
+  ],
 };
 
 export function useCreditSettings() {
@@ -33,6 +45,7 @@ export function useCreditSettings() {
         dollarPerCredit: parseFloat(map.dollar_per_credit) || DEFAULTS.dollarPerCredit,
         priorityRates: map.priority_rates || DEFAULTS.priorityRates,
         difficultyRates: map.difficulty_rates || DEFAULTS.difficultyRates,
+        packages: map.credit_packages || DEFAULTS.packages,
       } as CreditRates;
     },
     staleTime: 60_000,

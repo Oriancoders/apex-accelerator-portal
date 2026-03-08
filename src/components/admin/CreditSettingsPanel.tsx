@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
-import { useCreditSettings } from "@/hooks/useCreditSettings";
+import { useCreditSettings, CreditPackage } from "@/hooks/useCreditSettings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Settings, DollarSign, Layers, Gauge, Save } from "lucide-react";
+import { Settings, DollarSign, Layers, Gauge, Save, Plus, Trash2, Gift } from "lucide-react";
 
 export default function CreditSettingsPanel() {
   const { settings, isLoading, updateSetting } = useCreditSettings();
@@ -14,6 +13,7 @@ export default function CreditSettingsPanel() {
   const [dollarPerCredit, setDollarPerCredit] = useState("");
   const [priorityRates, setPriorityRates] = useState<Record<string, string>>({});
   const [difficultyRates, setDifficultyRates] = useState<Record<string, string>>({});
+  const [packages, setPackages] = useState<{ buy: string; bonus: string }[]>([]);
 
   useEffect(() => {
     if (settings) {
@@ -23,6 +23,9 @@ export default function CreditSettingsPanel() {
       );
       setDifficultyRates(
         Object.fromEntries(Object.entries(settings.difficultyRates).map(([k, v]) => [k, v.toString()]))
+      );
+      setPackages(
+        settings.packages.map((p) => ({ buy: p.buy.toString(), bonus: p.bonus.toString() }))
       );
     }
   }, [settings]);
@@ -58,10 +61,32 @@ export default function CreditSettingsPanel() {
     toast.success("Difficulty rates updated!");
   };
 
+  const handleSavePackages = async () => {
+    const parsed: CreditPackage[] = [];
+    for (const pkg of packages) {
+      const buy = parseInt(pkg.buy);
+      const bonus = parseInt(pkg.bonus);
+      if (isNaN(buy) || buy <= 0) { toast.error("Buy amount must be > 0"); return; }
+      if (isNaN(bonus) || bonus < 0) { toast.error("Bonus must be >= 0"); return; }
+      parsed.push({ buy, bonus });
+    }
+    await updateSetting.mutateAsync({ key: "credit_packages", value: parsed });
+    toast.success("Credit packages updated!");
+  };
+
+  const addPackage = () => setPackages([...packages, { buy: "10", bonus: "0" }]);
+  const removePackage = (i: number) => setPackages(packages.filter((_, idx) => idx !== i));
+  const updatePackage = (i: number, field: "buy" | "bonus", value: string) => {
+    const updated = [...packages];
+    updated[i][field] = value;
+    setPackages(updated);
+  };
+
   if (isLoading) return <div className="text-center py-8 text-muted-foreground">Loading settings...</div>;
 
   const priorityLabels: Record<string, string> = { low: "🟢 Low", medium: "🟡 Medium", high: "🟠 High", critical: "🔴 Critical" };
   const difficultyLabels: Record<string, string> = { easy: "🟢 Easy", medium: "🟡 Medium", hard: "🟠 Hard", expert: "🔴 Expert" };
+  const dollarVal = parseFloat(dollarPerCredit) || 0;
 
   return (
     <div className="space-y-4">
@@ -93,6 +118,68 @@ export default function CreditSettingsPanel() {
               <Save className="h-3.5 w-3.5" /> Save
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Credit Packages */}
+      <Card className="rounded-2xl">
+        <CardHeader className="pb-3 px-4 sm:px-6">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <Gift className="h-4 w-4 text-[hsl(var(--success))]" />
+              Credit Packages
+            </CardTitle>
+            <Button variant="outline" size="sm" onClick={addPackage} className="rounded-lg h-7 text-xs gap-1">
+              <Plus className="h-3 w-3" /> Add Package
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Users pay for the "Buy" amount at ${dollarVal.toFixed(2)}/credit and get bonus credits free
+          </p>
+        </CardHeader>
+        <CardContent className="px-4 sm:px-6 pb-4 sm:pb-5 space-y-2">
+          {packages.map((pkg, i) => {
+            const buyNum = parseInt(pkg.buy) || 0;
+            const bonusNum = parseInt(pkg.bonus) || 0;
+            const price = buyNum * dollarVal;
+            return (
+              <div key={i} className="flex items-center gap-2 p-3 rounded-xl bg-muted/50">
+                <div className="flex-1 space-y-1">
+                  <Label className="text-[10px] text-muted-foreground">Buy (credits)</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={pkg.buy}
+                    onChange={(e) => updatePackage(i, "buy", e.target.value)}
+                    className="h-8 rounded-lg text-sm"
+                  />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <Label className="text-[10px] text-muted-foreground">Bonus (free)</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={pkg.bonus}
+                    onChange={(e) => updatePackage(i, "bonus", e.target.value)}
+                    className="h-8 rounded-lg text-sm"
+                  />
+                </div>
+                <div className="text-center min-w-[80px] space-y-0.5">
+                  <p className="text-[10px] text-muted-foreground">Preview</p>
+                  <p className="text-xs font-semibold">${price.toFixed(2)}</p>
+                  <p className="text-[10px] text-[hsl(var(--success))]">+{bonusNum} free</p>
+                </div>
+                {packages.length > 1 && (
+                  <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={() => removePackage(i)}>
+                    <Trash2 className="h-3 w-3 text-destructive" />
+                  </Button>
+                )}
+              </div>
+            );
+          })}
+          <Button onClick={handleSavePackages} disabled={saving} size="sm" className="mt-2 rounded-xl gap-1.5">
+            <Save className="h-3.5 w-3.5" /> Save Packages
+          </Button>
         </CardContent>
       </Card>
 
