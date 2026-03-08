@@ -11,6 +11,11 @@ import NewTicketPage from "./pages/NewTicketPage";
 import TicketDetailPage from "./pages/TicketDetailPage";
 import CreditsPage from "./pages/CreditsPage";
 import NotFound from "./pages/NotFound";
+import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
+import AdminTicketsPage from "./pages/admin/AdminTicketsPage";
+import AdminUsersPage from "./pages/admin/AdminUsersPage";
+import AdminArticlesPage from "./pages/admin/AdminArticlesPage";
+import AdminCreditsPage from "./pages/admin/AdminCreditsPage";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +34,12 @@ const App = () => (
             <Route path="/tickets/new" element={<NewTicketPage />} />
             <Route path="/tickets/:id" element={<TicketDetailPage />} />
             <Route path="/credits" element={<CreditsPage />} />
+            {/* Admin Routes */}
+            <Route path="/admin" element={<AdminDashboardPage />} />
+            <Route path="/admin/tickets" element={<AdminTicketsPage />} />
+            <Route path="/admin/users" element={<AdminUsersPage />} />
+            <Route path="/admin/articles" element={<AdminArticlesPage />} />
+            <Route path="/admin/credits" element={<AdminCreditsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

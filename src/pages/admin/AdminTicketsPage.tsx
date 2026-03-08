@@ -95,10 +95,10 @@ export default function AdminTicketsPage() {
       expert_opinion?: string;
       credit_cost?: number;
       estimated_hours?: number;
-      solution_roadmap?: Record<string, unknown>[];
+      solution_roadmap?: unknown;
     }) => {
       const { id, ...rest } = updates;
-      const { error } = await supabase.from("tickets").update(rest).eq("id", id);
+      const { error } = await supabase.from("tickets").update(rest as any).eq("id", id);
       if (error) throw error;
 
       // Add internal note if provided
