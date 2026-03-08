@@ -95,7 +95,7 @@ export default function AdminTicketsPage() {
       expert_opinion?: string;
       credit_cost?: number;
       estimated_hours?: number;
-      solution_roadmap?: RoadmapItem[];
+      solution_roadmap?: Record<string, unknown>[];
     }) => {
       const { id, ...rest } = updates;
       const { error } = await supabase.from("tickets").update(rest).eq("id", id);
