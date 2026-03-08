@@ -10,8 +10,10 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
+  isGuest: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  loginAsGuest: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -19,8 +21,10 @@ const AuthContext = createContext<AuthContextType>({
   session: null,
   profile: null,
   loading: true,
+  isGuest: false,
   signOut: async () => {},
   refreshProfile: async () => {},
+  loginAsGuest: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
