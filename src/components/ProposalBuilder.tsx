@@ -15,20 +15,7 @@ import type { Database } from "@/integrations/supabase/types";
 type Priority = Database["public"]["Enums"]["ticket_priority"];
 type Difficulty = "easy" | "medium" | "hard" | "expert";
 
-// Credit rates
-const PRIORITY_CREDITS: Record<Priority, number> = {
-  low: 10,
-  medium: 15,
-  high: 20,
-  critical: 30,
-};
-
-const DIFFICULTY_CREDITS: Record<Difficulty, number> = {
-  easy: 10,
-  medium: 15,
-  hard: 20,
-  expert: 30,
-};
+// Rates are loaded dynamically from settings
 
 interface SubTask {
   title: string;
