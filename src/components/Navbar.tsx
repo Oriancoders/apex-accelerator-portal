@@ -52,7 +52,12 @@ export default function Navbar() {
         </nav>
 
         <div className="flex items-center gap-3">
-          {profile && (
+          {isGuest && (
+            <div className="flex items-center gap-1.5 bg-warning/10 px-3 py-1.5 rounded-full">
+              <span className="text-xs font-semibold text-warning">Guest Mode</span>
+            </div>
+          )}
+          {profile && !isGuest && (
             <div className="flex items-center gap-1.5 bg-muted px-3 py-1.5 rounded-full">
               <Coins className="h-4 w-4 text-accent" />
               <span className="text-sm font-semibold text-foreground">{profile.credits}</span>
@@ -64,7 +69,7 @@ export default function Navbar() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-9 w-9 rounded-full">
                 <Avatar className="h-9 w-9">
-                  <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                  <AvatarFallback className={`text-sm ${isGuest ? 'bg-warning text-warning-foreground' : 'bg-primary text-primary-foreground'}`}>
                     {initials}
                   </AvatarFallback>
                 </Avatar>
@@ -72,19 +77,23 @@ export default function Navbar() {
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56" align="end">
               <div className="px-2 py-1.5">
-                <p className="text-sm font-medium">{profile?.full_name || "User"}</p>
-                <p className="text-xs text-muted-foreground">{user?.email}</p>
+                <p className="text-sm font-medium">{isGuest ? "Guest User" : profile?.full_name || "User"}</p>
+                <p className="text-xs text-muted-foreground">{isGuest ? "Read-only access" : user?.email}</p>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate("/profile")}>
-                <User className="mr-2 h-4 w-4" />
-                Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/credits")}>
-                <Coins className="mr-2 h-4 w-4" />
-                Buy Credits
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
+              {!isGuest && (
+                <>
+                  <DropdownMenuItem onClick={() => navigate("/profile")}>
+                    <User className="mr-2 h-4 w-4" />
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/credits")}>
+                    <Coins className="mr-2 h-4 w-4" />
+                    Buy Credits
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
               {isAdmin && (
                 <DropdownMenuItem onClick={() => navigate("/admin")}>
                   <Shield className="mr-2 h-4 w-4" />
@@ -94,7 +103,7 @@ export default function Navbar() {
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleSignOut}>
                 <LogOut className="mr-2 h-4 w-4" />
-                Sign Out
+                {isGuest ? "Exit Guest Mode" : "Sign Out"}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

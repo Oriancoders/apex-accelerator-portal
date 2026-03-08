@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 
 export default function TicketSubmissionWidget() {
   const navigate = useNavigate();
-  const { profile } = useAuth();
+  const { profile, isGuest } = useAuth();
 
   return (
     <motion.div
@@ -26,17 +26,36 @@ export default function TicketSubmissionWidget() {
             Need Salesforce maintenance, a new feature, integration, or customization? Submit a ticket and our experts will review it.
           </p>
         </div>
-        <Button
-          size="lg"
-          onClick={() => navigate("/tickets/new")}
-          className="gap-2 shadow-primary"
-        >
-          Create Ticket
-          <ArrowRight className="h-4 w-4" />
-        </Button>
-        <p className="text-xs text-muted-foreground">
-          You have <span className="font-semibold text-accent">{profile?.credits ?? 0} credits</span> available
-        </p>
+        {isGuest ? (
+          <>
+            <Button
+              size="lg"
+              variant="secondary"
+              onClick={() => navigate("/auth")}
+              className="gap-2"
+            >
+              Sign In to Create Tickets
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+            <p className="text-xs text-warning">
+              Guest users cannot create tickets. Please sign in or create an account.
+            </p>
+          </>
+        ) : (
+          <>
+            <Button
+              size="lg"
+              onClick={() => navigate("/tickets/new")}
+              className="gap-2 shadow-primary"
+            >
+              Create Ticket
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              You have <span className="font-semibold text-accent">{profile?.credits ?? 0} credits</span> available
+            </p>
+          </>
+        )}
       </div>
     </motion.div>
   );

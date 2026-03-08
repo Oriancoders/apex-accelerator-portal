@@ -20,7 +20,7 @@ const priorityColors: Record<string, string> = {
 };
 
 export default function TicketsPage() {
-  const { user } = useAuth();
+  const { user, isGuest } = useAuth();
   const navigate = useNavigate();
 
   const { data: tickets = [], isLoading } = useQuery({
@@ -34,8 +34,23 @@ export default function TicketsPage() {
         .order("created_at", { ascending: false });
       return (data || []) as Ticket[];
     },
-    enabled: !!user,
+    enabled: !!user && !isGuest,
   });
+
+  if (isGuest) {
+    return (
+      <ProtectedLayout>
+        <div className="text-center py-16">
+          <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h2 className="text-xl font-bold text-foreground mb-2">Tickets Unavailable in Guest Mode</h2>
+          <p className="text-muted-foreground mb-4">Sign in or create an account to submit and track service requests.</p>
+          <Button onClick={() => navigate("/auth")} className="gap-2">
+            Sign In to Get Started
+          </Button>
+        </div>
+      </ProtectedLayout>
+    );
+  }
 
   return (
     <ProtectedLayout>
