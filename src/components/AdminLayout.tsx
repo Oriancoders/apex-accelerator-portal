@@ -226,6 +226,7 @@ function AdminHeader() {
       </div>
 
       <div className="flex items-center gap-2">
+        <NotificationBell />
         <Avatar className="h-8 w-8">
           <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">{initials}</AvatarFallback>
         </Avatar>
