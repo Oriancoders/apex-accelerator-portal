@@ -12,6 +12,7 @@ import NewTicketPage from "./pages/NewTicketPage";
 import TicketDetailPage from "./pages/TicketDetailPage";
 import CreditsPage from "./pages/CreditsPage";
 import NotFound from "./pages/NotFound";
+import NotificationsPage from "./pages/NotificationsPage";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
 import AdminTicketsPage from "./pages/admin/AdminTicketsPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
@@ -37,6 +38,7 @@ const App = () => (
             <Route path="/tickets/new" element={<NewTicketPage />} />
             <Route path="/tickets/:id" element={<TicketDetailPage />} />
             <Route path="/credits" element={<CreditsPage />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboardPage />} />
             <Route path="/admin/tickets" element={<AdminTicketsPage />} />
