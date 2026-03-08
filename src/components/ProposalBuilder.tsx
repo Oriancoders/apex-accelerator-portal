@@ -162,10 +162,10 @@ export default function ProposalBuilder({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="easy">🟢 Easy (10 cr/hr)</SelectItem>
-                  <SelectItem value="medium">🟡 Medium (15 cr/hr)</SelectItem>
-                  <SelectItem value="hard">🟠 Hard (20 cr/hr)</SelectItem>
-                  <SelectItem value="expert">🔴 Expert (30 cr/hr)</SelectItem>
+                  <SelectItem value="easy">🟢 Easy ({settings.difficultyRates.easy ?? 10} cr/hr)</SelectItem>
+                  <SelectItem value="medium">🟡 Medium ({settings.difficultyRates.medium ?? 15} cr/hr)</SelectItem>
+                  <SelectItem value="hard">🟠 Hard ({settings.difficultyRates.hard ?? 20} cr/hr)</SelectItem>
+                  <SelectItem value="expert">🔴 Expert ({settings.difficultyRates.expert ?? 30} cr/hr)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
