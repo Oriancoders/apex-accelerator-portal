@@ -13,7 +13,7 @@ import {
 import { Cloud, Coins, LogOut, User, LayoutDashboard, Shield } from "lucide-react";
 
 export default function Navbar() {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, isGuest } = useAuth();
   const { isAdmin } = useAdminRole();
   const navigate = useNavigate();
 
@@ -22,9 +22,11 @@ export default function Navbar() {
     navigate("/auth");
   };
 
-  const initials = profile?.full_name
-    ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
-    : "U";
+  const initials = isGuest
+    ? "G"
+    : profile?.full_name
+      ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+      : "U";
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
