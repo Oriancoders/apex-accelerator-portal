@@ -14,7 +14,7 @@ export default function ProtectedLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  if (!user) return <Navigate to="/auth" replace />;
+  if (!user && !isGuest) return <Navigate to="/auth" replace />;
 
   return (
     <div className="min-h-screen bg-background">
