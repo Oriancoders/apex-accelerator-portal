@@ -74,6 +74,7 @@ const App = () => (
             <Route path="/admin/appexchange" element={<AdminAppExchangePage />} />
             <Route path="/admin/news" element={<AdminNewsPage />} />
             <Route path="/admin/extensions" element={<AdminExtensionsPage />} />
+            <Route path="/admin/contacts" element={<AdminContactSubmissionsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <AiChatbot />
