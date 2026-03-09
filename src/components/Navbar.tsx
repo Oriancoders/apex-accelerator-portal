@@ -156,7 +156,7 @@ export default function Navbar() {
                   <DropdownMenuSeparator />
                 </>
               )}
-              {isAdmin && (
+              {isAdmin && !isGuest && (
                 <>
                   <DropdownMenuItem onClick={() => navigate("/admin")} className="h-10 cursor-pointer">
                     <Shield className="mr-2 h-4 w-4" />
@@ -234,7 +234,7 @@ export default function Navbar() {
                     </button>
                   </>
                 )}
-                {isAdmin && (
+                {isAdmin && !isGuest && (
                   <button
                     onClick={() => { navigate("/admin"); setMobileOpen(false); }}
                     className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
