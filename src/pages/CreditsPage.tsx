@@ -82,12 +82,12 @@ export default function CreditsPage() {
       });
   }, []);
 
-  const handlePurchase = async (buy: number, bonus: number, price: number, index: number) => {
+  const handlePurchase = async (index: number) => {
     setPurchasingIndex(index);
     try {
-      const priceInCents = Math.round(price * 100);
+      // Send only the package index — server computes the price
       const { data, error } = await supabase.functions.invoke("create-credit-checkout", {
-        body: { buyCredits: buy, bonusCredits: bonus, priceInCents },
+        body: { packageIndex: index },
       });
       if (error) throw error;
       if (data?.url) {
@@ -173,7 +173,7 @@ export default function CreditsPage() {
                     className="w-full gap-2"
                     variant={isPopular ? "default" : "outline"}
                     disabled={isPurchasing || purchasingIndex !== null}
-                    onClick={() => handlePurchase(pkg.buy, pkg.bonus, price, i)}
+                    onClick={() => handlePurchase(i)}
                   >
                     {isPurchasing ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
