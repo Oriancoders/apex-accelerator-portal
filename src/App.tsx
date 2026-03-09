@@ -71,6 +71,7 @@ const App = () => (
             <Route path="/admin/extensions" element={<AdminExtensionsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <AiChatbot />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
