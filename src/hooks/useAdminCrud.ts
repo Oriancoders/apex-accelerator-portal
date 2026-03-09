@@ -96,7 +96,7 @@ export function useAdminCrud<T extends { id: string }, F extends Record<string, 
   // ── Delete ─────────────────────────────────────────────────────────────
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from(table).delete().eq("id", id);
+      const { error } = await (supabase as any).from(table).delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
