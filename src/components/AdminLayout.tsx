@@ -237,7 +237,7 @@ function AdminHeader() {
 }
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, isGuest } = useAuth();
   const { isAdmin, isLoading: roleLoading } = useAdminRole();
 
   if (loading || roleLoading) {
@@ -251,6 +251,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     );
   }
 
+  // Block guest users from accessing admin routes
+  if (isGuest) return <Navigate to="/dashboard" replace />;
   if (!user) return <Navigate to="/auth" replace />;
   if (!isAdmin) return <Navigate to="/dashboard" replace />;
 
