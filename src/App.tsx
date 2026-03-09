@@ -13,6 +13,7 @@ import TicketDetailPage from "./pages/TicketDetailPage";
 import CreditsPage from "./pages/CreditsPage";
 import PricingGuidePage from "./pages/PricingGuidePage";
 import NotFound from "./pages/NotFound";
+import ProfilePage from "./pages/ProfilePage";
 import NotificationsPage from "./pages/NotificationsPage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
@@ -55,6 +56,7 @@ const App = () => (
             <Route path="/appexchange" element={<AppExchangePage />} />
             <Route path="/news" element={<NewsPage />} />
             <Route path="/extensions" element={<ExtensionsPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboardPage />} />
             <Route path="/admin/tickets" element={<AdminTicketsPage />} />
