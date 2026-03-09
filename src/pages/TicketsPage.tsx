@@ -1,18 +1,18 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import {
-  PlusCircle, Clock, ArrowRight, Calendar, Coins,
+  PlusCircle, ArrowRight, Calendar, Coins,
   CheckCircle, PlayCircle, Target, ClipboardCheck, HelpCircle,
-  Lock, XCircle, Filter, BarChart3, Activity
+  Lock, XCircle, BarChart3, Activity
 } from "lucide-react";
-import { format, formatDistanceToNow } from "date-fns";
-import { useState } from "react";
+import { formatDistanceToNow } from "date-fns";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Ticket = Tables<"tickets">;
@@ -49,7 +49,17 @@ function isActive(s: string) {
 export default function TicketsPage() {
   const { user, isGuest } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<string>("all");
+  const [realtimePulse, setRealtimePulse] = useState(false);
+  const pulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevStatusRef = useRef<Record<string, string>>({});
+
+  const pulse = useCallback(() => {
+    setRealtimePulse(true);
+    if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+    pulseTimerRef.current = setTimeout(() => setRealtimePulse(false), 2000);
+  }, []);
 
   const { data: tickets = [], isLoading } = useQuery({
     queryKey: ["tickets", user?.id],
@@ -64,6 +74,49 @@ export default function TicketsPage() {
     },
     enabled: !!user && !isGuest,
   });
+
+  // Realtime subscription — update list instantly when ticket changes
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel("client-tickets-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tickets", filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          const updated = payload.new as Ticket | undefined;
+          if (updated && payload.eventType === "UPDATE") {
+            const prev = prevStatusRef.current[updated.id];
+            if (prev && prev !== updated.status) {
+              const statusLabel = updated.status.replace(/_/g, " ");
+              toast.info(`Ticket status updated to "${statusLabel}"`, {
+                description: updated.title,
+                duration: 5000,
+              });
+            }
+            prevStatusRef.current[updated.id] = updated.status;
+          }
+          queryClient.invalidateQueries({ queryKey: ["tickets", user.id] });
+          pulse();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+      if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+    };
+  }, [user, queryClient, pulse]);
+
+  // Seed prevStatusRef when tickets first load
+  useEffect(() => {
+    if (tickets.length > 0 && Object.keys(prevStatusRef.current).length === 0) {
+      const map: Record<string, string> = {};
+      tickets.forEach(t => { map[t.id] = t.status; });
+      prevStatusRef.current = map;
+    }
+  }, [tickets]);
 
   if (isGuest) {
     return (
@@ -99,7 +152,13 @@ export default function TicketsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground tracking-tight">My Tickets</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">{tickets.length} total · {activeCount} active · {doneCount} completed</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-sm text-muted-foreground">{tickets.length} total · {activeCount} active · {doneCount} completed</p>
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-all duration-500 ${realtimePulse ? "bg-success/20 border-success/40 text-success scale-110" : "bg-success/10 border-success/20 text-success"}`}>
+                <span className={`w-1.5 h-1.5 rounded-full bg-success ${realtimePulse ? "animate-ping" : "animate-pulse"}`} />
+                Live
+              </span>
+            </div>
           </div>
           <Button onClick={() => navigate("/tickets/new")} className="gap-2 rounded-xl h-11 font-semibold">
             <PlusCircle className="h-4 w-4" />
