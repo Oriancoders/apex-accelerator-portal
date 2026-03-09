@@ -48,9 +48,9 @@ export default function Navbar() {
 
   // Hick's Law: fewer nav items for guests
   const navItems = [
-    { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard, show: true },
     { label: "My Tickets", to: "/tickets", icon: Ticket, show: !isGuest },
     { label: "Why Us", to: "/why-choose-us", icon: Star, show: true },
+    { label: "About & Contact", to: "/about", icon: Info, show: true },
   ].filter((n) => n.show);
 
   const isActive = (path: string) => location.pathname === path;
