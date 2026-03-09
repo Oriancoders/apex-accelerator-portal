@@ -15,7 +15,7 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Cloud, Coins, LogOut, User, LayoutDashboard, Shield, Ticket, BookOpen, Menu, ArrowRight, DollarSign, History, Lightbulb, Star } from "lucide-react";
+import { Cloud, Coins, LogOut, User, LayoutDashboard, Shield, Ticket, BookOpen, Menu, ArrowRight, DollarSign, History, Lightbulb, Star, Info } from "lucide-react";
 import { useState } from "react";
 import NotificationBell from "@/components/NotificationBell";
 
