@@ -110,13 +110,13 @@ export default function TicketsPage() {
   }
 
   const filtered = tickets.filter((t) => {
-    if (filter === "active") return isActive(t.status);
+    if (filter === "active") return isActiveStatus(t.status);
     if (filter === "completed") return ["completed", "closed"].includes(t.status);
     if (filter === "cancelled") return t.status === "cancelled";
     return true;
   });
 
-  const activeCount = tickets.filter(t => isActive(t.status)).length;
+  const activeCount = tickets.filter(t => isActiveStatus(t.status)).length;
   const doneCount = tickets.filter(t => ["completed", "closed"].includes(t.status)).length;
 
   return (
