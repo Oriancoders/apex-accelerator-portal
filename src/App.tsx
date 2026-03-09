@@ -31,6 +31,7 @@ import AdminExtensionsPage from "./pages/admin/AdminExtensionsPage";
 import AppExchangePage from "./pages/AppExchangePage";
 import NewsPage from "./pages/NewsPage";
 import ExtensionsPage from "./pages/ExtensionsPage";
+import WhyChooseUsPage from "./pages/WhyChooseUsPage";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +58,7 @@ const App = () => (
             <Route path="/appexchange" element={<AppExchangePage />} />
             <Route path="/news" element={<NewsPage />} />
             <Route path="/extensions" element={<ExtensionsPage />} />
+            <Route path="/why-choose-us" element={<WhyChooseUsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboardPage />} />

@@ -15,7 +15,7 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Cloud, Coins, LogOut, User, LayoutDashboard, Shield, Ticket, BookOpen, Menu, ArrowRight, DollarSign, History, Lightbulb } from "lucide-react";
+import { Cloud, Coins, LogOut, User, LayoutDashboard, Shield, Ticket, BookOpen, Menu, ArrowRight, DollarSign, History, Lightbulb, Star } from "lucide-react";
 import { useState } from "react";
 import NotificationBell from "@/components/NotificationBell";
 
@@ -50,6 +50,7 @@ export default function Navbar() {
   const navItems = [
     { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard, show: true },
     { label: "My Tickets", to: "/tickets", icon: Ticket, show: !isGuest },
+    { label: "Why Us", to: "/why-choose-us", icon: Star, show: true },
   ].filter((n) => n.show);
 
   const isActive = (path: string) => location.pathname === path;
