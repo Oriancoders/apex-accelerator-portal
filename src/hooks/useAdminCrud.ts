@@ -56,7 +56,7 @@ export function useAdminCrud<T extends { id: string }, F extends Record<string, 
   const { data: items = [], isLoading } = useQuery({
     queryKey: [queryKey],
     queryFn: async () => {
-      let q = supabase.from(table).select("*").order("created_at", { ascending: false });
+      let q = (supabase as any).from(table).select("*").order("created_at", { ascending: false });
       if (queryFilter) q = queryFilter(q);
       const { data, error } = await q;
       if (error) throw error;
