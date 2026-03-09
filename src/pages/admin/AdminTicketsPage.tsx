@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/AdminLayout";
@@ -821,6 +821,8 @@ export default function AdminTicketsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedTicket, setSelectedTicket] = useState<TicketType | null>(null);
+  const realtimeBadgeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [realtimePulse, setRealtimePulse] = useState(false);
 
   const { data: tickets = [], isLoading, refetch } = useQuery({
     queryKey: ["admin-tickets"],
@@ -832,6 +834,50 @@ export default function AdminTicketsPage() {
       return (data || []) as TicketType[];
     },
   });
+
+  // ── Realtime subscriptions ────────────────────────────────────────────────
+  useEffect(() => {
+    const pulse = () => {
+      setRealtimePulse(true);
+      if (realtimeBadgeRef.current) clearTimeout(realtimeBadgeRef.current);
+      realtimeBadgeRef.current = setTimeout(() => setRealtimePulse(false), 2000);
+    };
+
+    const ticketsSub = supabase
+      .channel("admin-tickets-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tickets" },
+        (payload) => {
+          queryClient.invalidateQueries({ queryKey: ["admin-tickets"] });
+          // If the open ticket was updated, refresh it too
+          if (payload.new && (payload.new as TicketType).id === selectedTicket?.id) {
+            setSelectedTicket(payload.new as TicketType);
+          }
+          pulse();
+        }
+      )
+      .subscribe();
+
+    const reviewsSub = supabase
+      .channel("admin-ticket-reviews-realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "ticket_reviews" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin-tickets"] });
+          pulse();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ticketsSub);
+      supabase.removeChannel(reviewsSub);
+      if (realtimeBadgeRef.current) clearTimeout(realtimeBadgeRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryClient, selectedTicket?.id]);
 
   const filtered = tickets.filter((t) => {
     const matchSearch =
@@ -858,7 +904,13 @@ export default function AdminTicketsPage() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">Manage Tickets</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">{tickets.length} total · {counts.action} need action</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-sm text-muted-foreground">{tickets.length} total · {counts.action} need action</p>
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-all duration-500 ${realtimePulse ? "bg-success/20 border-success/40 text-success scale-110" : "bg-success/10 border-success/20 text-success"}`}>
+                <span className={`w-1.5 h-1.5 rounded-full bg-success ${realtimePulse ? "animate-ping" : "animate-pulse"}`} />
+                Live
+              </span>
+            </div>
           </div>
           {counts.action > 0 && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/10 border border-destructive/20 text-xs font-semibold text-destructive">
