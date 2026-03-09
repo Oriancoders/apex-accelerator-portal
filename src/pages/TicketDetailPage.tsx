@@ -17,6 +17,7 @@ import {
   ClipboardCheck, Lock, BarChart3, PlayCircle, HelpCircle
 } from "lucide-react";
 import { format, formatDistanceToNow, differenceInMinutes, differenceInHours, differenceInDays } from "date-fns";
+import { sanitizeHtml } from "@/lib/sanitize";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 
