@@ -56,10 +56,12 @@ export default function TicketChat({ ticketId, isAdmin = false }: TicketChatProp
 
   const sendMutation = useMutation({
     mutationFn: async (msg: string) => {
+      if (!user?.id) throw new Error("Not authenticated");
       const { error } = await supabase.from("chat_messages").insert({
         ticket_id: ticketId,
-        user_id: user?.id || null,
-        sender_type: isAdmin ? "admin" : "user",
+        user_id: user.id,
+        // sender_type is determined server-side by RLS context, not client prop
+        sender_type: "user",
         message: msg,
       });
       if (error) throw error;
