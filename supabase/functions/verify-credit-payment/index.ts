@@ -18,7 +18,7 @@ const DEFAULTS = {
   ],
 };
 
-serve(async (req: Request) => {
+serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -88,28 +88,12 @@ serve(async (req: Request) => {
 
     // Validate origin for redirect URLs
     const origin = req.headers.get("origin") || "";
-    const configuredSiteUrl = Deno.env.get("SITE_URL") ?? Deno.env.get("PUBLIC_SITE_URL") ?? "";
-    const defaultOrigin = configuredSiteUrl ? new URL(configuredSiteUrl).origin : "";
-
-    const envAllowedOrigins = (Deno.env.get("ALLOWED_CHECKOUT_ORIGINS") ?? "")
-      .split(",")
-      .map((value: string) => value.trim())
-      .filter((value: string) => value.length > 0)
-      .map((value: string) => new URL(value).origin);
-
-    const allowedOrigins = Array.from(new Set([
-      defaultOrigin,
-      ...envAllowedOrigins,
+    const allowedOrigins = [
+      "https://id-preview--f32dadef-b332-4587-a6bb-60eb8af2ca1a.lovable.app",
       "http://localhost:5173",
       "http://localhost:8080",
-    ].filter((value) => value.length > 0)));
-
-    const requestOrigin = origin ? new URL(origin).origin : "";
-    const safeOrigin = allowedOrigins.includes(requestOrigin) ? requestOrigin : defaultOrigin;
-
-    if (!safeOrigin) {
-      throw new Error("Missing valid redirect origin. Set SITE_URL.");
-    }
+    ];
+    const safeOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
