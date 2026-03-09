@@ -122,13 +122,13 @@ export default function Navbar() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               {/* Fitts's Law: Large round target */}
-              <Button variant="ghost" className="relative h-10 w-10 rounded-full p-0">
+              <button type="button" className="relative h-10 w-10 rounded-full p-0 inline-flex items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 <Avatar className="h-9 w-9">
                   <AvatarFallback className={`text-sm font-semibold ${isGuest ? 'bg-warning/20 text-warning' : 'bg-primary/10 text-primary'}`}>
                     {initials}
                   </AvatarFallback>
                 </Avatar>
-              </Button>
+              </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56 rounded-xl" align="end" sideOffset={8}>
               <div className="px-3 py-2.5">
