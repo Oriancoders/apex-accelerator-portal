@@ -5,7 +5,7 @@ import NewsWidget from "@/components/widgets/NewsWidget";
 import KnowledgeBaseWidget from "@/components/widgets/KnowledgeBaseWidget";
 import RecipesWidget from "@/components/widgets/RecipesWidget";
 import ExtensionsWidget from "@/components/widgets/ExtensionsWidget";
-import AiAssistantWidget from "@/components/widgets/AiAssistantWidget";
+
 import TicketSubmissionWidget from "@/components/widgets/TicketSubmissionWidget";
 import TicketDashboardWidget from "@/components/widgets/TicketDashboardWidget";
 import { motion } from "framer-motion";
