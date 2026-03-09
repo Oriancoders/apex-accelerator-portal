@@ -21,6 +21,8 @@ import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import AdminArticlesPage from "./pages/admin/AdminArticlesPage";
 import AdminCreditsPage from "./pages/admin/AdminCreditsPage";
 import AdminNotificationsPage from "./pages/admin/AdminNotificationsPage";
+import RecipesPage from "./pages/RecipesPage";
+import AdminRecipesPage from "./pages/admin/AdminRecipesPage";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +45,7 @@ const App = () => (
             <Route path="/pricing" element={<PricingGuidePage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/knowledge" element={<KnowledgeBasePage />} />
+            <Route path="/recipes" element={<RecipesPage />} />
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboardPage />} />
             <Route path="/admin/tickets" element={<AdminTicketsPage />} />
@@ -50,6 +53,7 @@ const App = () => (
             <Route path="/admin/users" element={<AdminUsersPage />} />
             <Route path="/admin/articles" element={<AdminArticlesPage />} />
             <Route path="/admin/credits" element={<AdminCreditsPage />} />
+            <Route path="/admin/recipes" element={<AdminRecipesPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
