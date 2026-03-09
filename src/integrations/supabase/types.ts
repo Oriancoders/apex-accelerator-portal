@@ -541,6 +541,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_adjust_credits: {
+        Args: { p_amount: number; p_reason?: string; p_user_id: string }
+        Returns: number
+      }
       create_notification: {
         Args: {
           p_message: string
