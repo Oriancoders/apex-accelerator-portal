@@ -32,6 +32,7 @@ import AppExchangePage from "./pages/AppExchangePage";
 import NewsPage from "./pages/NewsPage";
 import ExtensionsPage from "./pages/ExtensionsPage";
 import WhyChooseUsPage from "./pages/WhyChooseUsPage";
+import AboutContactPage from "./pages/AboutContactPage";
 
 const queryClient = new QueryClient();
 
