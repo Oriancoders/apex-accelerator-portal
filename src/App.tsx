@@ -63,6 +63,7 @@ const App = () => (
             <Route path="/admin/credits" element={<AdminCreditsPage />} />
             <Route path="/admin/recipes" element={<AdminRecipesPage />} />
             <Route path="/admin/appexchange" element={<AdminAppExchangePage />} />
+            <Route path="/admin/news" element={<AdminNewsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
