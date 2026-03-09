@@ -21,9 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProposalBuilder from "@/components/ProposalBuilder";
 import TicketChat from "@/components/TicketChat";
 import { toast } from "sonner";
-import {
-  format, formatDistanceToNow, differenceInMinutes,
-} from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import {
   Search, Ticket, Filter, Lock, CheckCircle, XCircle, Clock,
   PlayCircle, Target, Award, ClipboardCheck, HelpCircle, Activity,
@@ -32,6 +30,13 @@ import {
   Eye, Send,
 } from "lucide-react";
 import type { Tables, Database } from "@/integrations/supabase/types";
+
+// ── Shared modules ───────────────────────────────────────────────────────────
+import { STATUS_META, PRIORITY_META, STATUS_ACTION } from "@/constants/ticket";
+import StatusBadge from "@/shared/StatusBadge";
+import ProgressStepper from "@/shared/ProgressStepper";
+import TicketTimeline from "@/shared/TicketTimeline";
+import LifecycleStats from "@/shared/LifecycleStats";
 
 type TicketType = Tables<"tickets">;
 type TicketEvent = Tables<"ticket_events">;
