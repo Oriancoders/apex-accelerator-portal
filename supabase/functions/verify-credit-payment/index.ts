@@ -8,33 +8,23 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const DEFAULTS = {
-  dollarPerCredit: 2.5,
-  packages: [
-    { buy: 10, bonus: 2 },
-    { buy: 25, bonus: 6 },
-    { buy: 50, bonus: 15 },
-    { buy: 100, bonus: 35 },
-  ],
-};
-
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const supabaseAdmin = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+  );
 
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_ANON_KEY") ?? ""
   );
 
-  // Read-only admin client for credit_settings
-  const supabaseAdmin = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-  );
-
   try {
+    // Authenticate user
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -45,91 +35,91 @@ serve(async (req) => {
     const token = authHeader.replace("Bearer ", "");
     const { data } = await supabaseClient.auth.getUser(token);
     const user = data.user;
-    if (!user?.email) throw new Error("User not authenticated");
+    if (!user) throw new Error("User not authenticated");
 
-    const { packageIndex } = await req.json();
-    if (typeof packageIndex !== "number" || packageIndex < 0) {
-      throw new Error("Invalid package selection");
-    }
-
-    // SERVER-SIDE: Load credit settings from database (never trust client price)
-    const { data: settingsRows } = await supabaseAdmin
-      .from("credit_settings")
-      .select("key, value");
-
-    let dollarPerCredit = DEFAULTS.dollarPerCredit;
-    let packages = DEFAULTS.packages;
-
-    if (settingsRows && settingsRows.length > 0) {
-      const map: Record<string, any> = {};
-      settingsRows.forEach((row: any) => { map[row.key] = row.value; });
-      dollarPerCredit = parseFloat(map.dollar_per_credit) || DEFAULTS.dollarPerCredit;
-      packages = map.credit_packages || DEFAULTS.packages;
-    }
-
-    if (packageIndex >= packages.length) {
-      throw new Error("Invalid package index");
-    }
-
-    const pkg = packages[packageIndex];
-    const buyCredits = pkg.buy;
-    const bonusCredits = pkg.bonus || 0;
-    const totalCredits = buyCredits + bonusCredits;
-
-    // Server-computed price — client cannot manipulate this
-    const priceInCents = Math.round(buyCredits * dollarPerCredit * 100);
+    const { sessionId } = await req.json();
+    if (!sessionId || typeof sessionId !== "string") throw new Error("Missing or invalid session ID");
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",
     });
 
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
-    const customerId = customers.data.length > 0 ? customers.data[0].id : undefined;
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
 
-    // Validate origin for redirect URLs
-    const origin = req.headers.get("origin") || "";
-    const allowedOrigins = [
-      "https://id-preview--f32dadef-b332-4587-a6bb-60eb8af2ca1a.lovable.app",
-      "http://localhost:5173",
-      "http://localhost:8080",
-    ];
-    const safeOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
+    if (session.payment_status !== "paid") {
+      return new Response(JSON.stringify({ success: false, error: "Payment not completed" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      });
+    }
 
-    const session = await stripe.checkout.sessions.create({
-      customer: customerId,
-      customer_email: customerId ? undefined : user.email,
-      line_items: [
+    const userId = session.metadata?.user_id;
+    const totalCredits = parseInt(session.metadata?.total_credits || "0");
+    const buyCredits = session.metadata?.buy_credits || "0";
+    const bonusCredits = session.metadata?.bonus_credits || "0";
+
+    if (!userId || totalCredits <= 0) throw new Error("Invalid session metadata");
+
+    // Verify the requesting user matches the session user
+    if (user.id !== userId) throw new Error("User mismatch");
+
+    // Idempotency check: if this session was already recorded, don't apply credits again.
+    const { data: existingTx, error: txCheckError } = await supabaseAdmin
+      .from("credit_transactions")
+      .select("id")
+      .eq("stripe_session_id", sessionId)
+      .limit(1);
+
+    if (txCheckError) throw txCheckError;
+
+    if (existingTx && existingTx.length > 0) {
+      const { data: profileRow } = await supabaseAdmin
+        .from("profiles")
+        .select("credits")
+        .eq("user_id", userId)
+        .single();
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          already_processed: true,
+          credits_added: 0,
+          new_balance: profileRow?.credits ?? null,
+        }),
         {
-          price_data: {
-            currency: "usd",
-            product_data: {
-              name: `${buyCredits} Credits` + (bonusCredits > 0 ? ` (+${bonusCredits} Free)` : ""),
-              description: `Total: ${totalCredits} credits for your account`,
-            },
-            unit_amount: priceInCents,
-          },
-          quantity: 1,
-        },
-      ],
-      mode: "payment",
-      metadata: {
-        user_id: user.id,
-        total_credits: String(totalCredits),
-        buy_credits: String(buyCredits),
-        bonus_credits: String(bonusCredits),
-      },
-      success_url: `${safeOrigin}/credits?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${safeOrigin}/credits`,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
+    }
+
+    // Use atomic function to add credits (prevents race conditions)
+    const { data: newCredits, error: rpcError } = await supabaseAdmin.rpc("add_purchase_credits", {
+      p_user_id: userId,
+      p_amount: totalCredits,
+      p_description: `Purchased ${buyCredits} credits (+${bonusCredits} bonus)`,
+      p_stripe_session_id: sessionId,
     });
 
-    return new Response(JSON.stringify({ url: session.url }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
+    if (rpcError) {
+      console.error("add_purchase_credits rpc error:", rpcError);
+      throw rpcError;
+    }
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        credits_added: totalCredits,
+        new_balance: newCredits,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      }
+    );
   } catch (error) {
-    // Don't leak internal error details
-    console.error("Checkout error:", error);
-    return new Response(JSON.stringify({ error: "Failed to create checkout session" }), {
+    console.error("verify-credit-payment error:", error);
+    return new Response(JSON.stringify({ error: "Payment verification failed" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });
