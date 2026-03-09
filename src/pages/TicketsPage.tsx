@@ -1,18 +1,18 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import {
-  PlusCircle, Clock, ArrowRight, Calendar, Coins,
+  PlusCircle, ArrowRight, Calendar, Coins,
   CheckCircle, PlayCircle, Target, ClipboardCheck, HelpCircle,
-  Lock, XCircle, Filter, BarChart3, Activity
+  Lock, XCircle, BarChart3, Activity
 } from "lucide-react";
-import { format, formatDistanceToNow } from "date-fns";
-import { useState } from "react";
+import { formatDistanceToNow } from "date-fns";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Ticket = Tables<"tickets">;
