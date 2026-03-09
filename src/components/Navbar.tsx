@@ -50,8 +50,6 @@ export default function Navbar() {
   const navItems = [
     { label: "Dashboard", to: "/dashboard", icon: LayoutDashboard, show: true },
     { label: "My Tickets", to: "/tickets", icon: Ticket, show: !isGuest },
-    { label: "Knowledge Base", to: "/knowledge", icon: BookOpen, show: true },
-    { label: "Recipes", to: "/recipes", icon: Lightbulb, show: true },
   ].filter((n) => n.show);
 
   const isActive = (path: string) => location.pathname === path;

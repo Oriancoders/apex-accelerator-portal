@@ -1,4 +1,5 @@
 import { Chrome, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const extensions = [
   { name: "Salesforce Inspector Reloaded", desc: "Inspect data, run SOQL, export results", url: "https://chrome.google.com/webstore" },
@@ -8,6 +9,7 @@ const extensions = [
 ];
 
 export default function ExtensionsWidget() {
+  const navigate = useNavigate();
   return (
     <div className="widget-card h-full">
       <div className="widget-card-header">
@@ -15,6 +17,7 @@ export default function ExtensionsWidget() {
           <Chrome className="h-4 w-4 text-primary" />
           <h3 className="font-semibold text-sm text-foreground">Chrome Extensions</h3>
         </div>
+        <button onClick={() => navigate("/extensions")} className="text-primary text-xs font-medium hover:underline">View All</button>
       </div>
       <div className="widget-card-body space-y-1">
         {extensions.map((e) => (

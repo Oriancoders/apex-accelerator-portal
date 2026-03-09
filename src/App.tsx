@@ -23,6 +23,9 @@ import AdminCreditsPage from "./pages/admin/AdminCreditsPage";
 import AdminNotificationsPage from "./pages/admin/AdminNotificationsPage";
 import RecipesPage from "./pages/RecipesPage";
 import AdminRecipesPage from "./pages/admin/AdminRecipesPage";
+import AppExchangePage from "./pages/AppExchangePage";
+import NewsPage from "./pages/NewsPage";
+import ExtensionsPage from "./pages/ExtensionsPage";
 
 const queryClient = new QueryClient();
 
@@ -46,6 +49,9 @@ const App = () => (
             <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/knowledge" element={<KnowledgeBasePage />} />
             <Route path="/recipes" element={<RecipesPage />} />
+            <Route path="/appexchange" element={<AppExchangePage />} />
+            <Route path="/news" element={<NewsPage />} />
+            <Route path="/extensions" element={<ExtensionsPage />} />
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboardPage />} />
             <Route path="/admin/tickets" element={<AdminTicketsPage />} />

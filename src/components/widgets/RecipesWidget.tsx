@@ -1,4 +1,5 @@
 import { Lightbulb, Zap } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const recipes = [
   { title: "Auto-populate fields with Flow", type: "Flow Recipe", cloud: "Sales Cloud" },
@@ -9,6 +10,7 @@ const recipes = [
 ];
 
 export default function RecipesWidget() {
+  const navigate = useNavigate();
   return (
     <div className="widget-card h-full">
       <div className="widget-card-header">
@@ -16,6 +18,7 @@ export default function RecipesWidget() {
           <Lightbulb className="h-4 w-4 text-accent" />
           <h3 className="font-semibold text-sm text-foreground">Recipes & Quick Wins</h3>
         </div>
+        <button onClick={() => navigate("/recipes")} className="text-primary text-xs font-medium hover:underline">View All</button>
       </div>
       <div className="widget-card-body space-y-1">
         {recipes.map((r) => (
