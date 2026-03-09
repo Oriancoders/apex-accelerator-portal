@@ -23,6 +23,7 @@ import AdminCreditsPage from "./pages/admin/AdminCreditsPage";
 import AdminNotificationsPage from "./pages/admin/AdminNotificationsPage";
 import RecipesPage from "./pages/RecipesPage";
 import AdminRecipesPage from "./pages/admin/AdminRecipesPage";
+import AdminAppExchangePage from "./pages/admin/AdminAppExchangePage";
 import AppExchangePage from "./pages/AppExchangePage";
 import NewsPage from "./pages/NewsPage";
 import ExtensionsPage from "./pages/ExtensionsPage";
