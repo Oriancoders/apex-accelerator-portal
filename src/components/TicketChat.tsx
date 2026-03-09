@@ -101,7 +101,7 @@ export default function TicketChat({ ticketId, isAdmin = false }: TicketChatProp
                       ? "bg-muted text-muted-foreground italic"
                       : "bg-card border"
                   }`}>
-                    <p className="text-sm">{msg.message}</p>
+                    <p className="text-sm whitespace-pre-wrap break-words">{msg.message}</p>
                     <p className={`text-[10px] mt-1 ${
                       msg.sender_type === "admin" ? "text-primary-foreground/70" : "text-muted-foreground"
                     }`}>

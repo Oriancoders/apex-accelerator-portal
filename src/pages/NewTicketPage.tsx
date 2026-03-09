@@ -62,10 +62,12 @@ export default function NewTicketPage() {
 
     let fileUrls: string[] = [];
     for (const file of files) {
-      const path = `${user.id}/${Date.now()}-${file.name}`;
+      // Sanitize filename to prevent path traversal
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `${user.id}/${Date.now()}-${safeName}`;
       const { error } = await supabase.storage
         .from("ticket-attachments")
-        .upload(path, file);
+        .upload(path, file, { contentType: file.type });
       if (!error) fileUrls.push(path);
     }
 
