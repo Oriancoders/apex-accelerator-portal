@@ -230,6 +230,88 @@ export type Database = {
         }
         Relationships: []
       }
+      ticket_events: {
+        Row: {
+          attachments: string[] | null
+          changed_by: string | null
+          created_at: string
+          from_status: string | null
+          id: string
+          note: string | null
+          ticket_id: string
+          to_status: string
+        }
+        Insert: {
+          attachments?: string[] | null
+          changed_by?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          ticket_id: string
+          to_status: string
+        }
+        Update: {
+          attachments?: string[] | null
+          changed_by?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          note?: string | null
+          ticket_id?: string
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_events_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ticket_reviews: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          rating_overall: number | null
+          rating_timeliness: number | null
+          rating_value: number | null
+          ticket_id: string
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating_overall?: number | null
+          rating_timeliness?: number | null
+          rating_value?: number | null
+          ticket_id: string
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating_overall?: number | null
+          rating_timeliness?: number | null
+          rating_value?: number | null
+          ticket_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_reviews_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ticket_updates: {
         Row: {
           created_at: string
@@ -283,6 +365,8 @@ export type Database = {
           solution_roadmap: Json | null
           status: Database["public"]["Enums"]["ticket_status"]
           title: string
+          uat_attachments: string[] | null
+          uat_notes: string | null
           updated_at: string
           user_id: string
         }
@@ -303,6 +387,8 @@ export type Database = {
           solution_roadmap?: Json | null
           status?: Database["public"]["Enums"]["ticket_status"]
           title: string
+          uat_attachments?: string[] | null
+          uat_notes?: string | null
           updated_at?: string
           user_id: string
         }
@@ -323,6 +409,8 @@ export type Database = {
           solution_roadmap?: Json | null
           status?: Database["public"]["Enums"]["ticket_status"]
           title?: string
+          uat_attachments?: string[] | null
+          uat_notes?: string | null
           updated_at?: string
           user_id?: string
         }
