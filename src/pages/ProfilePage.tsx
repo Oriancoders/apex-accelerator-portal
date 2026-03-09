@@ -41,8 +41,6 @@ export default function ProfilePage() {
   const [showPassword, setShowPassword] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
 
-  // Redirect guests
-  if (isGuest) return <Navigate to="/dashboard" replace />;
 
   useEffect(() => {
     if (profile) {
