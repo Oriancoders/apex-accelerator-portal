@@ -173,7 +173,7 @@ export default function CreditsPage() {
                     className="w-full gap-2"
                     variant={isPopular ? "default" : "outline"}
                     disabled={isPurchasing || purchasingIndex !== null}
-                    onClick={() => handlePurchase(pkg.buy, pkg.bonus, price, i)}
+                    onClick={() => handlePurchase(i)}
                   >
                     {isPurchasing ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
