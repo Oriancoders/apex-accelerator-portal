@@ -234,7 +234,7 @@ export default function Navbar() {
                     </button>
                   </>
                 )}
-                {isAdmin && (
+                {isAdmin && !isGuest && (
                   <button
                     onClick={() => { navigate("/admin"); setMobileOpen(false); }}
                     className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
