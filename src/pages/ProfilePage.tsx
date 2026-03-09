@@ -26,7 +26,7 @@ const fadeIn = {
 };
 
 export default function ProfilePage() {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, isGuest } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -36,6 +36,13 @@ export default function ProfilePage() {
     phone: "",
     company: "",
   });
+
+  const [passwordForm, setPasswordForm] = useState({ newPassword: "", confirmPassword: "" });
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
+  // Redirect guests
+  if (isGuest) return <Navigate to="/dashboard" replace />;
 
   useEffect(() => {
     if (profile) {
