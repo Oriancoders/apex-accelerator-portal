@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/AdminLayout";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { sanitizeHtml } from "@/lib/sanitize";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -617,7 +618,7 @@ function TicketDialog({
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Description</p>
               <div
                 className="prose prose-sm max-w-none bg-muted/30 p-4 rounded-xl border border-border text-sm text-foreground leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: ticket.description }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(ticket.description) }}
               />
             </div>
 

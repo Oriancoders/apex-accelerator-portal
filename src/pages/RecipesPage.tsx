@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { sanitizeHtml } from "@/lib/sanitize";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,7 @@ function ArticleBody({ content }: { content: string }) {
           prose-strong:text-foreground prose-li:text-muted-foreground
           prose-a:text-primary prose-code:text-accent
           prose-blockquote:border-primary/30 prose-blockquote:text-muted-foreground"
-        dangerouslySetInnerHTML={{ __html: content }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
       />
     );
   }

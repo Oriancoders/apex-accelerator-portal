@@ -40,21 +40,13 @@ export default function AdminUsersPage() {
 
   const adjustCreditsMutation = useMutation({
     mutationFn: async ({ userId, amount, reason }: { userId: string; amount: number; reason: string }) => {
-      const user = users.find((u) => u.user_id === userId);
-      if (!user) throw new Error("User not found");
-      const newCredits = user.credits + amount;
-      if (newCredits < 0) throw new Error("Cannot set negative credits");
-
-      const { error: updateError } = await supabase.from("profiles").update({ credits: newCredits }).eq("user_id", userId);
-      if (updateError) throw updateError;
-
-      const { error: txError } = await supabase.from("credit_transactions").insert({
-        user_id: userId,
-        amount,
-        type: amount > 0 ? "admin_credit" : "admin_debit",
-        description: reason || "Admin adjustment",
+      const { data, error } = await supabase.rpc("admin_adjust_credits", {
+        p_user_id: userId,
+        p_amount: amount,
+        p_reason: reason || "Admin adjustment",
       });
-      if (txError) throw txError;
+      if (error) throw error;
+      return data;
     },
     onSuccess: () => {
       toast.success("Credits adjusted successfully");
