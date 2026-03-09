@@ -821,6 +821,8 @@ export default function AdminTicketsPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedTicket, setSelectedTicket] = useState<TicketType | null>(null);
+  const realtimeBadgeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [realtimePulse, setRealtimePulse] = useState(false);
 
   const { data: tickets = [], isLoading, refetch } = useQuery({
     queryKey: ["admin-tickets"],
@@ -832,6 +834,50 @@ export default function AdminTicketsPage() {
       return (data || []) as TicketType[];
     },
   });
+
+  // ── Realtime subscriptions ────────────────────────────────────────────────
+  useEffect(() => {
+    const pulse = () => {
+      setRealtimePulse(true);
+      if (realtimeBadgeRef.current) clearTimeout(realtimeBadgeRef.current);
+      realtimeBadgeRef.current = setTimeout(() => setRealtimePulse(false), 2000);
+    };
+
+    const ticketsSub = supabase
+      .channel("admin-tickets-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tickets" },
+        (payload) => {
+          queryClient.invalidateQueries({ queryKey: ["admin-tickets"] });
+          // If the open ticket was updated, refresh it too
+          if (payload.new && (payload.new as TicketType).id === selectedTicket?.id) {
+            setSelectedTicket(payload.new as TicketType);
+          }
+          pulse();
+        }
+      )
+      .subscribe();
+
+    const reviewsSub = supabase
+      .channel("admin-ticket-reviews-realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "ticket_reviews" },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["admin-tickets"] });
+          pulse();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ticketsSub);
+      supabase.removeChannel(reviewsSub);
+      if (realtimeBadgeRef.current) clearTimeout(realtimeBadgeRef.current);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryClient, selectedTicket?.id]);
 
   const filtered = tickets.filter((t) => {
     const matchSearch =
