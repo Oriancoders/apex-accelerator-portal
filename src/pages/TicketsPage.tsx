@@ -152,7 +152,13 @@ export default function TicketsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground tracking-tight">My Tickets</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">{tickets.length} total · {activeCount} active · {doneCount} completed</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-sm text-muted-foreground">{tickets.length} total · {activeCount} active · {doneCount} completed</p>
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-all duration-500 ${realtimePulse ? "bg-success/20 border-success/40 text-success scale-110" : "bg-success/10 border-success/20 text-success"}`}>
+                <span className={`w-1.5 h-1.5 rounded-full bg-success ${realtimePulse ? "animate-ping" : "animate-pulse"}`} />
+                Live
+              </span>
+            </div>
           </div>
           <Button onClick={() => navigate("/tickets/new")} className="gap-2 rounded-xl h-11 font-semibold">
             <PlusCircle className="h-4 w-4" />
