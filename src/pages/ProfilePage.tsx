@@ -337,6 +337,60 @@ export default function ProfilePage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Change Password — only for email auth */}
+            {(!profile?.auth_provider || profile.auth_provider === "email") && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Lock className="h-4 w-4 text-primary" /> Change Password
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handlePasswordChange} className="space-y-4">
+                    <div>
+                      <Label className="text-xs">New Password</Label>
+                      <div className="relative mt-1">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          value={passwordForm.newPassword}
+                          onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                          placeholder="Min 6 characters"
+                          minLength={6}
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Confirm Password</Label>
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        value={passwordForm.confirmPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                        placeholder="Repeat password"
+                        minLength={6}
+                        required
+                        className="mt-1"
+                      />
+                    </div>
+                    <Button type="submit" variant="outline" className="w-full rounded-xl" disabled={passwordLoading}>
+                      {passwordLoading ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Changing...</>
+                      ) : (
+                        <><Lock className="h-4 w-4 mr-2" /> Change Password</>
+                      )}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Analytics - Right Column */}
