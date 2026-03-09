@@ -21,9 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProposalBuilder from "@/components/ProposalBuilder";
 import TicketChat from "@/components/TicketChat";
 import { toast } from "sonner";
-import {
-  format, formatDistanceToNow, differenceInMinutes,
-} from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import {
   Search, Ticket, Filter, Lock, CheckCircle, XCircle, Clock,
   PlayCircle, Target, Award, ClipboardCheck, HelpCircle, Activity,
@@ -33,238 +31,22 @@ import {
 } from "lucide-react";
 import type { Tables, Database } from "@/integrations/supabase/types";
 
+// ── Shared modules ───────────────────────────────────────────────────────────
+import { STATUS_META, PRIORITY_META, STATUS_ACTION } from "@/constants/ticket";
+import StatusBadge from "@/shared/StatusBadge";
+import ProgressStepper from "@/shared/ProgressStepper";
+import TicketTimeline from "@/shared/TicketTimeline";
+import LifecycleStats from "@/shared/LifecycleStats";
+
 type TicketType = Tables<"tickets">;
 type TicketEvent = Tables<"ticket_events">;
 type TicketStatus = Database["public"]["Enums"]["ticket_status"];
 
 interface RoadmapItem { hour: number; title: string; description: string; }
 
-// ── Design tokens ────────────────────────────────────────────────────────────
-const STATUS_META: Record<string, { label: string; color: string; bg: string; border: string; icon: React.ReactNode }> = {
-  submitted:    { label: "Submitted",    color: "text-warning",          bg: "bg-warning/10",     border: "border-warning/30",     icon: <ClipboardCheck className="h-3.5 w-3.5" /> },
-  under_review: { label: "Under Review", color: "text-primary",          bg: "bg-primary/10",     border: "border-primary/30",     icon: <HelpCircle className="h-3.5 w-3.5" /> },
-  approved:     { label: "Approved",     color: "text-success",          bg: "bg-success/10",     border: "border-success/30",     icon: <CheckCircle className="h-3.5 w-3.5" /> },
-  in_progress:  { label: "In Progress",  color: "text-accent",           bg: "bg-accent/10",      border: "border-accent/30",      icon: <PlayCircle className="h-3.5 w-3.5" /> },
-  uat:          { label: "UAT",          color: "text-info",             bg: "bg-info/10",        border: "border-info/30",        icon: <Target className="h-3.5 w-3.5" /> },
-  completed:    { label: "Completed",    color: "text-success",          bg: "bg-success/10",     border: "border-success/30",     icon: <Award className="h-3.5 w-3.5" /> },
-  closed:       { label: "Closed",       color: "text-muted-foreground", bg: "bg-muted",          border: "border-border",         icon: <Lock className="h-3.5 w-3.5" /> },
-  cancelled:    { label: "Cancelled",    color: "text-destructive",      bg: "bg-destructive/10", border: "border-destructive/30", icon: <XCircle className="h-3.5 w-3.5" /> },
-};
-
-const PRIORITY_META: Record<string, { color: string; bg: string }> = {
-  low:      { color: "text-success",     bg: "bg-success/10" },
-  medium:   { color: "text-warning",     bg: "bg-warning/10" },
-  high:     { color: "text-accent",      bg: "bg-accent/10" },
-  critical: { color: "text-destructive", bg: "bg-destructive/10" },
-};
-
-// Workflow-aware: what action is needed at each status
-const STATUS_ACTION: Record<string, { label: string; desc: string; urgent?: boolean }> = {
-  submitted:    { label: "Needs Proposal",     desc: "Write and submit a proposal for this ticket.",    urgent: true },
-  under_review: { label: "Awaiting Approval",  desc: "Client is reviewing your proposal." },
-  approved:     { label: "Start Work",         desc: "Client approved. Move to In Progress.",           urgent: true },
-  in_progress:  { label: "In Development",     desc: "Move to UAT when work is ready.",                urgent: false },
-  uat:          { label: "UAT Active",         desc: "Client is testing. Monitor for issues." },
-  completed:    { label: "Ready to Close",     desc: "Client confirmed. Close the ticket.",             urgent: true },
-  closed:       { label: "Archived",           desc: "This ticket is closed." },
-  cancelled:    { label: "Cancelled",          desc: "This ticket was cancelled." },
-};
-
 const ALL_STATUSES: TicketStatus[] = [
   "submitted", "under_review", "approved", "in_progress", "uat", "completed", "closed", "cancelled"
 ];
-
-function formatDur(mins: number) {
-  if (mins < 60) return `${mins}m`;
-  if (mins < 1440) return `${Math.round(mins / 60)}h`;
-  return `${Math.round(mins / 1440)}d`;
-}
-
-// ── Status Badge ──────────────────────────────────────────────────────────────
-function StatusBadge({ status }: { status: string }) {
-  const m = STATUS_META[status] || STATUS_META.submitted;
-  return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${m.bg} ${m.color} ${m.border}`}>
-      {m.icon}
-      {m.label}
-    </span>
-  );
-}
-
-// ── Progress Stepper ──────────────────────────────────────────────────────────
-const STAGES = ["submitted", "under_review", "approved", "in_progress", "uat", "completed", "closed"] as const;
-const STAGE_IDX: Record<string, number> = { submitted: 0, under_review: 1, approved: 2, in_progress: 3, uat: 4, completed: 5, closed: 6, cancelled: -1 };
-
-function ProgressStepper({ status }: { status: string }) {
-  const currentIdx = STAGE_IDX[status] ?? 0;
-  if (status === "cancelled") return (
-    <div className="flex items-center gap-2 py-2">
-      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/10 border border-destructive/20 text-xs font-semibold text-destructive">
-        <XCircle className="h-3.5 w-3.5" /> Cancelled
-      </span>
-    </div>
-  );
-  return (
-    <div className="relative pt-2 pb-1">
-      <div className="absolute top-[26px] left-5 right-5 h-0.5 bg-border" />
-      <div
-        className="absolute top-[26px] left-5 h-0.5 bg-primary transition-all duration-700"
-        style={{ width: `calc(${(currentIdx / (STAGES.length - 1)) * 100}% - 2.5rem)` }}
-      />
-      <div className="flex justify-between relative">
-        {STAGES.map((stage, i) => {
-          const done = i < currentIdx;
-          const active = i === currentIdx;
-          return (
-            <div key={stage} className="flex flex-col items-center gap-1">
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-300 ${
-                done ? "bg-primary border-primary text-primary-foreground"
-                : active ? "bg-primary border-primary text-primary-foreground ring-4 ring-primary/20"
-                : "bg-card border-border text-muted-foreground"
-              }`}>
-                {done ? <CheckCircle className="h-4 w-4" /> : i + 1}
-              </div>
-              <span className={`text-[9px] font-medium text-center leading-tight max-w-[50px] ${
-                active ? "text-primary" : done ? "text-foreground" : "text-muted-foreground"
-              }`}>{STATUS_META[stage]?.label}</span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ── Timeline ──────────────────────────────────────────────────────────────────
-function TicketTimeline({ events }: { events: TicketEvent[] }) {
-  if (!events.length) return (
-    <div className="text-center py-10 text-muted-foreground text-sm">
-      <Clock className="h-8 w-8 mx-auto mb-2 opacity-30" />
-      No status changes recorded yet.
-    </div>
-  );
-  return (
-    <div className="relative space-y-0">
-      <div className="absolute left-5 top-5 bottom-5 w-0.5 bg-border" />
-      {events.map((ev, i) => {
-        const next = events[i + 1];
-        const durMins = next
-          ? differenceInMinutes(new Date(next.created_at), new Date(ev.created_at))
-          : differenceInMinutes(new Date(), new Date(ev.created_at));
-        const m = STATUS_META[ev.to_status] || STATUS_META.submitted;
-        return (
-          <div key={ev.id} className="relative pl-14 pb-6">
-            <div className={`absolute left-2.5 top-0 w-5 h-5 rounded-full border-2 flex items-center justify-center ${m.bg} ${m.border}`}>
-              <span className={m.color}>{m.icon}</span>
-            </div>
-            <div className="flex items-start justify-between gap-2">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  {ev.from_status && (
-                    <>
-                      <StatusBadge status={ev.from_status} />
-                      <ArrowRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                    </>
-                  )}
-                  <StatusBadge status={ev.to_status} />
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {format(new Date(ev.created_at), "MMM d, yyyy · h:mm a")}
-                  <span className="mx-1.5 text-border">·</span>
-                  {formatDistanceToNow(new Date(ev.created_at), { addSuffix: true })}
-                </p>
-                {ev.note && (
-                  <p className="text-xs text-foreground mt-2 bg-muted/60 px-3 py-2 rounded-lg border border-border">
-                    {ev.note}
-                  </p>
-                )}
-                {ev.attachments && ev.attachments.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {ev.attachments.map((url, ai) => (
-                      <a key={ai} href={url} target="_blank" rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline bg-primary/5 border border-primary/20 px-2.5 py-1 rounded-lg">
-                        <Paperclip className="h-3 w-3" /> Attachment {ai + 1}
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {i < events.length - 1 && (
-                <div className="flex-shrink-0 text-right">
-                  <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                    {formatDur(durMins)} here
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ── Lifecycle Stats ───────────────────────────────────────────────────────────
-function LifecycleStats({ events, ticket }: { events: TicketEvent[]; ticket: TicketType }) {
-  const totalMins = events.length > 1
-    ? differenceInMinutes(new Date(events[events.length - 1].created_at), new Date(events[0].created_at))
-    : 0;
-
-  const stageDurations: { stage: string; mins: number }[] = [];
-  for (let i = 0; i < events.length - 1; i++) {
-    const mins = differenceInMinutes(new Date(events[i + 1].created_at), new Date(events[i].created_at));
-    stageDurations.push({ stage: events[i].to_status, mins });
-  }
-  const maxMins = Math.max(...stageDurations.map((s) => s.mins), 1);
-
-  return (
-    <div className="space-y-5">
-      {/* KPI chips */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="p-4 rounded-xl bg-primary/5 border border-primary/15 text-center">
-          <Timer className="h-5 w-5 text-primary mx-auto mb-1" />
-          <p className="text-lg font-bold text-foreground">{formatDur(totalMins)}</p>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Total Time</p>
-        </div>
-        <div className="p-4 rounded-xl bg-accent/5 border border-accent/15 text-center">
-          <Coins className="h-5 w-5 text-accent mx-auto mb-1" />
-          <p className="text-lg font-bold text-foreground">{ticket.credit_cost ?? "—"}</p>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Credits</p>
-        </div>
-        <div className="p-4 rounded-xl bg-success/5 border border-success/15 text-center">
-          <Activity className="h-5 w-5 text-success mx-auto mb-1" />
-          <p className="text-lg font-bold text-foreground">{events.length}</p>
-          <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Events</p>
-        </div>
-      </div>
-
-      {/* Bar chart of stage durations */}
-      {stageDurations.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs font-semibold text-foreground uppercase tracking-wide">Time per Stage</p>
-          {stageDurations.map((s, i) => {
-            const m = STATUS_META[s.stage] || STATUS_META.submitted;
-            const pct = Math.round((s.mins / maxMins) * 100);
-            return (
-              <div key={i} className="space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span className={`font-medium ${m.color}`}>{m.label}</span>
-                  <span className="text-muted-foreground">{formatDur(s.mins)}</span>
-                </div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary rounded-full transition-all duration-500"
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // ── UAT Panel (admin sends to UAT) ───────────────────────────────────────────
 function UATPanel({ ticket, onUpdate }: { ticket: TicketType; onUpdate: () => void }) {
