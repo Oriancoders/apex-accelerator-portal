@@ -541,6 +541,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_purchase_credits: {
+        Args: {
+          p_amount: number
+          p_description: string
+          p_stripe_session_id: string
+          p_user_id: string
+        }
+        Returns: number
+      }
       admin_adjust_credits: {
         Args: { p_amount: number; p_reason?: string; p_user_id: string }
         Returns: number
