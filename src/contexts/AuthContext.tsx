@@ -84,7 +84,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsGuest(false);
   };
 
-  const loginAsGuest = () => {
+  const loginAsGuest = async () => {
+    // Clear any existing session before entering guest mode
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    setProfile(null);
     setIsGuest(true);
     setLoading(false);
   };
