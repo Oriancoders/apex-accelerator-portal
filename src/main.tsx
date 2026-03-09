@@ -19,6 +19,21 @@ function isChunkLoadError(reason: unknown): boolean {
 	);
 }
 
+function isBlockedTelemetryError(reason: unknown): boolean {
+	const message =
+		reason instanceof Error
+			? reason.message
+			: typeof reason === "string"
+				? reason
+				: "";
+
+	const normalized = message.toLowerCase();
+	return (
+		normalized.includes("err_blocked_by_client") &&
+		(normalized.includes("posthog") || normalized.includes("us.i.posthog.com"))
+	);
+}
+
 function attemptChunkRecovery() {
 	const hasReloaded = sessionStorage.getItem(CHUNK_RELOAD_KEY) === "1";
 	if (hasReloaded) return;
@@ -27,12 +42,22 @@ function attemptChunkRecovery() {
 }
 
 window.addEventListener("unhandledrejection", (event) => {
+	if (isBlockedTelemetryError(event.reason)) {
+		event.preventDefault();
+		return;
+	}
+
 	if (isChunkLoadError(event.reason)) {
 		attemptChunkRecovery();
 	}
 });
 
 window.addEventListener("error", (event) => {
+	if (isBlockedTelemetryError(event.error ?? event.message)) {
+		event.preventDefault();
+		return;
+	}
+
 	if (isChunkLoadError(event.error ?? event.message)) {
 		attemptChunkRecovery();
 	}
