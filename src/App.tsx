@@ -28,6 +28,7 @@ import AdminRecipesPage from "./pages/admin/AdminRecipesPage";
 import AdminNewsPage from "./pages/admin/AdminNewsPage";
 import AdminAppExchangePage from "./pages/admin/AdminAppExchangePage";
 import AdminExtensionsPage from "./pages/admin/AdminExtensionsPage";
+import AdminContactSubmissionsPage from "./pages/admin/AdminContactSubmissionsPage";
 import AppExchangePage from "./pages/AppExchangePage";
 import NewsPage from "./pages/NewsPage";
 import ExtensionsPage from "./pages/ExtensionsPage";
@@ -73,6 +74,7 @@ const App = () => (
             <Route path="/admin/appexchange" element={<AdminAppExchangePage />} />
             <Route path="/admin/news" element={<AdminNewsPage />} />
             <Route path="/admin/extensions" element={<AdminExtensionsPage />} />
+            <Route path="/admin/contacts" element={<AdminContactSubmissionsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <AiChatbot />

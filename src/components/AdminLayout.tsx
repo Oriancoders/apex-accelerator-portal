@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { NavLink } from "@/components/NavLink";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { LayoutDashboard, Ticket, Users, FileText, Coins, Shield, ArrowLeft, Bell, Menu, Lightbulb, Package, Newspaper, Chrome } from "lucide-react";
+import { LayoutDashboard, Ticket, Users, FileText, Coins, Shield, ArrowLeft, Bell, Menu, Lightbulb, Package, Newspaper, Chrome, MessageSquare } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -47,6 +47,7 @@ const adminMenuItems = [
   { title: "AppExchange", url: "/admin/appexchange", icon: Package },
   { title: "News", url: "/admin/news", icon: Newspaper },
   { title: "Extensions", url: "/admin/extensions", icon: Chrome },
+  { title: "Contacts", url: "/admin/contacts", icon: MessageSquare },
   { title: "Credits", url: "/admin/credits", icon: Coins },
 ];
 

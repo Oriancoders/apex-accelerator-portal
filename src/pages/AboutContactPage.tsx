@@ -1,5 +1,6 @@
 import Navbar from "@/components/Navbar";
 import { motion } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
 import {
   Users,
   Mail,
@@ -112,18 +113,28 @@ export default function AboutContactPage() {
   const [sending, setSending] = useState(false);
   const [showCalendly, setShowCalendly] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim() || !formData.email.trim() || !formData.message.trim()) {
       toast.error("Please fill in all required fields");
       return;
     }
     setSending(true);
-    setTimeout(() => {
-      setSending(false);
+    try {
+      const { error } = await supabase.from("contact_submissions" as any).insert({
+        name: formData.name.trim(),
+        email: formData.email.trim(),
+        company: formData.company.trim() || null,
+        message: formData.message.trim(),
+      });
+      if (error) throw error;
       toast.success("Message sent! We'll get back to you within 24 hours.");
       setFormData({ name: "", email: "", company: "", message: "" });
-    }, 1200);
+    } catch {
+      toast.error("Failed to send message. Please try again.");
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
