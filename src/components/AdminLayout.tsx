@@ -237,6 +237,18 @@ function AdminHeader() {
   );
 }
 
+function AccessDeniedRedirect({ to, message }: { to: string; message: string }) {
+  const { toast } = useToast();
+  useEffect(() => {
+    toast({
+      title: "Access Denied",
+      description: message,
+      variant: "destructive",
+    });
+  }, []);
+  return <Navigate to={to} replace />;
+}
+
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const { user, loading, isGuest } = useAuth();
   const { isAdmin, isLoading: roleLoading } = useAdminRole();
@@ -252,10 +264,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     );
   }
 
-  // Block guest users from accessing admin routes
-  if (isGuest) return <Navigate to="/dashboard" replace />;
-  if (!user) return <Navigate to="/auth" replace />;
-  if (!isAdmin) return <Navigate to="/dashboard" replace />;
+  if (isGuest) return <AccessDeniedRedirect to="/dashboard" message="Guest users cannot access the admin panel." />;
+  if (!user) return <AccessDeniedRedirect to="/auth" message="Please sign in to access the admin panel." />;
+  if (!isAdmin) return <AccessDeniedRedirect to="/dashboard" message="You don't have admin privileges." />;
 
   return (
     <SidebarProvider>
