@@ -5,7 +5,7 @@ import NewsWidget from "@/components/widgets/NewsWidget";
 import KnowledgeBaseWidget from "@/components/widgets/KnowledgeBaseWidget";
 import RecipesWidget from "@/components/widgets/RecipesWidget";
 import ExtensionsWidget from "@/components/widgets/ExtensionsWidget";
-import AiAssistantWidget from "@/components/widgets/AiAssistantWidget";
+
 import TicketSubmissionWidget from "@/components/widgets/TicketSubmissionWidget";
 import TicketDashboardWidget from "@/components/widgets/TicketDashboardWidget";
 import { motion } from "framer-motion";
@@ -145,9 +145,6 @@ export default function DashboardPage() {
           />
           {/* Responsive grid: 1 col mobile → 2 col tablet → 3 col desktop */}
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
-            <motion.div {...stagger.item}>
-              <AiAssistantWidget />
-            </motion.div>
             <motion.div {...stagger.item}>
               <KnowledgeBaseWidget />
             </motion.div>

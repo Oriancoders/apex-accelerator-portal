@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import AiChatbot from "@/components/AiChatbot";
 import AuthPage from "./pages/AuthPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -70,6 +71,7 @@ const App = () => (
             <Route path="/admin/extensions" element={<AdminExtensionsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <AiChatbot />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
