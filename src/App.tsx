@@ -49,6 +49,9 @@ const App = () => (
             <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/knowledge" element={<KnowledgeBasePage />} />
             <Route path="/recipes" element={<RecipesPage />} />
+            <Route path="/appexchange" element={<AppExchangePage />} />
+            <Route path="/news" element={<NewsPage />} />
+            <Route path="/extensions" element={<ExtensionsPage />} />
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboardPage />} />
             <Route path="/admin/tickets" element={<AdminTicketsPage />} />
