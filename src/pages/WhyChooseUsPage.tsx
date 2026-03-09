@@ -1,4 +1,5 @@
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import { motion } from "framer-motion";
 import {
   DollarSign,
@@ -275,6 +276,7 @@ export default function WhyChooseUsPage() {
           </div>
         </motion.div>
       </section>
+      <Footer />
     </div>
   );
 }
