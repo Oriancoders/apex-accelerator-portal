@@ -7,44 +7,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import {
   PlusCircle, ArrowRight, Calendar, Coins,
-  CheckCircle, PlayCircle, Target, ClipboardCheck, HelpCircle,
-  Lock, XCircle, BarChart3, Activity
+  CheckCircle, Lock, BarChart3, Activity
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
+import { STATUS_META, PRIORITY_META, FILTER_TABS, isActiveStatus } from "@/constants/ticket";
+import StatusBadge from "@/shared/StatusBadge";
+import PriorityBadge from "@/shared/PriorityBadge";
+import EmptyState from "@/shared/EmptyState";
 
 type Ticket = Tables<"tickets">;
-
-const STATUS_META: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode }> = {
-  submitted:    { label: "Submitted",    color: "text-warning",     bg: "bg-warning/10",     icon: <ClipboardCheck className="h-3.5 w-3.5" /> },
-  under_review: { label: "Under Review", color: "text-primary",     bg: "bg-primary/10",     icon: <HelpCircle className="h-3.5 w-3.5" /> },
-  approved:     { label: "Approved",     color: "text-success",     bg: "bg-success/10",     icon: <CheckCircle className="h-3.5 w-3.5" /> },
-  in_progress:  { label: "In Progress",  color: "text-accent",      bg: "bg-accent/10",      icon: <PlayCircle className="h-3.5 w-3.5" /> },
-  uat:          { label: "UAT",          color: "text-info",        bg: "bg-info/10",        icon: <Target className="h-3.5 w-3.5" /> },
-  completed:    { label: "Completed",    color: "text-success",     bg: "bg-success/10",     icon: <CheckCircle className="h-3.5 w-3.5" /> },
-  closed:       { label: "Closed",       color: "text-muted-foreground", bg: "bg-muted",    icon: <Lock className="h-3.5 w-3.5" /> },
-  cancelled:    { label: "Cancelled",    color: "text-destructive", bg: "bg-destructive/10", icon: <XCircle className="h-3.5 w-3.5" /> },
-};
-
-const PRIORITY_META: Record<string, { color: string; bg: string; dot: string }> = {
-  low:      { color: "text-success",     bg: "bg-success/10",     dot: "bg-success" },
-  medium:   { color: "text-warning",     bg: "bg-warning/10",     dot: "bg-warning" },
-  high:     { color: "text-accent",      bg: "bg-accent/10",      dot: "bg-accent" },
-  critical: { color: "text-destructive", bg: "bg-destructive/10", dot: "bg-destructive" },
-};
-
-const FILTER_TABS = [
-  { key: "all", label: "All" },
-  { key: "active", label: "Active" },
-  { key: "completed", label: "Done" },
-  { key: "cancelled", label: "Cancelled" },
-] as const;
-
-function isActive(s: string) {
-  return ["submitted", "under_review", "approved", "in_progress", "uat"].includes(s);
-}
 
 export default function TicketsPage() {
   const { user, isGuest } = useAuth();
