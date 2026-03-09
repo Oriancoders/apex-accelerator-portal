@@ -110,6 +110,7 @@ export default function AboutContactPage() {
     message: "",
   });
   const [sending, setSending] = useState(false);
+  const [showCalendly, setShowCalendly] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
