@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import {
   BookOpen, Search, Tag, Clock, User, ChevronRight,
-  FileText, Shield, Zap, BarChart2, Settings, Puzzle, Newspaper, X,
+  FileText, Shield, Zap, Settings, Newspaper, X,
 } from "lucide-react";
 import { format } from "date-fns";
 import type { Tables } from "@/integrations/supabase/types";
