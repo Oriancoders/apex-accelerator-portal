@@ -353,7 +353,7 @@ export default function AboutContactPage() {
                 <Button
                   size="lg"
                   className="w-full h-12 rounded-xl font-bold"
-                  onClick={() => toast.info("Meeting booking coming soon! Please use the contact form for now.")}
+                  onClick={() => setShowCalendly(true)}
                 >
                   <Calendar className="mr-2 h-4 w-4" />
                   Schedule a Meeting
