@@ -904,7 +904,13 @@ export default function AdminTicketsPage() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">Manage Tickets</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">{tickets.length} total · {counts.action} need action</p>
+            <div className="flex items-center gap-2 mt-0.5">
+              <p className="text-sm text-muted-foreground">{tickets.length} total · {counts.action} need action</p>
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-all duration-500 ${realtimePulse ? "bg-success/20 border-success/40 text-success scale-110" : "bg-success/10 border-success/20 text-success"}`}>
+                <span className={`w-1.5 h-1.5 rounded-full bg-success ${realtimePulse ? "animate-ping" : "animate-pulse"}`} />
+                Live
+              </span>
+            </div>
           </div>
           {counts.action > 0 && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/10 border border-destructive/20 text-xs font-semibold text-destructive">
