@@ -14,6 +14,7 @@ import CreditsPage from "./pages/CreditsPage";
 import PricingGuidePage from "./pages/PricingGuidePage";
 import NotFound from "./pages/NotFound";
 import NotificationsPage from "./pages/NotificationsPage";
+import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
 import AdminTicketsPage from "./pages/admin/AdminTicketsPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
