@@ -25,14 +25,20 @@ serve(async (req) => {
 
   try {
     // Authenticate user
-    const authHeader = req.headers.get("Authorization")!;
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const token = authHeader.replace("Bearer ", "");
     const { data } = await supabaseClient.auth.getUser(token);
     const user = data.user;
     if (!user) throw new Error("User not authenticated");
 
     const { sessionId } = await req.json();
-    if (!sessionId) throw new Error("Missing session ID");
+    if (!sessionId || typeof sessionId !== "string") throw new Error("Missing or invalid session ID");
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",
@@ -47,20 +53,6 @@ serve(async (req) => {
       });
     }
 
-    // Check if already processed
-    const { data: existingTx } = await supabaseAdmin
-      .from("credit_transactions")
-      .select("id")
-      .eq("stripe_session_id", sessionId)
-      .limit(1);
-
-    if (existingTx && existingTx.length > 0) {
-      return new Response(JSON.stringify({ success: true, already_processed: true }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      });
-    }
-
     const userId = session.metadata?.user_id;
     const totalCredits = parseInt(session.metadata?.total_credits || "0");
     const buyCredits = session.metadata?.buy_credits || "0";
@@ -71,37 +63,31 @@ serve(async (req) => {
     // Verify the requesting user matches the session user
     if (user.id !== userId) throw new Error("User mismatch");
 
-    // Add credits to profile
-    await supabaseAdmin
-      .from("profiles")
-      .update({ credits: supabaseAdmin.rpc ? undefined : undefined })
-      .eq("user_id", userId);
-
-    // Use raw SQL via rpc or direct update with increment
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("credits")
-      .eq("user_id", userId)
-      .single();
-
-    const newCredits = (profile?.credits || 0) + totalCredits;
-
-    await supabaseAdmin
-      .from("profiles")
-      .update({ credits: newCredits })
-      .eq("user_id", userId);
-
-    // Record transaction
-    await supabaseAdmin.from("credit_transactions").insert({
-      user_id: userId,
-      amount: totalCredits,
-      type: "purchase",
-      description: `Purchased ${buyCredits} credits (+${bonusCredits} bonus)`,
-      stripe_session_id: sessionId,
+    // Use atomic function to add credits (prevents race conditions)
+    const { data: newCredits, error: rpcError } = await supabaseAdmin.rpc("add_purchase_credits", {
+      p_user_id: userId,
+      p_amount: totalCredits,
+      p_description: `Purchased ${buyCredits} credits (+${bonusCredits} bonus)`,
+      p_stripe_session_id: sessionId,
     });
 
+    if (rpcError) throw rpcError;
+
+    // Check if it was a duplicate (credits returned but no new transaction)
+    const { data: txCheck } = await supabaseAdmin
+      .from("credit_transactions")
+      .select("id")
+      .eq("stripe_session_id", sessionId);
+
+    const alreadyProcessed = txCheck && txCheck.length > 1;
+
     return new Response(
-      JSON.stringify({ success: true, credits_added: totalCredits, new_balance: newCredits }),
+      JSON.stringify({
+        success: true,
+        credits_added: totalCredits,
+        new_balance: newCredits,
+        ...(alreadyProcessed ? { already_processed: true } : {}),
+      }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
