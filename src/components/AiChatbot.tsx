@@ -200,10 +200,8 @@ export default function AiChatbot() {
           </motion.div>
         )}
       </AnimatePresence>
-            </Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
+
 
       {/* Chat panel */}
       <AnimatePresence>
