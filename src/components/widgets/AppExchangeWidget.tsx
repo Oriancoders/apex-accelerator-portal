@@ -1,4 +1,5 @@
-import { ExternalLink, Star } from "lucide-react";
+import { ExternalLink, Star, Package } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const products = [
   { name: "Salesforce Inspector Reloaded", rating: 4.9, url: "https://appexchange.salesforce.com", desc: "Debug & explore data" },
@@ -9,14 +10,17 @@ const products = [
 ];
 
 export default function AppExchangeWidget() {
+  const navigate = useNavigate();
   return (
     <div className="widget-card h-full">
       <div className="widget-card-header">
-        <h3 className="font-semibold text-sm text-foreground">Top AppExchange Products</h3>
-        <a href="https://appexchange.salesforce.com" target="_blank" rel="noopener noreferrer" className="text-primary text-xs font-medium hover:underline">View All</a>
+        <div className="flex items-center gap-2">
+          <Package className="h-4 w-4 text-primary" />
+          <h3 className="font-semibold text-sm text-foreground">Top AppExchange Products</h3>
+        </div>
+        <button onClick={() => navigate("/appexchange")} className="text-primary text-xs font-medium hover:underline">View All</button>
       </div>
       <div className="widget-card-body space-y-1">
-        {/* Fitts's Law: Large touch targets with generous padding */}
         {products.map((p) => (
           <a
             key={p.name}

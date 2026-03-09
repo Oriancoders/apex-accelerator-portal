@@ -1,4 +1,5 @@
 import { Newspaper, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const news = [
   { title: "Spring '26 Release Highlights", date: "Mar 6, 2026", url: "#" },
@@ -9,6 +10,7 @@ const news = [
 ];
 
 export default function NewsWidget() {
+  const navigate = useNavigate();
   return (
     <div className="widget-card h-full">
       <div className="widget-card-header">
@@ -16,6 +18,7 @@ export default function NewsWidget() {
           <Newspaper className="h-4 w-4 text-primary" />
           <h3 className="font-semibold text-sm text-foreground">Salesforce News</h3>
         </div>
+        <button onClick={() => navigate("/news")} className="text-primary text-xs font-medium hover:underline">View All</button>
       </div>
       <div className="widget-card-body space-y-1">
         {news.map((n) => (
