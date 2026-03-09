@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Cloud, Mail, Phone, MapPin, ArrowUpRight } from "lucide-react";
+import { Cloud, Mail, Phone, MapPin, ArrowUpRight, Linkedin, Twitter, Youtube } from "lucide-react";
 
 const footerLinks = {
   Platform: [
