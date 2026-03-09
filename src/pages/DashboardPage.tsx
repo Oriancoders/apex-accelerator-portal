@@ -1,4 +1,5 @@
 import ProtectedLayout from "@/components/ProtectedLayout";
+import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
 import AppExchangeWidget from "@/components/widgets/AppExchangeWidget";
 import NewsWidget from "@/components/widgets/NewsWidget";
