@@ -49,7 +49,25 @@ export default function Footer() {
                 <MapPin className="h-3.5 w-3.5" /> San Francisco, CA
               </div>
             </div>
-          </div>
+            {/* Social Links */}
+            <div className="flex items-center gap-2 mt-5">
+              {[
+                { icon: Linkedin, href: "https://linkedin.com/company/shiftdeploy", label: "LinkedIn" },
+                { icon: Twitter, href: "https://twitter.com/shiftdeploy", label: "Twitter" },
+                { icon: Youtube, href: "https://youtube.com/@shiftdeploy", label: "YouTube" },
+              ].map((s) => (
+                <a
+                  key={s.label}
+                  href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={s.label}
+                  className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+                >
+                  <s.icon className="h-4 w-4" />
+                </a>
+              ))}
+            </div>
 
           {/* Link Columns */}
           {Object.entries(footerLinks).map(([title, links]) => (
