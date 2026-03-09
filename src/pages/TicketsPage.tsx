@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import {
   PlusCircle, ArrowRight, Calendar, Coins,
-  CheckCircle, Lock, BarChart3, Activity
+  CheckCircle, Lock, BarChart3, Activity, ClipboardCheck
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useState, useEffect, useRef, useCallback } from "react";
