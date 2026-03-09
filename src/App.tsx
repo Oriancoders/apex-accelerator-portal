@@ -25,6 +25,7 @@ import RecipesPage from "./pages/RecipesPage";
 import AdminRecipesPage from "./pages/admin/AdminRecipesPage";
 import AdminNewsPage from "./pages/admin/AdminNewsPage";
 import AdminAppExchangePage from "./pages/admin/AdminAppExchangePage";
+import AdminExtensionsPage from "./pages/admin/AdminExtensionsPage";
 import AppExchangePage from "./pages/AppExchangePage";
 import NewsPage from "./pages/NewsPage";
 import ExtensionsPage from "./pages/ExtensionsPage";
