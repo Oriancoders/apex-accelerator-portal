@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,7 +24,7 @@ async function getUserEmail(userId: string): Promise<{ email: string; name: stri
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-  const res = await fetch(`${supabaseUrl}/rest/v1/profiles?user_id=eq.${userId}&select=email,full_name`, {
+  const res = await fetch(`${supabaseUrl}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=email,full_name`, {
     headers: {
       Authorization: `Bearer ${serviceRoleKey}`,
       apikey: serviceRoleKey,
@@ -63,6 +64,16 @@ function formatStatus(status: string): string {
   return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+// Escape HTML to prevent injection in email templates
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 async function sendEmail(to: string[], subject: string, html: string) {
   if (!RESEND_API_KEY) {
     console.error("RESEND_API_KEY not configured");
@@ -97,11 +108,13 @@ function ticketEmailTemplate(
   isNew: boolean,
   priority?: string,
 ): string {
-  const statusFormatted = formatStatus(status);
+  const safeTitle = escapeHtml(ticketTitle);
+  const safeName = escapeHtml(recipientName);
+  const statusFormatted = escapeHtml(formatStatus(status));
   const heading = isNew ? "New Ticket Submitted" : "Ticket Status Updated";
   const message = isNew
-    ? `Your ticket "<strong>${ticketTitle}</strong>" has been submitted successfully. Our team will review it shortly.`
-    : `The status of your ticket "<strong>${ticketTitle}</strong>" has been updated to <strong>${statusFormatted}</strong>.`;
+    ? `Your ticket "<strong>${safeTitle}</strong>" has been submitted successfully. Our team will review it shortly.`
+    : `The status of your ticket "<strong>${safeTitle}</strong>" has been updated to <strong>${statusFormatted}</strong>.`;
 
   return `
 <!DOCTYPE html>
@@ -115,13 +128,13 @@ function ticketEmailTemplate(
     <div style="padding:32px;">
       <h2 style="margin:0 0 8px;color:#1a1a2e;font-size:18px;">${heading}</h2>
       <p style="color:#71717a;font-size:14px;line-height:1.6;margin:0 0 20px;">
-        Hi ${recipientName},<br/><br/>
+        Hi ${safeName},<br/><br/>
         ${message}
       </p>
       <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
         <tr>
           <td style="padding:10px 14px;background:#f4f4f5;border-radius:8px 8px 0 0;font-size:12px;color:#71717a;font-weight:600;">TICKET</td>
-          <td style="padding:10px 14px;background:#f4f4f5;border-radius:8px 8px 0 0;font-size:13px;color:#1a1a2e;font-weight:600;">${ticketTitle}</td>
+          <td style="padding:10px 14px;background:#f4f4f5;border-radius:8px 8px 0 0;font-size:13px;color:#1a1a2e;font-weight:600;">${safeTitle}</td>
         </tr>
         <tr>
           <td style="padding:10px 14px;font-size:12px;color:#71717a;font-weight:600;border-bottom:1px solid #f4f4f5;">STATUS</td>
@@ -129,7 +142,7 @@ function ticketEmailTemplate(
         </tr>
         ${priority ? `<tr>
           <td style="padding:10px 14px;font-size:12px;color:#71717a;font-weight:600;">PRIORITY</td>
-          <td style="padding:10px 14px;font-size:13px;color:#1a1a2e;text-transform:capitalize;">${priority}</td>
+          <td style="padding:10px 14px;font-size:13px;color:#1a1a2e;text-transform:capitalize;">${escapeHtml(priority)}</td>
         </tr>` : ""}
       </table>
       <p style="color:#a1a1aa;font-size:12px;margin:0;">
@@ -150,6 +163,36 @@ serve(async (req) => {
   }
 
   try {
+    // Verify this is called by the database trigger (internal call with service role)
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Verify the token is valid (either anon key from trigger or service role)
+    const token = authHeader.replace("Bearer ", "");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    
+    // Only allow calls from the database trigger (which uses anon key) or service role
+    if (token !== anonKey && token !== serviceKey) {
+      // Verify it's at least a valid user token (fallback)
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        anonKey
+      );
+      const { error: authError } = await supabase.auth.getUser(token);
+      if (authError) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     const payload = await req.json();
     const { type, table, record } = payload;
 
@@ -159,33 +202,47 @@ serve(async (req) => {
       });
     }
 
+    // Validate required fields
     const ticket = record as TicketRecord;
+    if (!ticket.user_id || !ticket.title || !ticket.id) {
+      return new Response(JSON.stringify({ ok: true, skipped: true, reason: "missing fields" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate user_id is a UUID to prevent injection in REST query
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(ticket.user_id)) {
+      return new Response(JSON.stringify({ error: "Invalid user_id" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const isNew = type === "INSERT";
 
-    // Get ticket owner info
     const user = await getUserEmail(ticket.user_id);
     const adminEmails = await getAdminEmails();
 
+    const safeTitle = ticket.title.slice(0, 200);
     const subject = isNew
-      ? `New Ticket: ${ticket.title}`
-      : `Ticket Updated: ${ticket.title} → ${formatStatus(ticket.status)}`;
+      ? `New Ticket: ${safeTitle}`
+      : `Ticket Updated: ${safeTitle} → ${formatStatus(ticket.status)}`;
 
-    // Send to user
     if (user?.email) {
       await sendEmail(
         [user.email],
         subject,
-        ticketEmailTemplate(user.name, ticket.title, ticket.id, ticket.status, isNew, ticket.priority),
+        ticketEmailTemplate(user.name, safeTitle, ticket.id, ticket.status, isNew, ticket.priority),
       );
     }
 
-    // Send to admins (exclude the user if they're also an admin)
     const adminRecipients = adminEmails.filter((e) => e !== user?.email);
     if (adminRecipients.length > 0) {
       await sendEmail(
         adminRecipients,
         subject,
-        ticketEmailTemplate("Admin", ticket.title, ticket.id, ticket.status, isNew, ticket.priority),
+        ticketEmailTemplate("Admin", safeTitle, ticket.id, ticket.status, isNew, ticket.priority),
       );
     }
 
@@ -194,7 +251,7 @@ serve(async (req) => {
     });
   } catch (err) {
     console.error("Webhook error:", err);
-    return new Response(JSON.stringify({ error: String(err) }), {
+    return new Response(JSON.stringify({ error: "Internal error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

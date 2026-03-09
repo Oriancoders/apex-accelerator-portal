@@ -8,6 +8,16 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const DEFAULTS = {
+  dollarPerCredit: 2.5,
+  packages: [
+    { buy: 10, bonus: 2 },
+    { buy: 25, bonus: 6 },
+    { buy: 50, bonus: 15 },
+    { buy: 100, bonus: 35 },
+  ],
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -18,25 +28,72 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_ANON_KEY") ?? ""
   );
 
+  // Read-only admin client for credit_settings
+  const supabaseAdmin = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+  );
+
   try {
-    const authHeader = req.headers.get("Authorization")!;
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     const token = authHeader.replace("Bearer ", "");
     const { data } = await supabaseClient.auth.getUser(token);
     const user = data.user;
     if (!user?.email) throw new Error("User not authenticated");
 
-    const { buyCredits, bonusCredits, priceInCents } = await req.json();
-    if (!buyCredits || !priceInCents) throw new Error("Missing package data");
+    const { packageIndex } = await req.json();
+    if (typeof packageIndex !== "number" || packageIndex < 0) {
+      throw new Error("Invalid package selection");
+    }
 
-    const totalCredits = buyCredits + (bonusCredits || 0);
+    // SERVER-SIDE: Load credit settings from database (never trust client price)
+    const { data: settingsRows } = await supabaseAdmin
+      .from("credit_settings")
+      .select("key, value");
+
+    let dollarPerCredit = DEFAULTS.dollarPerCredit;
+    let packages = DEFAULTS.packages;
+
+    if (settingsRows && settingsRows.length > 0) {
+      const map: Record<string, any> = {};
+      settingsRows.forEach((row: any) => { map[row.key] = row.value; });
+      dollarPerCredit = parseFloat(map.dollar_per_credit) || DEFAULTS.dollarPerCredit;
+      packages = map.credit_packages || DEFAULTS.packages;
+    }
+
+    if (packageIndex >= packages.length) {
+      throw new Error("Invalid package index");
+    }
+
+    const pkg = packages[packageIndex];
+    const buyCredits = pkg.buy;
+    const bonusCredits = pkg.bonus || 0;
+    const totalCredits = buyCredits + bonusCredits;
+
+    // Server-computed price — client cannot manipulate this
+    const priceInCents = Math.round(buyCredits * dollarPerCredit * 100);
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",
     });
 
-    // Find or skip existing customer
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     const customerId = customers.data.length > 0 ? customers.data[0].id : undefined;
+
+    // Validate origin for redirect URLs
+    const origin = req.headers.get("origin") || "";
+    const allowedOrigins = [
+      "https://id-preview--f32dadef-b332-4587-a6bb-60eb8af2ca1a.lovable.app",
+      "http://localhost:5173",
+      "http://localhost:8080",
+    ];
+    const safeOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -59,10 +116,10 @@ serve(async (req) => {
         user_id: user.id,
         total_credits: String(totalCredits),
         buy_credits: String(buyCredits),
-        bonus_credits: String(bonusCredits || 0),
+        bonus_credits: String(bonusCredits),
       },
-      success_url: `${req.headers.get("origin")}/credits?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.get("origin")}/credits`,
+      success_url: `${safeOrigin}/credits?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${safeOrigin}/credits`,
     });
 
     return new Response(JSON.stringify({ url: session.url }), {
@@ -70,7 +127,9 @@ serve(async (req) => {
       status: 200,
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    // Don't leak internal error details
+    console.error("Checkout error:", error);
+    return new Response(JSON.stringify({ error: "Failed to create checkout session" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });
