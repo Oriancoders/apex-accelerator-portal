@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ArrowLeft, Upload, Send } from "lucide-react";
+import { validateFiles } from "@/utils/file-validation";
 import type { Database } from "@/integrations/supabase/types";
 
 type Priority = Database["public"]["Enums"]["ticket_priority"];
@@ -26,30 +27,9 @@ export default function NewTicketPage() {
   const [contactPhone, setContactPhone] = useState(profile?.phone || "");
   const [files, setFiles] = useState<File[]>([]);
 
-  const ALLOWED_FILE_TYPES = [
-    "image/png", "image/jpeg", "image/gif", "image/webp",
-    "application/pdf",
-    "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.ms-excel", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "text/plain", "text/csv",
-  ];
-  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
-    const selected = Array.from(e.target.files);
-    const valid = selected.filter((f) => {
-      if (!ALLOWED_FILE_TYPES.includes(f.type)) {
-        toast.error(`File "${f.name}" has an unsupported type.`);
-        return false;
-      }
-      if (f.size > MAX_FILE_SIZE) {
-        toast.error(`File "${f.name}" exceeds the 10MB limit.`);
-        return false;
-      }
-      return true;
-    });
-    setFiles(valid);
+    setFiles(validateFiles(Array.from(e.target.files)));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

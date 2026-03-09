@@ -5,6 +5,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import TicketChat from "@/components/TicketChat";
+import ProgressStepper from "@/shared/ProgressStepper";
+import StarRating from "@/shared/StarRating";
+import { STATUS_META, PRIORITY_META } from "@/constants/ticket";
+import { formatDuration } from "@/utils/format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,111 +30,6 @@ type TicketEvent = Tables<"ticket_events">;
 
 interface SubTask { title: string; }
 interface RoadmapItem { hour: number; title: string; description: string; subtasks?: SubTask[]; }
-
-const STATUS_META: Record<string, { label: string; color: string; bg: string; icon: React.ReactNode; desc: string }> = {
-  submitted:    { label: "Submitted",    color: "text-warning",     bg: "bg-warning/10 border-warning/20",     icon: <ClipboardCheck className="h-4 w-4" />, desc: "Your request has been received and is waiting for expert review." },
-  under_review: { label: "Under Review", color: "text-primary",     bg: "bg-primary/10 border-primary/20",     icon: <HelpCircle className="h-4 w-4" />,     desc: "Our expert team is analyzing your request and preparing a proposal." },
-  approved:     { label: "Approved",     color: "text-success",     bg: "bg-success/10 border-success/20",     icon: <CheckCircle className="h-4 w-4" />,    desc: "You approved the proposal. Work is about to begin." },
-  in_progress:  { label: "In Progress",  color: "text-accent",      bg: "bg-accent/10 border-accent/20",       icon: <PlayCircle className="h-4 w-4" />,     desc: "Our team is actively working on your request." },
-  uat:          { label: "UAT",          color: "text-info",        bg: "bg-info/10 border-info/20",           icon: <Target className="h-4 w-4" />,         desc: "The work is ready. Please test and confirm the deliverables." },
-  completed:    { label: "Completed",    color: "text-success",     bg: "bg-success/10 border-success/20",     icon: <Award className="h-4 w-4" />,          desc: "Work is confirmed complete. Awaiting final closure." },
-  closed:       { label: "Closed",       color: "text-muted-foreground", bg: "bg-muted border-border",        icon: <Lock className="h-4 w-4" />,           desc: "This ticket has been closed and archived." },
-  cancelled:    { label: "Cancelled",    color: "text-destructive", bg: "bg-destructive/10 border-destructive/20", icon: <XCircle className="h-4 w-4" />,   desc: "This ticket was cancelled." },
-};
-
-const PRIORITY_META: Record<string, { color: string; bg: string; dot: string }> = {
-  low:      { color: "text-success",     bg: "bg-success/10",     dot: "bg-success" },
-  medium:   { color: "text-warning",     bg: "bg-warning/10",     dot: "bg-warning" },
-  high:     { color: "text-accent",      bg: "bg-accent/10",      dot: "bg-accent" },
-  critical: { color: "text-destructive", bg: "bg-destructive/10", dot: "bg-destructive" },
-};
-
-const STAGES = ["submitted", "under_review", "approved", "in_progress", "uat", "completed", "closed"] as const;
-const STAGE_IDX: Record<string, number> = { submitted: 0, under_review: 1, approved: 2, in_progress: 3, uat: 4, completed: 5, closed: 6, cancelled: -1 };
-
-function formatDuration(minutes: number): string {
-  if (minutes < 60) return `${minutes}m`;
-  if (minutes < 60 * 24) return `${Math.round(minutes / 60)}h`;
-  return `${Math.round(minutes / (60 * 24))}d`;
-}
-
-function StarRating({ value, onChange, label }: { value: number; onChange: (v: number) => void; label: string }) {
-  const [hover, setHover] = useState(0);
-  return (
-    <div className="space-y-1">
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <div className="flex gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <button
-            key={star}
-            type="button"
-            onClick={() => onChange(star)}
-            onMouseEnter={() => setHover(star)}
-            onMouseLeave={() => setHover(0)}
-            className="transition-transform hover:scale-110 focus:outline-none"
-          >
-            <Star
-              className={`h-6 w-6 transition-colors ${
-                star <= (hover || value) ? "fill-warning text-warning" : "text-muted-foreground/30"
-              }`}
-            />
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ProgressStepper({ status }: { status: string }) {
-  const isCancelled = status === "cancelled";
-  const currentIdx = STAGE_IDX[status] ?? 0;
-
-  if (isCancelled) {
-    return (
-      <div className="flex items-center gap-2 py-3 px-1 overflow-x-auto">
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-destructive/10 border border-destructive/20">
-          <XCircle className="h-3.5 w-3.5 text-destructive" />
-          <span className="text-xs font-semibold text-destructive">Cancelled</span>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="relative pt-3 pb-1">
-      {/* Track line */}
-      <div className="absolute top-[22px] left-4 right-4 h-0.5 bg-border" />
-      <div
-        className="absolute top-[22px] left-4 h-0.5 bg-primary transition-all duration-700"
-        style={{ width: `calc(${(currentIdx / (STAGES.length - 1)) * 100}% - 2rem)` }}
-      />
-      <div className="flex justify-between relative">
-        {STAGES.map((stage, i) => {
-          const done = i < currentIdx;
-          const active = i === currentIdx;
-          return (
-            <div key={stage} className="flex flex-col items-center gap-1 min-w-0">
-              <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-300 ${
-                done
-                  ? "bg-primary border-primary text-primary-foreground"
-                  : active
-                  ? "bg-primary border-primary text-primary-foreground ring-4 ring-primary/20"
-                  : "bg-card border-border text-muted-foreground"
-              }`}>
-                {done ? <CheckCircle className="h-4 w-4" /> : i + 1}
-              </div>
-              <span className={`text-[9px] font-medium text-center leading-tight max-w-[52px] ${
-                active ? "text-primary" : done ? "text-foreground" : "text-muted-foreground"
-              }`}>
-                {STATUS_META[stage]?.label || stage}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 export default function TicketDetailPage() {
   const { id } = useParams<{ id: string }>();
