@@ -16,7 +16,7 @@ import { motion } from "framer-motion";
 import {
   User, Mail, Phone, Building2, Coins, Clock, Ticket, CheckCircle,
   TrendingUp, Calendar, CreditCard, BarChart3, Save, AlertTriangle,
-  FileText, ArrowUpRight, ArrowDownRight, Loader2
+  FileText, ArrowUpRight, ArrowDownRight, Loader2, Lock, Eye, EyeOff
 } from "lucide-react";
 
 const fadeIn = {
