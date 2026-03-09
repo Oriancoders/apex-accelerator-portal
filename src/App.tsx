@@ -58,6 +58,7 @@ const App = () => (
             <Route path="/appexchange" element={<AppExchangePage />} />
             <Route path="/news" element={<NewsPage />} />
             <Route path="/extensions" element={<ExtensionsPage />} />
+            <Route path="/why-choose-us" element={<WhyChooseUsPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboardPage />} />
