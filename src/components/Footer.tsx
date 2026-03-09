@@ -68,6 +68,7 @@ export default function Footer() {
                 </a>
               ))}
             </div>
+          </div>
 
           {/* Link Columns */}
           {Object.entries(footerLinks).map(([title, links]) => (
