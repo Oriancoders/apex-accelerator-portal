@@ -423,6 +423,35 @@ export default function AboutContactPage() {
           </Accordion>
         </div>
       </section>
+
+      {/* Calendly Modal */}
+      {showCalendly && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowCalendly(false)}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="bg-card rounded-2xl shadow-xl w-full max-w-2xl h-[80vh] overflow-hidden relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+              <h3 className="font-bold text-foreground flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-primary" />
+                Schedule a Meeting
+              </h3>
+              <Button variant="ghost" size="sm" onClick={() => setShowCalendly(false)} className="h-8 w-8 p-0 rounded-full">
+                ✕
+              </Button>
+            </div>
+            <iframe
+              src="https://calendly.com/shiftdeploy/30min"
+              className="w-full h-[calc(80vh-52px)] border-0"
+              title="Schedule a Meeting"
+            />
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
