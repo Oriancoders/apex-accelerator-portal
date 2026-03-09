@@ -848,7 +848,24 @@ export default function AdminTicketsPage() {
       .channel("admin-tickets-realtime")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "tickets" },
+        { event: "INSERT", schema: "public", table: "tickets" },
+        (payload) => {
+          const newTicket = payload.new as TicketType;
+          queryClient.invalidateQueries({ queryKey: ["admin-tickets"] });
+          toast("🎫 New ticket submitted", {
+            description: newTicket.title,
+            duration: 8000,
+            action: {
+              label: "Open",
+              onClick: () => setSelectedTicket(newTicket),
+            },
+          });
+          pulse();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "tickets" },
         (payload) => {
           queryClient.invalidateQueries({ queryKey: ["admin-tickets"] });
           // If the open ticket was updated, refresh it too
