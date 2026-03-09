@@ -34,40 +34,72 @@ export default function NewTicketPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !description.trim() || !title.trim()) {
+    const trimmedTitle = title.trim();
+    const trimmedDesc = description.trim();
+
+    if (!user) {
+      toast.error("You must be signed in.");
+      return;
+    }
+    if (!trimmedTitle || !trimmedDesc) {
       toast.error("Please fill in all required fields.");
       return;
     }
+    if (trimmedTitle.length > 200) {
+      toast.error("Title must be less than 200 characters.");
+      return;
+    }
+    if (trimmedDesc.length > 10000) {
+      toast.error("Description is too long (max 10,000 characters).");
+      return;
+    }
+    // Email format validation if provided
+    if (contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim())) {
+      toast.error("Please enter a valid contact email.");
+      return;
+    }
+
     setLoading(true);
 
-    let fileUrls: string[] = [];
-    for (const file of files) {
-      // Sanitize filename to prevent path traversal
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const path = `${user.id}/${Date.now()}-${safeName}`;
-      const { error } = await supabase.storage
-        .from("ticket-attachments")
-        .upload(path, file, { contentType: file.type });
-      if (!error) fileUrls.push(path);
-    }
+    try {
+      let fileUrls: string[] = [];
+      for (const file of files) {
+        // Sanitize filename to prevent path traversal
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const path = `${user.id}/${Date.now()}-${safeName}`;
+        const { error } = await supabase.storage
+          .from("ticket-attachments")
+          .upload(path, file, { contentType: file.type });
+        if (error) {
+          toast.error(`Failed to upload "${file.name}": ${error.message}`);
+          setLoading(false);
+          return;
+        }
+        fileUrls.push(path);
+      }
 
-    const { error } = await supabase.from("tickets").insert({
-      user_id: user.id,
-      title,
-      description,
-      priority,
-      contact_email: contactEmail,
-      contact_phone: contactPhone,
-      file_urls: fileUrls.length > 0 ? fileUrls : null,
-    });
+      const { error } = await supabase.from("tickets").insert({
+        user_id: user.id,
+        title: trimmedTitle,
+        description: trimmedDesc,
+        priority,
+        contact_email: contactEmail.trim() || null,
+        contact_phone: contactPhone.trim() || null,
+        file_urls: fileUrls.length > 0 ? fileUrls : null,
+      });
 
-    if (error) {
-      toast.error("Failed to submit ticket: " + error.message);
-    } else {
-      toast.success("Ticket submitted successfully!");
-      navigate("/tickets");
+      if (error) {
+        toast.error("Failed to submit ticket. Please try again.");
+      } else {
+        toast.success("Ticket submitted successfully!");
+        navigate("/tickets");
+      }
+    } catch (err) {
+      console.error("Ticket submission error:", err);
+      toast.error("An unexpected error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (

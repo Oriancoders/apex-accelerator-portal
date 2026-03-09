@@ -24,40 +24,66 @@ async function getUserEmail(userId: string): Promise<{ email: string; name: stri
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-  const res = await fetch(`${supabaseUrl}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=email,full_name`, {
-    headers: {
-      Authorization: `Bearer ${serviceRoleKey}`,
-      apikey: serviceRoleKey,
-    },
-  });
-  const data = await res.json();
-  if (data && data.length > 0) {
-    return { email: data[0].email, name: data[0].full_name || "User" };
+  try {
+    const res = await fetch(`${supabaseUrl}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=email,full_name`, {
+      headers: {
+        Authorization: `Bearer ${serviceRoleKey}`,
+        apikey: serviceRoleKey,
+      },
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data && data.length > 0) {
+      return { email: data[0].email, name: data[0].full_name || "User" };
+    }
+  } catch (err) {
+    console.error("getUserEmail failed:", err instanceof Error ? err.message : err);
   }
   return null;
 }
 
+/**
+ * PERFORMANCE FIX: Batch-fetch admin emails in a single query
+ * instead of N+1 individual profile lookups.
+ */
 async function getAdminEmails(): Promise<string[]> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-  const rolesRes = await fetch(`${supabaseUrl}/rest/v1/user_roles?role=eq.admin&select=user_id`, {
-    headers: {
-      Authorization: `Bearer ${serviceRoleKey}`,
-      apikey: serviceRoleKey,
-    },
-  });
-  const roles = await rolesRes.json();
-  if (!roles || roles.length === 0) return [];
+  try {
+    // Step 1: Get admin user IDs
+    const rolesRes = await fetch(`${supabaseUrl}/rest/v1/user_roles?role=eq.admin&select=user_id`, {
+      headers: {
+        Authorization: `Bearer ${serviceRoleKey}`,
+        apikey: serviceRoleKey,
+      },
+    });
+    if (!rolesRes.ok) return [];
+    const roles = await rolesRes.json();
+    if (!roles || roles.length === 0) return [];
 
-  const adminUserIds = roles.map((r: any) => r.user_id);
-  const emails: string[] = [];
+    const adminUserIds: string[] = roles.map((r: { user_id: string }) => r.user_id);
 
-  for (const uid of adminUserIds) {
-    const user = await getUserEmail(uid);
-    if (user?.email) emails.push(user.email);
+    // Step 2: Batch-fetch all admin profiles in ONE query (fixes N+1)
+    const idsFilter = adminUserIds.map((id) => `"${id}"`).join(",");
+    const profilesRes = await fetch(
+      `${supabaseUrl}/rest/v1/profiles?user_id=in.(${idsFilter})&select=email`,
+      {
+        headers: {
+          Authorization: `Bearer ${serviceRoleKey}`,
+          apikey: serviceRoleKey,
+        },
+      }
+    );
+    if (!profilesRes.ok) return [];
+    const profiles = await profilesRes.json();
+    return (profiles || [])
+      .map((p: { email: string | null }) => p.email)
+      .filter((e: string | null): e is string => !!e);
+  } catch (err) {
+    console.error("getAdminEmails failed:", err instanceof Error ? err.message : err);
+    return [];
   }
-  return emails;
 }
 
 function formatStatus(status: string): string {
@@ -80,23 +106,27 @@ async function sendEmail(to: string[], subject: string, html: string) {
     return;
   }
 
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${RESEND_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: "SF Services <notifications@sfservices.com>",
-      to,
-      subject,
-      html,
-    }),
-  });
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "SF Services <notifications@sfservices.com>",
+        to,
+        subject,
+        html,
+      }),
+    });
 
-  if (!res.ok) {
-    const err = await res.text();
-    console.error("Resend error:", err);
+    if (!res.ok) {
+      const err = await res.text();
+      console.error("Resend error:", err);
+    }
+  } catch (err) {
+    console.error("sendEmail failed:", err instanceof Error ? err.message : err);
   }
 }
 
@@ -196,6 +226,13 @@ serve(async (req) => {
     const payload = await req.json();
     const { type, table, record } = payload;
 
+    // Validate payload structure
+    if (!type || !table) {
+      return new Response(JSON.stringify({ ok: true, skipped: true, reason: "invalid payload" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     if (table !== "tickets" || !record) {
       return new Response(JSON.stringify({ ok: true, skipped: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -221,36 +258,48 @@ serve(async (req) => {
 
     const isNew = type === "INSERT";
 
-    const user = await getUserEmail(ticket.user_id);
-    const adminEmails = await getAdminEmails();
+    // Fetch user and admin emails concurrently (performance)
+    const [user, adminEmails] = await Promise.all([
+      getUserEmail(ticket.user_id),
+      getAdminEmails(),
+    ]);
 
     const safeTitle = ticket.title.slice(0, 200);
     const subject = isNew
       ? `New Ticket: ${safeTitle}`
       : `Ticket Updated: ${safeTitle} → ${formatStatus(ticket.status)}`;
 
+    // Send emails concurrently (performance)
+    const emailPromises: Promise<void>[] = [];
+
     if (user?.email) {
-      await sendEmail(
-        [user.email],
-        subject,
-        ticketEmailTemplate(user.name, safeTitle, ticket.id, ticket.status, isNew, ticket.priority),
+      emailPromises.push(
+        sendEmail(
+          [user.email],
+          subject,
+          ticketEmailTemplate(user.name, safeTitle, ticket.id, ticket.status, isNew, ticket.priority),
+        )
       );
     }
 
     const adminRecipients = adminEmails.filter((e) => e !== user?.email);
     if (adminRecipients.length > 0) {
-      await sendEmail(
-        adminRecipients,
-        subject,
-        ticketEmailTemplate("Admin", safeTitle, ticket.id, ticket.status, isNew, ticket.priority),
+      emailPromises.push(
+        sendEmail(
+          adminRecipients,
+          subject,
+          ticketEmailTemplate("Admin", safeTitle, ticket.id, ticket.status, isNew, ticket.priority),
+        )
       );
     }
+
+    await Promise.all(emailPromises);
 
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    console.error("Webhook error:", err);
+    console.error("Webhook error:", err instanceof Error ? err.message : err);
     return new Response(JSON.stringify({ error: "Internal error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

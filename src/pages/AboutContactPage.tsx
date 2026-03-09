@@ -116,17 +116,36 @@ export default function AboutContactPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name.trim() || !formData.email.trim() || !formData.message.trim()) {
+    const name = formData.name.trim();
+    const email = formData.email.trim();
+    const message = formData.message.trim();
+    const company = formData.company.trim();
+
+    if (!name || !email || !message) {
       toast.error("Please fill in all required fields");
       return;
     }
+    // Client-side email format validation
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+    if (name.length > 100) {
+      toast.error("Name must be less than 100 characters");
+      return;
+    }
+    if (message.length > 1000) {
+      toast.error("Message must be less than 1000 characters");
+      return;
+    }
+
     setSending(true);
     try {
       const { error } = await supabase.from("contact_submissions" as any).insert({
-        name: formData.name.trim(),
-        email: formData.email.trim(),
-        company: formData.company.trim() || null,
-        message: formData.message.trim(),
+        name,
+        email,
+        company: company || null,
+        message,
       });
       if (error) throw error;
       toast.success("Message sent! We'll get back to you within 24 hours.");
