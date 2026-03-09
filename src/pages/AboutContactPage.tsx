@@ -464,6 +464,7 @@ export default function AboutContactPage() {
           </motion.div>
         </div>
       )}
+      <Footer />
     </div>
   );
 }

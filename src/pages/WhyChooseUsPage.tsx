@@ -276,6 +276,7 @@ export default function WhyChooseUsPage() {
           </div>
         </motion.div>
       </section>
+      <Footer />
     </div>
   );
 }
