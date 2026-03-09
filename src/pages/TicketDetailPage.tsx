@@ -537,7 +537,7 @@ export default function TicketDetailPage() {
                 <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Request Description</CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="prose prose-sm max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: ticket.description }} />
+                <div className="prose prose-sm max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: sanitizeHtml(ticket.description) }} />
               </CardContent>
             </Card>
 

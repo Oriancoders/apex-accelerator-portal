@@ -618,7 +618,7 @@ function TicketDialog({
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Description</p>
               <div
                 className="prose prose-sm max-w-none bg-muted/30 p-4 rounded-xl border border-border text-sm text-foreground leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: ticket.description }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(ticket.description) }}
               />
             </div>
 
