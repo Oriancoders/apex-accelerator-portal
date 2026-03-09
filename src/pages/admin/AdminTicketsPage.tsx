@@ -871,9 +871,30 @@ export default function AdminTicketsPage() {
       )
       .subscribe();
 
+    const creditsSub = supabase
+      .channel("admin-credit-transactions-realtime")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "credit_transactions" },
+        (payload) => {
+          const record = payload.new as { type: string; amount: number; user_id: string };
+          queryClient.invalidateQueries({ queryKey: ["admin-tickets"] });
+          queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+          if (record.type === "purchase" && record.amount > 0) {
+            toast.success(`💳 Credit purchase: +${record.amount} credits`, {
+              description: "A user just purchased credits.",
+              duration: 5000,
+            });
+          }
+          pulse();
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(ticketsSub);
       supabase.removeChannel(reviewsSub);
+      supabase.removeChannel(creditsSub);
       if (realtimeBadgeRef.current) clearTimeout(realtimeBadgeRef.current);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
