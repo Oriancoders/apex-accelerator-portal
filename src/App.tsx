@@ -21,6 +21,8 @@ import AdminUsersPage from "./pages/admin/AdminUsersPage";
 import AdminArticlesPage from "./pages/admin/AdminArticlesPage";
 import AdminCreditsPage from "./pages/admin/AdminCreditsPage";
 import AdminNotificationsPage from "./pages/admin/AdminNotificationsPage";
+import RecipesPage from "./pages/RecipesPage";
+import AdminRecipesPage from "./pages/admin/AdminRecipesPage";
 
 const queryClient = new QueryClient();
 
