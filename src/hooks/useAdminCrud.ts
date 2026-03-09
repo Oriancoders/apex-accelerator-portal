@@ -78,10 +78,10 @@ export function useAdminCrud<T extends { id: string }, F extends Record<string, 
     mutationFn: async () => {
       const payload = toPayload(form);
       if (editing) {
-        const { error } = await supabase.from(table).update(payload).eq("id", editing.id);
+        const { error } = await (supabase as any).from(table).update(payload).eq("id", editing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from(table).insert(payload);
+        const { error } = await (supabase as any).from(table).insert(payload);
         if (error) throw error;
       }
     },
