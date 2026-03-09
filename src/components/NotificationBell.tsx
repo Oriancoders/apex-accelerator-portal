@@ -29,21 +29,21 @@ export default function NotificationBell() {
     queryClient.invalidateQueries({ queryKey: ["user-notifications"] });
   }, [queryClient]);
 
-  // Realtime subscription — instantly refetch on any change to notifications table
+  // Realtime subscription for current user's notifications only
   useEffect(() => {
     if (!user) return;
 
     const channel = supabase
-      .channel("notification-bell-realtime")
+      .channel(`notification-bell-realtime-${user.id}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
           table: "notifications",
+          filter: `user_id=eq.${user.id}`,
         },
         () => {
-          // Any INSERT, UPDATE, DELETE → refetch queries instantly
           invalidateAll();
         }
       )
@@ -55,49 +55,46 @@ export default function NotificationBell() {
   }, [user, invalidateAll]);
 
   const { data: notifications = [] } = useQuery({
-    queryKey: ["notification-bell", user?.id, isAdmin],
+    queryKey: ["notification-bell", user?.id],
     queryFn: async () => {
       if (!user) return [];
-      let query = supabase
+      const { data } = await supabase
         .from("notifications")
         .select("*")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(5);
 
-      if (!isAdmin) {
-        query = query.eq("user_id", user.id);
-      }
-
-      const { data } = await query;
       return data || [];
     },
     enabled: !!user,
-    refetchInterval: 30000, // Fallback polling every 30s
+    refetchInterval: 15000,
   });
 
   const { data: unreadCount = 0 } = useQuery({
-    queryKey: ["notification-bell-count", user?.id, isAdmin],
+    queryKey: ["notification-bell-count", user?.id],
     queryFn: async () => {
       if (!user) return 0;
-      let query = supabase
+      const { count } = await supabase
         .from("notifications")
         .select("*", { count: "exact", head: true })
-        .eq("is_read", false);
+        .eq("is_read", false)
+        .eq("user_id", user.id);
 
-      if (!isAdmin) {
-        query = query.eq("user_id", user.id);
-      }
-
-      const { count } = await query;
       return count || 0;
     },
     enabled: !!user,
-    refetchInterval: 30000,
+    refetchInterval: 15000,
   });
 
   const markReadMutation = useMutation({
     mutationFn: async (id: string) => {
-      await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+      if (!user) return;
+      await supabase
+        .from("notifications")
+        .update({ is_read: true })
+        .eq("id", id)
+        .eq("user_id", user.id);
     },
     onSuccess: invalidateAll,
   });
@@ -107,19 +104,19 @@ export default function NotificationBell() {
   useEffect(() => {
     if (open && !prevOpen.current && notifications.length > 0) {
       const unreadIds = notifications.filter((n) => !n.is_read).map((n) => n.id);
-      if (unreadIds.length > 0) {
+      if (unreadIds.length > 0 && user) {
         const markAll = async () => {
           await supabase
             .from("notifications")
             .update({ is_read: true })
-            .in("id", unreadIds);
-          // Realtime will handle the refetch automatically
+            .in("id", unreadIds)
+            .eq("user_id", user.id);
         };
         setTimeout(markAll, 1500);
       }
     }
     prevOpen.current = open;
-  }, [open, notifications]);
+  }, [open, notifications, user]);
 
   if (!user) return null;
 
