@@ -50,7 +50,7 @@ export default function Navbar() {
   const navItems = [
     { label: "My Tickets", to: "/tickets", icon: Ticket, show: !isGuest },
     { label: "Why Us", to: "/why-choose-us", icon: Star, show: true },
-    { label: "About & Contact", to: "/about", icon: Info, show: true },
+    { label: "Get to Know Us", to: "/about", icon: Info, show: true },
   ].filter((n) => n.show);
 
   const isActive = (path: string) => location.pathname === path;
