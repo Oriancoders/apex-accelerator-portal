@@ -63,6 +63,36 @@ serve(async (req) => {
     // Verify the requesting user matches the session user
     if (user.id !== userId) throw new Error("User mismatch");
 
+    // Idempotency check: if this session was already recorded, don't apply credits again.
+    const { data: existingTx, error: txCheckError } = await supabaseAdmin
+      .from("credit_transactions")
+      .select("id")
+      .eq("stripe_session_id", sessionId)
+      .limit(1);
+
+    if (txCheckError) throw txCheckError;
+
+    if (existingTx && existingTx.length > 0) {
+      const { data: profileRow } = await supabaseAdmin
+        .from("profiles")
+        .select("credits")
+        .eq("user_id", userId)
+        .single();
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          already_processed: true,
+          credits_added: 0,
+          new_balance: profileRow?.credits ?? null,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
+    }
+
     // Use atomic function to add credits (prevents race conditions)
     const { data: newCredits, error: rpcError } = await supabaseAdmin.rpc("add_purchase_credits", {
       p_user_id: userId,
@@ -71,22 +101,16 @@ serve(async (req) => {
       p_stripe_session_id: sessionId,
     });
 
-    if (rpcError) throw rpcError;
-
-    // Check if it was a duplicate (credits returned but no new transaction)
-    const { data: txCheck } = await supabaseAdmin
-      .from("credit_transactions")
-      .select("id")
-      .eq("stripe_session_id", sessionId);
-
-    const alreadyProcessed = txCheck && txCheck.length > 1;
+    if (rpcError) {
+      console.error("add_purchase_credits rpc error:", rpcError);
+      throw rpcError;
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
         credits_added: totalCredits,
         new_balance: newCredits,
-        ...(alreadyProcessed ? { already_processed: true } : {}),
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
