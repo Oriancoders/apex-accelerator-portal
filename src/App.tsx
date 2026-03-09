@@ -14,6 +14,7 @@ import CreditsPage from "./pages/CreditsPage";
 import PricingGuidePage from "./pages/PricingGuidePage";
 import NotFound from "./pages/NotFound";
 import NotificationsPage from "./pages/NotificationsPage";
+import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import AdminDashboardPage from "./pages/admin/AdminDashboardPage";
 import AdminTicketsPage from "./pages/admin/AdminTicketsPage";
 import AdminUsersPage from "./pages/admin/AdminUsersPage";
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="/credits" element={<CreditsPage />} />
             <Route path="/pricing" element={<PricingGuidePage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
+            <Route path="/knowledge" element={<KnowledgeBasePage />} />
             {/* Admin Routes */}
             <Route path="/admin" element={<AdminDashboardPage />} />
             <Route path="/admin/tickets" element={<AdminTicketsPage />} />
