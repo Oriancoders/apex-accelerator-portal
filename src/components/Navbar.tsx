@@ -156,7 +156,7 @@ export default function Navbar() {
                   <DropdownMenuSeparator />
                 </>
               )}
-              {isAdmin && (
+              {isAdmin && !isGuest && (
                 <>
                   <DropdownMenuItem onClick={() => navigate("/admin")} className="h-10 cursor-pointer">
                     <Shield className="mr-2 h-4 w-4" />
