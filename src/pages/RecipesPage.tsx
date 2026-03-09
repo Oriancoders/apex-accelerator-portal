@@ -40,7 +40,7 @@ function ArticleBody({ content }: { content: string }) {
           prose-strong:text-foreground prose-li:text-muted-foreground
           prose-a:text-primary prose-code:text-accent
           prose-blockquote:border-primary/30 prose-blockquote:text-muted-foreground"
-        dangerouslySetInnerHTML={{ __html: content }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
       />
     );
   }
