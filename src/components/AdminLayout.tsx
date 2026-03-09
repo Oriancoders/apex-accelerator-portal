@@ -47,6 +47,7 @@ const adminMenuItems = [
   { title: "AppExchange", url: "/admin/appexchange", icon: Package },
   { title: "News", url: "/admin/news", icon: Newspaper },
   { title: "Extensions", url: "/admin/extensions", icon: Chrome },
+  { title: "Contacts", url: "/admin/contacts", icon: MessageSquare },
   { title: "Credits", url: "/admin/credits", icon: Coins },
 ];
 
