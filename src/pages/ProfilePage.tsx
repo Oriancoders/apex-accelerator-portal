@@ -3,6 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import ProtectedLayout from "@/components/ProtectedLayout";
+import { Navigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ import { motion } from "framer-motion";
 import {
   User, Mail, Phone, Building2, Coins, Clock, Ticket, CheckCircle,
   TrendingUp, Calendar, CreditCard, BarChart3, Save, AlertTriangle,
-  FileText, ArrowUpRight, ArrowDownRight, Loader2
+  FileText, ArrowUpRight, ArrowDownRight, Loader2, Lock, Eye, EyeOff
 } from "lucide-react";
 
 const fadeIn = {
@@ -25,7 +26,7 @@ const fadeIn = {
 };
 
 export default function ProfilePage() {
-  const { user, profile, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile, isGuest } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -35,6 +36,11 @@ export default function ProfilePage() {
     phone: "",
     company: "",
   });
+
+  const [passwordForm, setPasswordForm] = useState({ newPassword: "", confirmPassword: "" });
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
 
   useEffect(() => {
     if (profile) {
@@ -113,6 +119,30 @@ export default function ProfilePage() {
     },
     onError: () => toast({ title: "Error updating profile", variant: "destructive" }),
   });
+
+  // Redirect guests — after all hooks
+  if (isGuest) return <Navigate to="/dashboard" replace />;
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordForm.newPassword.length < 6) {
+      toast({ title: "Password must be at least 6 characters", variant: "destructive" });
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast({ title: "Passwords do not match", variant: "destructive" });
+      return;
+    }
+    setPasswordLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: passwordForm.newPassword });
+    setPasswordLoading(false);
+    if (error) {
+      toast({ title: "Error changing password", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Password changed successfully" });
+      setPasswordForm({ newPassword: "", confirmPassword: "" });
+    }
+  };
 
   // Compute stats
   const totalTickets = tickets.length;
@@ -307,6 +337,60 @@ export default function ProfilePage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Change Password — only for email auth */}
+            {(!profile?.auth_provider || profile.auth_provider === "email") && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Lock className="h-4 w-4 text-primary" /> Change Password
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handlePasswordChange} className="space-y-4">
+                    <div>
+                      <Label className="text-xs">New Password</Label>
+                      <div className="relative mt-1">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          value={passwordForm.newPassword}
+                          onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                          placeholder="Min 6 characters"
+                          minLength={6}
+                          required
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <Label className="text-xs">Confirm Password</Label>
+                      <Input
+                        type={showPassword ? "text" : "password"}
+                        value={passwordForm.confirmPassword}
+                        onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                        placeholder="Repeat password"
+                        minLength={6}
+                        required
+                        className="mt-1"
+                      />
+                    </div>
+                    <Button type="submit" variant="outline" className="w-full rounded-xl" disabled={passwordLoading}>
+                      {passwordLoading ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Changing...</>
+                      ) : (
+                        <><Lock className="h-4 w-4 mr-2" /> Change Password</>
+                      )}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Analytics - Right Column */}
