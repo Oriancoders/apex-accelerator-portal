@@ -88,22 +88,12 @@ serve(async (req) => {
 
     // Validate origin for redirect URLs
     const origin = req.headers.get("origin") || "";
-    const configuredSiteUrl =
-      Deno.env.get("SITE_URL") ??
-      Deno.env.get("PUBLIC_SITE_URL") ??
-      "";
     const allowedOrigins = [
-      configuredSiteUrl,
+      "https://id-preview--f32dadef-b332-4587-a6bb-60eb8af2ca1a.lovable.app",
       "http://localhost:5173",
       "http://localhost:8080",
-    ].filter((value) => value.length > 0);
-    const safeOrigin = allowedOrigins.includes(origin)
-      ? origin
-      : configuredSiteUrl || allowedOrigins[0] || "";
-
-    if (!safeOrigin) {
-      throw new Error("Missing redirect origin. Set SITE_URL env var.");
-    }
+    ];
+    const safeOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
