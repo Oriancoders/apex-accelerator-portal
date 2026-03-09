@@ -147,6 +147,42 @@ export type Database = {
           },
         ]
       }
+      extensions: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          name: string
+          published: boolean | null
+          updated_at: string
+          url: string
+          users_count: string | null
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description: string
+          id?: string
+          name: string
+          published?: boolean | null
+          updated_at?: string
+          url?: string
+          users_count?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          published?: boolean | null
+          updated_at?: string
+          url?: string
+          users_count?: string | null
+        }
+        Relationships: []
+      }
       news_items: {
         Row: {
           category: string

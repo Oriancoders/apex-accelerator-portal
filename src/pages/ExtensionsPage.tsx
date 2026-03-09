@@ -1,91 +1,33 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Input } from "@/components/ui/input";
 import { ExternalLink, Search, Chrome, X } from "lucide-react";
-
-const extensions = [
-  {
-    name: "Salesforce Inspector Reloaded",
-    desc: "Inspect data, run SOQL queries, export results and navigate records directly from your browser.",
-    url: "https://chrome.google.com/webstore",
-    category: "Developer Tools",
-    users: "400K+",
-  },
-  {
-    name: "Salesforce DevTools",
-    desc: "Debug logs explorer, schema browser, and real-time event monitoring all in one Chrome extension.",
-    url: "https://chrome.google.com/webstore",
-    category: "Developer Tools",
-    users: "150K+",
-  },
-  {
-    name: "ORGanizer for Salesforce",
-    desc: "Multi-org management with quick links, org notes, and instant switching between sandboxes and production.",
-    url: "https://chrome.google.com/webstore",
-    category: "Productivity",
-    users: "200K+",
-  },
-  {
-    name: "Salesforce Colored Favicons",
-    desc: "Identify your Salesforce orgs instantly with custom color-coded browser tab favicons.",
-    url: "https://chrome.google.com/webstore",
-    category: "Productivity",
-    users: "100K+",
-  },
-  {
-    name: "Apex PMD",
-    desc: "Static code analysis for Apex directly in Chrome — catch bugs and code quality issues before deployment.",
-    url: "https://chrome.google.com/webstore",
-    category: "Developer Tools",
-    users: "50K+",
-  },
-  {
-    name: "Salesforce Mass Edit & Mass Update",
-    desc: "Mass edit and update Salesforce records inline — like a spreadsheet, without leaving the list view.",
-    url: "https://chrome.google.com/webstore",
-    category: "Data Management",
-    users: "80K+",
-  },
-  {
-    name: "Salesforce.com Quick Login As",
-    desc: "Quickly login as any user in your org for testing and support — saves hours compared to the native approach.",
-    url: "https://chrome.google.com/webstore",
-    category: "Admin Tools",
-    users: "120K+",
-  },
-  {
-    name: "Salesforce Field Audit",
-    desc: "See field history, audit trail, and data changes for any Salesforce record in a clean timeline view.",
-    url: "https://chrome.google.com/webstore",
-    category: "Admin Tools",
-    users: "60K+",
-  },
-  {
-    name: "Salesforce Metadata Search",
-    desc: "Search across all metadata types in your org — find where a field is used across flows, triggers, and layouts.",
-    url: "https://chrome.google.com/webstore",
-    category: "Developer Tools",
-    users: "70K+",
-  },
-  {
-    name: "Lightning Extension",
-    desc: "Debug Lightning components, view component trees, and analyze performance metrics in Salesforce Lightning.",
-    url: "https://chrome.google.com/webstore",
-    category: "Developer Tools",
-    users: "90K+",
-  },
-];
-
-const categories = ["All", ...Array.from(new Set(extensions.map((e) => e.category)))];
 
 export default function ExtensionsPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
 
+  const { data: extensions = [], isLoading } = useQuery({
+    queryKey: ["public-extensions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("extensions")
+        .select("*")
+        .eq("published", true)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const categories = ["All", ...Array.from(new Set(extensions.map((e) => e.category)))];
+
   const filtered = extensions.filter((e) => {
     const matchSearch =
       e.name.toLowerCase().includes(search.toLowerCase()) ||
-      e.desc.toLowerCase().includes(search.toLowerCase()) ||
+      e.description.toLowerCase().includes(search.toLowerCase()) ||
       e.category.toLowerCase().includes(search.toLowerCase());
     const matchCat = category === "All" || e.category === category;
     return matchSearch && matchCat;
@@ -94,7 +36,6 @@ export default function ExtensionsPage() {
   return (
     <ProtectedLayout>
       <div className="max-w-5xl mx-auto space-y-8">
-
         {/* Hero */}
         <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-background border border-primary/15 px-6 py-10 sm:px-10">
           <div className="absolute inset-0 pointer-events-none">
@@ -152,7 +93,9 @@ export default function ExtensionsPage() {
         </div>
 
         {/* Extensions grid */}
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-20 text-muted-foreground">Loading extensions...</div>
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mb-4">
               <Chrome className="h-7 w-7 text-muted-foreground" />
@@ -170,7 +113,7 @@ export default function ExtensionsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {filtered.map((e) => (
               <a
-                key={e.name}
+                key={e.id}
                 href={e.url}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -181,7 +124,7 @@ export default function ExtensionsPage() {
                     <Chrome className="h-5 w-5 text-primary" />
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-xs text-muted-foreground">{e.users} users</span>
+                    {e.users_count && <span className="text-xs text-muted-foreground">{e.users_count} users</span>}
                     <ExternalLink className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                 </div>
@@ -189,7 +132,7 @@ export default function ExtensionsPage() {
                   <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors leading-snug mb-1">
                     {e.name}
                   </h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{e.desc}</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{e.description}</p>
                 </div>
                 <div>
                   <span className="inline-flex items-center text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary">

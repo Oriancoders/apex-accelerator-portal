@@ -1,15 +1,25 @@
 import { Chrome, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
-const extensions = [
-  { name: "Salesforce Inspector Reloaded", desc: "Inspect data, run SOQL, export results", url: "https://chrome.google.com/webstore" },
-  { name: "Salesforce DevTools", desc: "Debug logs, schema explorer", url: "https://chrome.google.com/webstore" },
-  { name: "ORGanizer for Salesforce", desc: "Multi-org management & quick links", url: "https://chrome.google.com/webstore" },
-  { name: "Salesforce Colored Favicons", desc: "Identify orgs by color-coded tabs", url: "https://chrome.google.com/webstore" },
-];
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function ExtensionsWidget() {
   const navigate = useNavigate();
+
+  const { data: extensions = [] } = useQuery({
+    queryKey: ["extensions-widget"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("extensions")
+        .select("id, name, description, url")
+        .eq("published", true)
+        .order("created_at", { ascending: false })
+        .limit(4);
+      if (error) throw error;
+      return data;
+    },
+  });
+
   return (
     <div className="widget-card h-full">
       <div className="widget-card-header">
@@ -22,7 +32,7 @@ export default function ExtensionsWidget() {
       <div className="widget-card-body space-y-1">
         {extensions.map((e) => (
           <a
-            key={e.name}
+            key={e.id}
             href={e.url}
             target="_blank"
             rel="noopener noreferrer"
@@ -30,7 +40,7 @@ export default function ExtensionsWidget() {
           >
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{e.name}</p>
-              <p className="text-xs text-muted-foreground">{e.desc}</p>
+              <p className="text-xs text-muted-foreground">{e.description}</p>
             </div>
             <ExternalLink className="h-3.5 w-3.5 text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-3" />
           </a>

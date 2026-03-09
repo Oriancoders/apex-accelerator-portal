@@ -25,6 +25,7 @@ import RecipesPage from "./pages/RecipesPage";
 import AdminRecipesPage from "./pages/admin/AdminRecipesPage";
 import AdminNewsPage from "./pages/admin/AdminNewsPage";
 import AdminAppExchangePage from "./pages/admin/AdminAppExchangePage";
+import AdminExtensionsPage from "./pages/admin/AdminExtensionsPage";
 import AppExchangePage from "./pages/AppExchangePage";
 import NewsPage from "./pages/NewsPage";
 import ExtensionsPage from "./pages/ExtensionsPage";
@@ -64,6 +65,7 @@ const App = () => (
             <Route path="/admin/recipes" element={<AdminRecipesPage />} />
             <Route path="/admin/appexchange" element={<AdminAppExchangePage />} />
             <Route path="/admin/news" element={<AdminNewsPage />} />
+            <Route path="/admin/extensions" element={<AdminExtensionsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
