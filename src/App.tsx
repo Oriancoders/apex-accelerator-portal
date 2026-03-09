@@ -28,6 +28,7 @@ import AdminRecipesPage from "./pages/admin/AdminRecipesPage";
 import AdminNewsPage from "./pages/admin/AdminNewsPage";
 import AdminAppExchangePage from "./pages/admin/AdminAppExchangePage";
 import AdminExtensionsPage from "./pages/admin/AdminExtensionsPage";
+import AdminContactSubmissionsPage from "./pages/admin/AdminContactSubmissionsPage";
 import AppExchangePage from "./pages/AppExchangePage";
 import NewsPage from "./pages/NewsPage";
 import ExtensionsPage from "./pages/ExtensionsPage";
