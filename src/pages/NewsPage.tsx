@@ -1,86 +1,28 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import { Input } from "@/components/ui/input";
 import { ExternalLink, Search, Newspaper, X, Calendar } from "lucide-react";
 
-const news = [
-  {
-    title: "Spring '26 Release Highlights",
-    date: "Mar 6, 2026",
-    url: "https://www.salesforce.com/news/",
-    category: "Release Notes",
-    summary: "Salesforce Spring '26 introduces over 200 new features across Sales Cloud, Service Cloud, and Marketing Cloud including enhanced Einstein AI capabilities.",
-  },
-  {
-    title: "Einstein AI Copilot Now GA",
-    date: "Mar 4, 2026",
-    url: "https://www.salesforce.com/news/",
-    category: "AI & Einstein",
-    summary: "Einstein Copilot is now generally available, bringing conversational AI directly into every Salesforce workflow to help users take action faster.",
-  },
-  {
-    title: "Flow Builder: New Screen Components",
-    date: "Mar 2, 2026",
-    url: "https://www.salesforce.com/news/",
-    category: "Automation",
-    summary: "Salesforce Flow Builder ships with 15 new screen components including rich text, data tables, and location pickers to build richer user experiences.",
-  },
-  {
-    title: "Salesforce Acquires Data Cloud Startup",
-    date: "Feb 28, 2026",
-    url: "https://www.salesforce.com/news/",
-    category: "Company News",
-    summary: "Salesforce expands its Data Cloud capabilities with the acquisition of a leading real-time data streaming startup to power unified customer profiles.",
-  },
-  {
-    title: "Apex Test Performance Improvements",
-    date: "Feb 25, 2026",
-    url: "https://www.salesforce.com/news/",
-    category: "Developer",
-    summary: "Apex test execution is now up to 40% faster with new parallel test runner infrastructure rolled out across all Salesforce production orgs.",
-  },
-  {
-    title: "Agentforce 2.0 Launched",
-    date: "Feb 20, 2026",
-    url: "https://www.salesforce.com/news/",
-    category: "AI & Einstein",
-    summary: "Agentforce 2.0 brings autonomous AI agents that can handle complex multi-step tasks across service, sales, and marketing without human intervention.",
-  },
-  {
-    title: "Salesforce Launches Slack AI",
-    date: "Feb 15, 2026",
-    url: "https://www.salesforce.com/news/",
-    category: "Productivity",
-    summary: "Slack AI introduces channel recaps, thread summaries, and search answers powered by large language models, rolled out to all paid Slack plans.",
-  },
-  {
-    title: "MuleSoft Integration Templates Expansion",
-    date: "Feb 10, 2026",
-    url: "https://www.salesforce.com/news/",
-    category: "Integration",
-    summary: "MuleSoft adds 50+ new pre-built integration templates for SAP, Workday, and ServiceNow, cutting integration project timelines by half.",
-  },
-  {
-    title: "Salesforce Trailhead Adds AI Learning Paths",
-    date: "Feb 5, 2026",
-    url: "https://www.salesforce.com/news/",
-    category: "Learning",
-    summary: "Trailhead expands with 20 new AI-focused learning paths, including hands-on modules for Prompt Builder, Einstein Copilot, and AI model deployment.",
-  },
-  {
-    title: "Hyperforce Expansion to New Regions",
-    date: "Jan 30, 2026",
-    url: "https://www.salesforce.com/news/",
-    category: "Infrastructure",
-    summary: "Salesforce Hyperforce now available in 8 new regions including Southeast Asia, Middle East, and South America for data residency compliance.",
-  },
-];
-
-const categories = ["All", ...Array.from(new Set(news.map((n) => n.category)))];
-
 export default function NewsPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
+
+  const { data: news = [], isLoading } = useQuery({
+    queryKey: ["public-news"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("news_items")
+        .select("*")
+        .eq("published", true)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const categories = ["All", ...Array.from(new Set(news.map((n) => n.category)))];
 
   const filtered = news.filter((n) => {
     const matchSearch =
@@ -94,7 +36,6 @@ export default function NewsPage() {
   return (
     <ProtectedLayout>
       <div className="max-w-5xl mx-auto space-y-8">
-
         {/* Hero */}
         <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-primary/10 via-primary/5 to-background border border-primary/15 px-6 py-10 sm:px-10">
           <div className="absolute inset-0 pointer-events-none">
@@ -152,7 +93,9 @@ export default function NewsPage() {
         </div>
 
         {/* News list */}
-        {filtered.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center py-20 text-muted-foreground">Loading news...</div>
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mb-4">
               <Newspaper className="h-7 w-7 text-muted-foreground" />
@@ -170,7 +113,7 @@ export default function NewsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {filtered.map((n) => (
               <a
-                key={n.title}
+                key={n.id}
                 href={n.url}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -190,7 +133,7 @@ export default function NewsPage() {
                 </div>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground mt-auto pt-1">
                   <Calendar className="h-3 w-3" />
-                  {n.date}
+                  {new Date(n.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </div>
               </a>
             ))}

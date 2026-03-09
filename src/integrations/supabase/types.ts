@@ -147,6 +147,39 @@ export type Database = {
           },
         ]
       }
+      news_items: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          published: boolean | null
+          summary: string
+          title: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          published?: boolean | null
+          summary: string
+          title: string
+          updated_at?: string
+          url?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          published?: boolean | null
+          summary?: string
+          title?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
