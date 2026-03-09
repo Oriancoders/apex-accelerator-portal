@@ -120,6 +120,30 @@ export default function ProfilePage() {
     onError: () => toast({ title: "Error updating profile", variant: "destructive" }),
   });
 
+  // Redirect guests — after all hooks
+  if (isGuest) return <Navigate to="/dashboard" replace />;
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordForm.newPassword.length < 6) {
+      toast({ title: "Password must be at least 6 characters", variant: "destructive" });
+      return;
+    }
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast({ title: "Passwords do not match", variant: "destructive" });
+      return;
+    }
+    setPasswordLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: passwordForm.newPassword });
+    setPasswordLoading(false);
+    if (error) {
+      toast({ title: "Error changing password", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Password changed successfully" });
+      setPasswordForm({ newPassword: "", confirmPassword: "" });
+    }
+  };
+
   // Compute stats
   const totalTickets = tickets.length;
   const completedTickets = tickets.filter((t) => t.status === "completed" || t.status === "closed").length;
