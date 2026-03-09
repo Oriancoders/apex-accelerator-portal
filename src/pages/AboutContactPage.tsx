@@ -19,7 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import {
   Accordion,
@@ -110,6 +110,7 @@ export default function AboutContactPage() {
     message: "",
   });
   const [sending, setSending] = useState(false);
+  const [showCalendly, setShowCalendly] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -352,7 +353,7 @@ export default function AboutContactPage() {
                 <Button
                   size="lg"
                   className="w-full h-12 rounded-xl font-bold"
-                  onClick={() => toast.info("Meeting booking coming soon! Please use the contact form for now.")}
+                  onClick={() => setShowCalendly(true)}
                 >
                   <Calendar className="mr-2 h-4 w-4" />
                   Schedule a Meeting
@@ -422,6 +423,35 @@ export default function AboutContactPage() {
           </Accordion>
         </div>
       </section>
+
+      {/* Calendly Modal */}
+      {showCalendly && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowCalendly(false)}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className="bg-card rounded-2xl shadow-xl w-full max-w-2xl h-[80vh] overflow-hidden relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-3 border-b border-border">
+              <h3 className="font-bold text-foreground flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-primary" />
+                Schedule a Meeting
+              </h3>
+              <Button variant="ghost" size="sm" onClick={() => setShowCalendly(false)} className="h-8 w-8 p-0 rounded-full">
+                ✕
+              </Button>
+            </div>
+            <iframe
+              src="https://calendly.com/shiftdeploy/30min"
+              className="w-full h-[calc(80vh-52px)] border-0"
+              title="Schedule a Meeting"
+            />
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
