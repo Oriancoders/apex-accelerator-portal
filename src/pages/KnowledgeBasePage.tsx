@@ -21,13 +21,10 @@ import type { Tables } from "@/integrations/supabase/types";
 type Article = Tables<"articles">;
 
 const CATEGORY_META: Record<string, { label: string; icon: React.ReactNode; color: string; bg: string }> = {
-  "best-practices": { label: "Best Practices", icon: <Shield className="h-4 w-4" />, color: "text-primary",     bg: "bg-primary/10" },
-  "how-to":         { label: "How-To Guides",  icon: <BookOpen className="h-4 w-4" />, color: "text-success",   bg: "bg-success/10" },
-  "architecture":   { label: "Architecture",   icon: <BarChart2 className="h-4 w-4" />, color: "text-accent",   bg: "bg-accent/10" },
-  "integration":    { label: "Integration",    icon: <Puzzle className="h-4 w-4" />, color: "text-info",        bg: "bg-info/10" },
-  "security":       { label: "Security",       icon: <Shield className="h-4 w-4" />, color: "text-destructive", bg: "bg-destructive/10" },
-  "performance":    { label: "Performance",    icon: <Zap className="h-4 w-4" />, color: "text-warning",        bg: "bg-warning/10" },
-  "recipe":         { label: "Recipes",        icon: <Settings className="h-4 w-4" />, color: "text-primary",   bg: "bg-primary/10" },
+  "best_practice":  { label: "Best Practices", icon: <Shield className="h-4 w-4" />, color: "text-primary",     bg: "bg-primary/10" },
+  "guide":          { label: "How-To Guides",  icon: <BookOpen className="h-4 w-4" />, color: "text-success",   bg: "bg-success/10" },
+  "recipe":         { label: "Recipes",        icon: <Settings className="h-4 w-4" />, color: "text-accent",    bg: "bg-accent/10" },
+  "quick_win":      { label: "Quick Wins",     icon: <Zap className="h-4 w-4" />, color: "text-warning",        bg: "bg-warning/10" },
   "news":           { label: "News",           icon: <Newspaper className="h-4 w-4" />, color: "text-muted-foreground", bg: "bg-muted" },
 };
 
