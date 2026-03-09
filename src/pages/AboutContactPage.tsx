@@ -426,17 +426,17 @@ export default function AboutContactPage() {
 
       {/* Calendly Modal */}
       {showCalendly && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowCalendly(false)}>
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm sm:p-4" onClick={() => setShowCalendly(false)}>
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            className="bg-card rounded-2xl shadow-xl w-full max-w-2xl h-[80vh] overflow-hidden relative"
+            initial={{ opacity: 0, y: 40, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 40, scale: 0.97 }}
+            transition={{ duration: 0.25, ease: "easeOut" as const }}
+            className="bg-card rounded-t-2xl sm:rounded-2xl shadow-xl w-full sm:max-w-2xl h-[90vh] sm:h-[80vh] overflow-hidden relative"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between px-5 py-3 border-b border-border">
-              <h3 className="font-bold text-foreground flex items-center gap-2">
+            <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-border">
+              <h3 className="font-bold text-foreground flex items-center gap-2 text-sm sm:text-base">
                 <Calendar className="h-4 w-4 text-primary" />
                 Schedule a Meeting
               </h3>
@@ -446,7 +446,7 @@ export default function AboutContactPage() {
             </div>
             <iframe
               src="https://calendly.com/shiftdeploy/30min"
-              className="w-full h-[calc(80vh-52px)] border-0"
+              className="w-full h-[calc(90vh-52px)] sm:h-[calc(80vh-52px)] border-0"
               title="Schedule a Meeting"
             />
           </motion.div>
