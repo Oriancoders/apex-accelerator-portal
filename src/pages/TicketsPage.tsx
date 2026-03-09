@@ -49,7 +49,17 @@ function isActive(s: string) {
 export default function TicketsPage() {
   const { user, isGuest } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<string>("all");
+  const [realtimePulse, setRealtimePulse] = useState(false);
+  const pulseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevStatusRef = useRef<Record<string, string>>({});
+
+  const pulse = useCallback(() => {
+    setRealtimePulse(true);
+    if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+    pulseTimerRef.current = setTimeout(() => setRealtimePulse(false), 2000);
+  }, []);
 
   const { data: tickets = [], isLoading } = useQuery({
     queryKey: ["tickets", user?.id],
@@ -64,6 +74,49 @@ export default function TicketsPage() {
     },
     enabled: !!user && !isGuest,
   });
+
+  // Realtime subscription — update list instantly when ticket changes
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel("client-tickets-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tickets", filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          const updated = payload.new as Ticket | undefined;
+          if (updated && payload.eventType === "UPDATE") {
+            const prev = prevStatusRef.current[updated.id];
+            if (prev && prev !== updated.status) {
+              const statusLabel = updated.status.replace(/_/g, " ");
+              toast.info(`Ticket status updated to "${statusLabel}"`, {
+                description: updated.title,
+                duration: 5000,
+              });
+            }
+            prevStatusRef.current[updated.id] = updated.status;
+          }
+          queryClient.invalidateQueries({ queryKey: ["tickets", user.id] });
+          pulse();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+      if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
+    };
+  }, [user, queryClient, pulse]);
+
+  // Seed prevStatusRef when tickets first load
+  useEffect(() => {
+    if (tickets.length > 0 && Object.keys(prevStatusRef.current).length === 0) {
+      const map: Record<string, string> = {};
+      tickets.forEach(t => { map[t.id] = t.status; });
+      prevStatusRef.current = map;
+    }
+  }, [tickets]);
 
   if (isGuest) {
     return (
