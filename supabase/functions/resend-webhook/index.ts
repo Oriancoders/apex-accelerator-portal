@@ -193,21 +193,8 @@ serve(async (req) => {
   }
 
   try {
-    // This function is called by a database trigger via pg_net.
-    // We verify the request contains a valid Authorization header with the anon or service key.
-    const authHeader = req.headers.get("Authorization");
-    const token = authHeader?.replace("Bearer ", "") ?? "";
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-
-    // Allow anon key, service key, or skip auth if called internally (no auth header but valid payload)
-    const isAuthorized = !authHeader || token === anonKey || token === serviceKey;
-    if (authHeader && !isAuthorized) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // This function is called internally by a database trigger via pg_net.
+    // JWT verification is handled at the platform level (config.toml).
 
     const payload = await req.json();
     const { type, table, record } = payload;
