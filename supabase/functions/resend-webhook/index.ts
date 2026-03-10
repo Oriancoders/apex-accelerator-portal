@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -193,35 +193,8 @@ serve(async (req) => {
   }
 
   try {
-    // Verify this is called by the database trigger (internal call with service role)
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Verify the token is valid (either anon key from trigger or service role)
-    const token = authHeader.replace("Bearer ", "");
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    
-    // Only allow calls from the database trigger (which uses anon key) or service role
-    if (token !== anonKey && token !== serviceKey) {
-      // Verify it's at least a valid user token (fallback)
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        anonKey
-      );
-      const { error: authError } = await supabase.auth.getUser(token);
-      if (authError) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    }
+    // This function is called internally by a database trigger via pg_net.
+    // JWT verification is handled at the platform level (config.toml).
 
     const payload = await req.json();
     const { type, table, record } = payload;
