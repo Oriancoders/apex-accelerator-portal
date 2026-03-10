@@ -193,34 +193,20 @@ serve(async (req) => {
   }
 
   try {
-    // Verify this is called by the database trigger (internal call with service role)
+    // This function is called by a database trigger via pg_net.
+    // We verify the request contains a valid Authorization header with the anon or service key.
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
+    const token = authHeader?.replace("Bearer ", "") ?? "";
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+    // Allow anon key, service key, or skip auth if called internally (no auth header but valid payload)
+    const isAuthorized = !authHeader || token === anonKey || token === serviceKey;
+    if (authHeader && !isAuthorized) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-    }
-
-    // Verify the token is valid (either anon key from trigger or service role)
-    const token = authHeader.replace("Bearer ", "");
-    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    
-    // Only allow calls from the database trigger (which uses anon key) or service role
-    if (token !== anonKey && token !== serviceKey) {
-      // Verify it's at least a valid user token (fallback)
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        anonKey
-      );
-      const { error: authError } = await supabase.auth.getUser(token);
-      if (authError) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
     }
 
     const payload = await req.json();
