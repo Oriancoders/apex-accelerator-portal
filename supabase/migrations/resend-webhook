@@ -1,0 +1,26 @@
+create extension if not exists pg_net;
+create or replace function public.invoke_resend_webhook()
+returns trigger
+language plpgsql
+security definer
+as $$
+declare
+  request_id bigint;
+begin
+  select net.http_post(
+    url := 'https://YOUR_PROJECT_ID.supabase.co/functions/v1/resend-webhook',
+    headers := jsonb_build_object(
+      'Content-Type','application/json'
+    ),
+    body := jsonb_build_object(
+      'type', TG_OP,
+      'table', TG_TABLE_NAME,
+      'record', row_to_json(NEW)
+    )
+  )
+  into request_id;
+
+  return NEW;
+end;
+$$;
+
