@@ -1,0 +1,15 @@
+create table if not exists public.ticket_events (
+  id uuid primary key default gen_random_uuid(),
+  ticket_id uuid not null,
+  from_status text,
+  to_status text not null,
+  changed_by uuid,
+  note text,
+  attachments text[],
+  created_at timestamptz not null default now(),
+
+  constraint ticket_events_ticket_id_fkey
+    foreign key (ticket_id)
+    references public.tickets(id)
+    on delete cascade
+);
