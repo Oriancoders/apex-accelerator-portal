@@ -193,262 +193,336 @@ export default function AdminDashboardPage() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        {/* Top Header & Period Filter (Fitts's Law applied: larger touch targets) */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
             <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">Admin Dashboard</h1>
             <p className="text-sm text-muted-foreground mt-1">Analytics & insights for the portal</p>
           </motion.div>
 
           <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)} className="w-fit">
-            <TabsList className="h-9">
+            <TabsList className="h-auto p-1 border shadow-sm">
               {(Object.keys(PERIOD_LABELS) as Period[]).map(p => (
-                <TabsTrigger key={p} value={p} className="text-xs px-3">{PERIOD_LABELS[p]}</TabsTrigger>
+                <TabsTrigger key={p} value={p} className="px-6 py-2.5 text-sm font-medium transition-colors">
+                  {PERIOD_LABELS[p]}
+                </TabsTrigger>
               ))}
             </TabsList>
           </Tabs>
         </div>
 
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {summaryCards.map((stat, i) => (
-            <motion.div
-              key={stat.title}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, delay: i * 0.04 }}
-            >
-              <Card className="hover:shadow-md transition-shadow h-full">
-                <CardHeader className="flex flex-row items-center justify-between pb-1 px-4 pt-4">
-                  <CardTitle className="text-xs font-medium text-muted-foreground leading-tight">{stat.title}</CardTitle>
-                  <div className={`p-1.5 rounded-lg ${stat.bg}`}>
-                    <stat.icon className={`h-4 w-4 ${stat.color}`} />
-                  </div>
+        {/* Modular View (Hick's Law / Chunking applied) */}
+        <Tabs defaultValue="overview" className="space-y-6 w-full">
+          <TabsList className="h-auto w-full justify-start p-1 bg-muted/40 overflow-x-auto flex-nowrap">
+            <TabsTrigger value="overview" className="px-6 py-2.5 text-sm font-medium whitespace-nowrap">System Overview</TabsTrigger>
+            <TabsTrigger value="operations" className="px-6 py-2.5 text-sm font-medium whitespace-nowrap">Operations</TabsTrigger>
+            <TabsTrigger value="finance" className="px-6 py-2.5 text-sm font-medium whitespace-nowrap">Finance</TabsTrigger>
+            <TabsTrigger value="users" className="px-6 py-2.5 text-sm font-medium whitespace-nowrap">Users</TabsTrigger>
+          </TabsList>
+
+          {/* OVERVIEW TAB */}
+          <TabsContent value="overview" className="space-y-6 outline-none">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {[summaryCards[0], summaryCards[4], summaryCards[6], summaryCards[1]].map((stat, i) => (
+                <motion.div
+                  key={stat.title}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25, delay: i * 0.04 }}
+                >
+                  <Card className="hover:shadow-md transition-shadow h-full">
+                    <CardHeader className="flex flex-row items-center justify-between pb-1 px-4 pt-4">
+                      <CardTitle className="text-xs font-medium text-muted-foreground leading-tight">{stat.title}</CardTitle>
+                      <div className={`p-1.5 rounded-lg ${stat.bg}`}>
+                        <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                      </div>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4">
+                      <div className="text-xl sm:text-2xl font-bold text-foreground">{stat.value}</div>
+                      {(stat as any).sub && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5">{(stat as any).sub}</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* Ticket Trend */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-primary" />
+                    Ticket Trend
+                  </CardTitle>
+                  <CardDescription className="text-xs">{PERIOD_LABELS[period]}</CardDescription>
                 </CardHeader>
-                <CardContent className="px-4 pb-4">
-                  <div className="text-xl sm:text-2xl font-bold text-foreground">{stat.value}</div>
-                  {(stat as any).sub && (
-                    <p className="text-[11px] text-muted-foreground mt-0.5">{(stat as any).sub}</p>
+                <CardContent>
+                  <div className="h-52">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={stats?.ticketTrend || []}>
+                        <XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                        <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid hsl(var(--border))", fontSize: 12 }} />
+                        <Bar dataKey="count" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Status Breakdown Pie */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-primary" />
+                    Ticket Status Breakdown
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-52 flex items-center">
+                    <div className="w-1/2 h-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={statusPieData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={40}
+                            outerRadius={70}
+                            dataKey="value"
+                            stroke="none"
+                          >
+                            {statusPieData.map((_, i) => (
+                              <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid hsl(var(--border))", fontSize: 12 }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="w-1/2 space-y-1.5">
+                      {statusPieData.map((d, i) => (
+                        <div key={d.name} className="flex items-center gap-2 text-xs">
+                          <div className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
+                          <span className="text-muted-foreground capitalize truncate">{d.name}</span>
+                          <span className="font-semibold text-foreground ml-auto">{d.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* OPERATIONS TAB */}
+          <TabsContent value="operations" className="space-y-6 outline-none">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {[summaryCards[0], summaryCards[5], summaryCards[3], summaryCards[7]].map((stat, i) => (
+                <motion.div key={stat.title} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: i * 0.04 }}>
+                  <Card className="hover:shadow-md transition-shadow h-full">
+                    <CardHeader className="flex flex-row items-center justify-between pb-1 px-4 pt-4">
+                      <CardTitle className="text-xs font-medium text-muted-foreground leading-tight">{stat.title}</CardTitle>
+                      <div className={`p-1.5 rounded-lg ${stat.bg}`}>
+                        <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                      </div>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4">
+                      <div className="text-xl sm:text-2xl font-bold text-foreground">{stat.value}</div>
+                      {(stat as any).sub && <p className="text-[11px] text-muted-foreground mt-0.5">{(stat as any).sub}</p>}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Priority Breakdown</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2.5">
+                    {(["critical", "high", "medium", "low"] as const).map(p => {
+                      const count = stats?.priorityCounts[p] || 0;
+                      const total = stats?.totalTickets || 1;
+                      const pct = Math.round((count / total) * 100) || 0;
+                      const colors: Record<string, string> = {
+                        critical: "bg-destructive",
+                        high: "bg-[hsl(var(--warning))]",
+                        medium: "bg-primary",
+                        low: "bg-muted-foreground/40",
+                      };
+                      return (
+                        <div key={p}>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="capitalize text-muted-foreground">{p}</span>
+                            <span className="font-semibold text-foreground">{count}</span>
+                          </div>
+                          <div className="h-2 rounded-full bg-muted overflow-hidden">
+                            <div className={`h-full rounded-full ${colors[p]} transition-all`} style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Quick Stats</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">Published Articles</span>
+                    <Badge variant="outline" className="text-xs">{stats?.publishedArticles ?? 0}/{stats?.totalArticles ?? 0}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">Pending Review</span>
+                    <Badge variant="outline" className="text-xs">{stats?.underReview ?? 0}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">Submitted</span>
+                    <Badge variant="outline" className="text-xs">{stats?.submitted ?? 0}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">Contact Inquiries</span>
+                    <Badge variant="outline" className="text-xs">{stats?.totalContacts ?? 0}</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* FINANCE TAB */}
+          <TabsContent value="finance" className="space-y-6 outline-none">
+            <div className="grid grid-cols-2 gap-4 border-b pb-6">
+              {[summaryCards[1], summaryCards[2]].map((stat, i) => (
+                <motion.div key={stat.title} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: i * 0.04 }}>
+                  <Card className="hover:shadow-md transition-shadow h-full">
+                    <CardHeader className="flex flex-row items-center justify-between pb-1 px-4 pt-4">
+                      <CardTitle className="text-xs font-medium text-muted-foreground leading-tight">{stat.title}</CardTitle>
+                      <div className={`p-1.5 rounded-lg ${stat.bg}`}>
+                        <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                      </div>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4">
+                      <div className="text-xl sm:text-2xl font-bold text-foreground">{stat.value}</div>
+                      {(stat as any).sub && <p className="text-[11px] text-muted-foreground mt-0.5">{(stat as any).sub}</p>}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Credits Overview</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total in Circulation</p>
+                    <p className="text-2xl font-bold text-foreground">{stats?.totalCredits ?? 0}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Purchased</p>
+                      <p className="text-lg font-bold text-accent">+{stats?.creditsPurchased ?? 0}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Spent</p>
+                      <p className="text-lg font-bold text-destructive">-{stats?.creditsSpent ?? 0}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Top Spenders */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Crown className="h-4 w-4 text-accent" />
+                    Top Spenders
+                  </CardTitle>
+                  <CardDescription className="text-xs">By credits spent · {PERIOD_LABELS[period]}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {(stats?.topSpenders || []).length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-6">No spending data yet</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {stats?.topSpenders.map((s, i) => (
+                        <div key={s.name} className="flex items-center gap-3">
+                          <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${i === 0 ? "bg-accent/20 text-accent" : "bg-muted text-muted-foreground"}`}>
+                            {i + 1}
+                          </div>
+                          <span className="text-sm font-medium text-foreground truncate flex-1">{s.name}</span>
+                          <Badge variant="secondary" className="font-mono text-xs">{s.amount} cr</Badge>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </CardContent>
               </Card>
-            </motion.div>
-          ))}
-        </div>
+            </div>
+          </TabsContent>
 
-        {/* Charts Row */}
-        <div className="grid md:grid-cols-2 gap-4">
-          {/* Ticket Trend */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Activity className="h-4 w-4 text-primary" />
-                Ticket Trend
-              </CardTitle>
-              <CardDescription className="text-xs">{PERIOD_LABELS[period]}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-52">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={stats?.ticketTrend || []}>
-                    <XAxis dataKey="label" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                    <Tooltip
-                      contentStyle={{ borderRadius: 12, border: "1px solid hsl(var(--border))", fontSize: 12 }}
-                    />
-                    <Bar dataKey="count" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Status Breakdown Pie */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-primary" />
-                Ticket Status Breakdown
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-52 flex items-center">
-                <div className="w-1/2 h-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={statusPieData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={40}
-                        outerRadius={70}
-                        dataKey="value"
-                        stroke="none"
-                      >
-                        {statusPieData.map((_, i) => (
-                          <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid hsl(var(--border))", fontSize: 12 }} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="w-1/2 space-y-1.5">
-                  {statusPieData.map((d, i) => (
-                    <div key={d.name} className="flex items-center gap-2 text-xs">
-                      <div className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
-                      <span className="text-muted-foreground capitalize truncate">{d.name}</span>
-                      <span className="font-semibold text-foreground ml-auto">{d.value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Leaderboards Row */}
-        <div className="grid md:grid-cols-2 gap-4">
-          {/* Top Spenders */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <Crown className="h-4 w-4 text-accent" />
-                Top Spenders
-              </CardTitle>
-              <CardDescription className="text-xs">By credits spent · {PERIOD_LABELS[period]}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {(stats?.topSpenders || []).length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-6">No spending data yet</p>
-              ) : (
-                <div className="space-y-3">
-                  {stats?.topSpenders.map((s, i) => (
-                    <div key={s.name} className="flex items-center gap-3">
-                      <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                        i === 0 ? "bg-accent/20 text-accent" : "bg-muted text-muted-foreground"
-                      }`}>
-                        {i + 1}
+          {/* USERS TAB */}
+          <TabsContent value="users" className="space-y-6 outline-none">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-6 border-b">
+              {[summaryCards[6]].map((stat, i) => (
+                <motion.div key={stat.title} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25, delay: i * 0.04 }}>
+                  <Card className="hover:shadow-md transition-shadow h-full">
+                    <CardHeader className="flex flex-row items-center justify-between pb-1 px-4 pt-4">
+                      <CardTitle className="text-xs font-medium text-muted-foreground leading-tight">{stat.title}</CardTitle>
+                      <div className={`p-1.5 rounded-lg ${stat.bg}`}>
+                        <stat.icon className={`h-4 w-4 ${stat.color}`} />
                       </div>
-                      <span className="text-sm font-medium text-foreground truncate flex-1">{s.name}</span>
-                      <Badge variant="secondary" className="font-mono text-xs">{s.amount} cr</Badge>
+                    </CardHeader>
+                    <CardContent className="px-4 pb-4">
+                      <div className="text-xl sm:text-2xl font-bold text-foreground">{stat.value}</div>
+                      {(stat as any).sub && <p className="text-[11px] text-muted-foreground mt-0.5">{(stat as any).sub}</p>}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* Most Active Users */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-primary" />
+                    Most Active Users
+                  </CardTitle>
+                  <CardDescription className="text-xs">By tickets submitted · {PERIOD_LABELS[period]}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {(stats?.topActive || []).length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-6">No activity data yet</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {stats?.topActive.map((s, i) => (
+                        <div key={s.name} className="flex items-center gap-3">
+                          <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${i === 0 ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}>
+                            {i + 1}
+                          </div>
+                          <span className="text-sm font-medium text-foreground truncate flex-1">{s.name}</span>
+                          <Badge variant="secondary" className="text-xs">{s.count} tickets</Badge>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Most Active Users */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-primary" />
-                Most Active Users
-              </CardTitle>
-              <CardDescription className="text-xs">By tickets submitted · {PERIOD_LABELS[period]}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {(stats?.topActive || []).length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-6">No activity data yet</p>
-              ) : (
-                <div className="space-y-3">
-                  {stats?.topActive.map((s, i) => (
-                    <div key={s.name} className="flex items-center gap-3">
-                      <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${
-                        i === 0 ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-                      }`}>
-                        {i + 1}
-                      </div>
-                      <span className="text-sm font-medium text-foreground truncate flex-1">{s.name}</span>
-                      <Badge variant="secondary" className="text-xs">{s.count} tickets</Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Priority Breakdown + Quick Stats */}
-        <div className="grid md:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Priority Breakdown</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2.5">
-                {(["critical", "high", "medium", "low"] as const).map(p => {
-                  const count = stats?.priorityCounts[p] || 0;
-                  const total = stats?.totalTickets || 1;
-                  const pct = Math.round((count / total) * 100) || 0;
-                  const colors: Record<string, string> = {
-                    critical: "bg-destructive",
-                    high: "bg-[hsl(var(--warning))]",
-                    medium: "bg-primary",
-                    low: "bg-muted-foreground/40",
-                  };
-                  return (
-                    <div key={p}>
-                      <div className="flex justify-between text-xs mb-1">
-                        <span className="capitalize text-muted-foreground">{p}</span>
-                        <span className="font-semibold text-foreground">{count}</span>
-                      </div>
-                      <div className="h-2 rounded-full bg-muted overflow-hidden">
-                        <div className={`h-full rounded-full ${colors[p]} transition-all`} style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Credits Overview</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <p className="text-xs text-muted-foreground">Total in Circulation</p>
-                <p className="text-2xl font-bold text-foreground">{stats?.totalCredits ?? 0}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-xs text-muted-foreground">Purchased</p>
-                  <p className="text-lg font-bold text-accent">+{stats?.creditsPurchased ?? 0}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Spent</p>
-                  <p className="text-lg font-bold text-destructive">-{stats?.creditsSpent ?? 0}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Quick Stats</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-foreground">Published Articles</span>
-                <Badge variant="outline" className="text-xs">{stats?.publishedArticles ?? 0}/{stats?.totalArticles ?? 0}</Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-foreground">Pending Review</span>
-                <Badge variant="outline" className="text-xs">{stats?.underReview ?? 0}</Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-foreground">Submitted</span>
-                <Badge variant="outline" className="text-xs">{stats?.submitted ?? 0}</Badge>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-foreground">Contact Inquiries</span>
-                <Badge variant="outline" className="text-xs">{stats?.totalContacts ?? 0}</Badge>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </AdminLayout>
   );

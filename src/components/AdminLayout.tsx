@@ -6,17 +6,19 @@ import { useAdminRole } from "@/hooks/useAdminRole";
 import {
   SidebarProvider, SidebarTrigger, Sidebar, SidebarContent, SidebarGroup,
   SidebarGroupLabel, SidebarGroupContent, SidebarMenu, SidebarMenuItem,
-  SidebarMenuButton, useSidebar,
+  SidebarMenuButton, useSidebar, SidebarInset
 } from "@/components/ui/sidebar";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { NavLink } from "@/components/NavLink";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { LayoutDashboard, Ticket, Users, FileText, Coins, Shield, ArrowLeft, Bell, Menu, Lightbulb, Package, Newspaper, Chrome, MessageSquare } from "lucide-react";
+import { LayoutDashboard, Ticket, Users, FileText, Coins, Shield, ArrowLeft, Bell, Menu, Lightbulb, Package, Newspaper, Chrome, MessageSquare, ChevronRight } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 
 /*
  * HCI Principles Applied to Admin Layout:
@@ -38,18 +40,40 @@ import { Badge } from "@/components/ui/badge";
  *   large touch targets. Header adapts with breadcrumb-style context.
  */
 
-const adminMenuItems = [
-  { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
-  { title: "Tickets", url: "/admin/tickets", icon: Ticket },
-  { title: "Users", url: "/admin/users", icon: Users },
-  { title: "Articles", url: "/admin/articles", icon: FileText },
-  { title: "Recipes", url: "/admin/recipes", icon: Lightbulb },
-  { title: "AppExchange", url: "/admin/appexchange", icon: Package },
-  { title: "News", url: "/admin/news", icon: Newspaper },
-  { title: "Extensions", url: "/admin/extensions", icon: Chrome },
-  { title: "Contacts", url: "/admin/contacts", icon: MessageSquare },
-  { title: "Credits", url: "/admin/credits", icon: Coins },
+const adminNavGroups = [
+  {
+    label: "Overview",
+    items: [
+      { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
+    ]
+  },
+  {
+    label: "Communications",
+    items: [
+      { title: "Tickets", url: "/admin/tickets", icon: Ticket },
+      { title: "Contacts", url: "/admin/contacts", icon: MessageSquare },
+    ]
+  },
+  {
+    label: "Administration",
+    items: [
+      { title: "Users", url: "/admin/users", icon: Users },
+      { title: "Credits", url: "/admin/credits", icon: Coins },
+    ]
+  },
+  {
+    label: "Content Management",
+    items: [
+      { title: "Articles", url: "/admin/articles", icon: FileText },
+      { title: "Recipes", url: "/admin/recipes", icon: Lightbulb },
+      { title: "AppExchange", url: "/admin/appexchange", icon: Package },
+      { title: "News", url: "/admin/news", icon: Newspaper },
+      { title: "Extensions", url: "/admin/extensions", icon: Chrome },
+    ]
+  }
 ];
+
+const allAdminItems = adminNavGroups.flatMap(group => group.items);
 
 function AdminSidebar() {
   const { state } = useSidebar();
@@ -71,43 +95,58 @@ function AdminSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border hidden md:flex">
       <SidebarContent className="py-2">
-        {/* Chunk 1: Brand + Main Nav */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="flex items-center gap-2 px-3 mb-1">
-            <Shield className="h-4 w-4 text-sidebar-primary" />
-            {!collapsed && <span className="font-bold text-xs uppercase tracking-wider">Admin Panel</span>}
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {adminMenuItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    {/* Fitts's Law: Tall menu items for easy clicking */}
-                    <NavLink
-                      to={item.url}
-                      end={item.url === "/admin"}
-                      className="hover:bg-sidebar-accent/50 min-h-[44px] rounded-xl mx-1 px-3"
-                      activeClassName="bg-sidebar-accent text-sidebar-primary font-semibold"
-                    >
-                      <item.icon className="mr-3 h-4 w-4 flex-shrink-0" />
-                      {!collapsed && (
-                        <span className="flex-1 text-sm">{item.title}</span>
-                      )}
-                      {item.title === "Notifications" && unreadCount > 0 && !collapsed && (
-                        <Badge variant="destructive" className="ml-auto text-[10px] h-5 min-w-5 flex items-center justify-center rounded-full">
-                          {unreadCount}
-                        </Badge>
-                      )}
-                      {item.title === "Notifications" && unreadCount > 0 && collapsed && (
-                        <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive" />
-                      )}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Brand Header */}
+        <div className="flex items-center gap-2 px-4 py-4 mb-2">
+          <Shield className="h-6 w-6 text-primary flex-shrink-0" />
+          {!collapsed && <span className="font-bold text-base tracking-wide">Admin Panel</span>}
+        </div>
+
+        {/* Chunking: Grouped Navigation Sections (Miller's Law) */}
+        <Accordion type="multiple" defaultValue={['Overview', 'Communications', 'Administration', 'Content Management']} className="w-full">
+          {adminNavGroups.map((group) => (
+            <AccordionItem value={group.label} key={group.label} className="border-none">
+              <SidebarGroup className="py-0">
+                <SidebarGroupLabel asChild className="group/label text-xs w-full hover:bg-sidebar-accent/50 hover:text-sidebar-foreground cursor-pointer transition-colors px-4 py-2">
+                  <AccordionTrigger className={`flex items-center w-full py-0 hover:no-underline ${collapsed ? "[&>svg]:hidden" : ""}`}>
+                    {!collapsed && <span className="font-semibold">{group.label}</span>}
+                  </AccordionTrigger>
+                </SidebarGroupLabel>
+                <AccordionContent className="pb-0">
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                    {group.items.map((item) => (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton asChild>
+                          {/* Fitts's Law: Tall menu items for easy clicking, clear hover states */}
+                          <NavLink
+                            to={item.url}
+                            end={item.url === "/admin"}
+                            className="hover:bg-sidebar-accent hover:text-sidebar-foreground min-h-[44px] rounded-lg mx-2 px-3 transition-colors"
+                            activeClassName="bg-primary/10 text-primary font-semibold"
+                          >
+                            <item.icon className="mr-3 h-5 w-5 flex-shrink-0" />
+                            {!collapsed && (
+                              <span className="flex-1 text-sm">{item.title}</span>
+                            )}
+                            {item.title === "Notifications" && unreadCount > 0 && !collapsed && (
+                              <Badge variant="destructive" className="ml-auto text-[10px] h-5 min-w-5 flex items-center justify-center rounded-full">
+                                {unreadCount}
+                              </Badge>
+                            )}
+                            {item.title === "Notifications" && unreadCount > 0 && collapsed && (
+                              <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-destructive" />
+                            )}
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </AccordionContent>
+            </SidebarGroup>
+          </AccordionItem>
+        ))}
+        </Accordion>
 
         {/* Chunk 2: Back action — separated (Gestalt Proximity) */}
         <SidebarGroup className="mt-auto">
@@ -167,26 +206,37 @@ function MobileAdminNav() {
             </div>
           </div>
         </div>
-        {/* Fitts's Law: Tall mobile nav items (h-12) */}
-        <nav className="p-3 space-y-1">
-          {adminMenuItems.map((item) => (
-            <Link
-              key={item.url}
-              to={item.url}
-              onClick={() => setOpen(false)}
-              className={`flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium transition-all ${
-                isActive(item.url)
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              }`}
-            >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
-              <span className="flex-1">{item.title}</span>
-              {item.title === "Notifications" && unreadCount > 0 && (
-                <Badge variant="destructive" className="text-[10px] h-5 min-w-5 rounded-full">{unreadCount}</Badge>
-              )}
-            </Link>
-          ))}
+        {/* Fitts's Law: Tall mobile nav items (h-12) and Hick's Law: Chunking */}
+        <nav className="p-3 pb-24 overflow-y-auto max-h-[calc(100vh-140px)]">
+          <Accordion type="multiple" defaultValue={['Overview', 'Communications', 'Administration', 'Content Management']} className="w-full space-y-4">
+            {adminNavGroups.map((group) => (
+              <AccordionItem value={group.label} key={group.label} className="border-none">
+                <AccordionTrigger className="px-4 py-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:no-underline">
+                  {group.label}
+                </AccordionTrigger>
+                <AccordionContent className="space-y-1 pb-0 pt-0">
+                  {group.items.map((item) => (
+                    <Link
+                      key={item.url}
+                      to={item.url}
+                      onClick={() => setOpen(false)}
+                      className={`flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium transition-all ${
+                        isActive(item.url)
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }`}
+                    >
+                      <item.icon className="h-5 w-5 flex-shrink-0" />
+                      <span className="flex-1">{item.title}</span>
+                      {item.title === "Notifications" && unreadCount > 0 && (
+                        <Badge variant="destructive" className="text-[10px] h-5 min-w-5 rounded-full">{unreadCount}</Badge>
+                      )}
+                    </Link>
+                  ))}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         </nav>
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
           <Link
@@ -208,7 +258,7 @@ function AdminHeader() {
   const location = useLocation();
 
   // Recognition > Recall: Show current page name in header
-  const currentPage = adminMenuItems.find((item) =>
+  const currentPage = allAdminItems.find((item) =>
     item.url === "/admin" ? location.pathname === "/admin" : location.pathname.startsWith(item.url)
   );
 
@@ -273,13 +323,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <AdminSidebar />
-        <div className="flex-1 flex flex-col min-w-0">
-          <AdminHeader />
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">{children}</main>
-        </div>
-      </div>
+      <AdminSidebar />
+      <SidebarInset>
+        <AdminHeader />
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">{children}</main>
+      </SidebarInset>
     </SidebarProvider>
   );
 }

@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -86,9 +86,14 @@ serve(async (req) => {
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     const customerId = customers.data.length > 0 ? customers.data[0].id : undefined;
 
-    // Use SITE_URL from env (your custom domain), fallback to request origin
-    const siteUrl = Deno.env.get("SITE_URL") || req.headers.get("origin") || "https://apex-accelerator-portal.lovable.app";
-    const safeOrigin = siteUrl.replace(/\/+$/, "");
+    // Validate origin for redirect URLs
+    const origin = req.headers.get("origin") || "";
+    const allowedOrigins = [
+      "https://id-preview--f32dadef-b332-4587-a6bb-60eb8af2ca1a.lovable.app",
+      "http://localhost:5173",
+      "http://localhost:8080",
+    ];
+    const safeOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,

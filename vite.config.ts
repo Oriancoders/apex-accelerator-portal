@@ -8,8 +8,16 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    headers: {
+      "Content-Security-Policy": "frame-ancestors 'none'",
+    },
     hmr: {
       overlay: false,
+    },
+  },
+  preview: {
+    headers: {
+      "Content-Security-Policy": "frame-ancestors 'none'",
     },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
