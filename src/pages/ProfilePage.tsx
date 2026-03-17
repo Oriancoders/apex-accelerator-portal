@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
+import { useUserRole } from "@/hooks/useUserRole";
 import {
   User, Mail, Phone, Building2, Coins, Clock, Ticket, CheckCircle,
   TrendingUp, Calendar, CreditCard, BarChart3, Save, AlertTriangle,
@@ -27,6 +28,7 @@ const fadeIn = {
 
 export default function ProfilePage() {
   const { user, profile, refreshProfile, isGuest } = useAuth();
+  const { role, isLoading: roleLoading } = useUserRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -34,7 +36,6 @@ export default function ProfilePage() {
     full_name: "",
     email: "",
     phone: "",
-    company: "",
   });
 
   const [passwordForm, setPasswordForm] = useState({ newPassword: "", confirmPassword: "" });
@@ -48,7 +49,6 @@ export default function ProfilePage() {
         full_name: profile.full_name || "",
         email: profile.email || "",
         phone: profile.phone || "",
-        company: profile.company || "",
       });
     }
   }, [profile]);
@@ -108,7 +108,6 @@ export default function ProfilePage() {
         .update({
           full_name: form.full_name,
           phone: form.phone,
-          company: form.company,
         })
         .eq("user_id", user.id);
       if (error) throw error;
@@ -122,6 +121,18 @@ export default function ProfilePage() {
 
   // Redirect guests — after all hooks
   if (isGuest) return <Navigate to="/dashboard" replace />;
+
+  if (roleLoading) {
+    return (
+      <ProtectedLayout>
+        <div className="flex items-center justify-center h-[50vh]">
+          <div className="animate-pulse text-muted-foreground">Loading profile...</div>
+        </div>
+      </ProtectedLayout>
+    );
+  }
+
+  const isMemberOnly = role === "member";
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -146,8 +157,8 @@ export default function ProfilePage() {
 
   // Compute stats
   const totalTickets = tickets.length;
-  const completedTickets = tickets.filter((t) => t.status === "completed" || t.status === "closed").length;
-  const activeTickets = tickets.filter((t) => !["completed", "closed", "cancelled"].includes(t.status)).length;
+  const completedTickets = tickets.filter((t) => t.status === "completed").length;
+  const activeTickets = tickets.filter((t) => !["completed", "cancelled"].includes(t.status)).length;
   const cancelledTickets = tickets.filter((t) => t.status === "cancelled").length;
 
   const totalHoursWorked = tickets.reduce((sum, t) => sum + (t.estimated_hours || 0), 0);
@@ -169,7 +180,6 @@ export default function ProfilePage() {
     in_progress: tickets.filter((t) => t.status === "in_progress").length,
     uat: tickets.filter((t) => t.status === "uat").length,
     completed: tickets.filter((t) => t.status === "completed").length,
-    closed: tickets.filter((t) => t.status === "closed").length,
     cancelled: tickets.filter((t) => t.status === "cancelled").length,
   };
 
@@ -211,16 +221,20 @@ export default function ProfilePage() {
                 </h1>
                 <p className="text-sm text-muted-foreground mt-1">{user?.email}</p>
                 <div className="flex items-center gap-3 mt-3 flex-wrap">
-                  <Badge variant="secondary" className="gap-1.5">
-                    <Coins className="h-3 w-3" /> {profile?.credits ?? 0} Credits
-                  </Badge>
-                  <Badge variant="outline" className="gap-1.5">
-                    <Calendar className="h-3 w-3" /> Member since {memberSince}
-                  </Badge>
-                  {profile?.company && (
-                    <Badge variant="outline" className="gap-1.5">
-                      <Building2 className="h-3 w-3" /> {profile.company}
-                    </Badge>
+                  {!isMemberOnly && (
+                    <>
+                      <Badge variant="secondary" className="gap-1.5">
+                        <Coins className="h-3 w-3" /> {profile?.credits ?? 0} Credits
+                      </Badge>
+                      <Badge variant="outline" className="gap-1.5">
+                        <Calendar className="h-3 w-3" /> Member since {memberSince}
+                      </Badge>
+                      {profile?.company && (
+                        <Badge variant="outline" className="gap-1.5">
+                          <Building2 className="h-3 w-3" /> {profile.company}
+                        </Badge>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -229,7 +243,7 @@ export default function ProfilePage() {
         </motion.div>
 
         {/* Key Stats Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        {!isMemberOnly && <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {[
             { label: "Total Tickets", value: totalTickets, icon: Ticket, color: "text-primary", bg: "bg-primary/5" },
             { label: "Hours Worked", value: totalHoursWorked, icon: Clock, color: "text-accent", bg: "bg-accent/5" },
@@ -250,11 +264,11 @@ export default function ProfilePage() {
               </Card>
             </motion.div>
           ))}
-        </div>
+        </div>}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Personal Information - Left Column */}
-          <div className="lg:col-span-1 space-y-6">
+          <div className={isMemberOnly ? "lg:col-span-3 space-y-6" : "lg:col-span-1 space-y-6"}>
             <Card>
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
@@ -288,15 +302,6 @@ export default function ProfilePage() {
                       className="mt-1"
                     />
                   </div>
-                  <div>
-                    <Label className="text-xs">Company</Label>
-                    <Input
-                      value={form.company}
-                      onChange={(e) => setForm({ ...form, company: e.target.value })}
-                      placeholder="Your company"
-                      className="mt-1"
-                    />
-                  </div>
                   <Button type="submit" className="w-full rounded-xl" disabled={updateMutation.isPending}>
                     {updateMutation.isPending ? (
                       <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...</>
@@ -309,34 +314,36 @@ export default function ProfilePage() {
             </Card>
 
             {/* Account Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-primary" /> Account Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Auth Provider</span>
-                  <Badge variant="outline" className="text-xs capitalize">{profile?.auth_provider || "email"}</Badge>
-                </div>
-                <Separator />
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Current Credits</span>
-                  <span className="text-sm font-bold text-foreground">{profile?.credits ?? 0}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Total Purchased</span>
-                  <span className="text-sm font-semibold text-foreground">{totalCreditsPurchased}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between items-center">
-                  <span className="text-xs text-muted-foreground">Total Spent</span>
-                  <span className="text-sm font-semibold text-destructive">{totalCreditsSpent}</span>
-                </div>
-              </CardContent>
-            </Card>
+            {!isMemberOnly && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-primary" /> Account Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">Auth Provider</span>
+                    <Badge variant="outline" className="text-xs capitalize">{profile?.auth_provider || "email"}</Badge>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">Current Credits</span>
+                    <span className="text-sm font-bold text-foreground">{profile?.credits ?? 0}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">Total Purchased</span>
+                    <span className="text-sm font-semibold text-foreground">{totalCreditsPurchased}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-muted-foreground">Total Spent</span>
+                    <span className="text-sm font-semibold text-destructive">{totalCreditsSpent}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Change Password — only for email auth */}
             {(!profile?.auth_provider || profile.auth_provider === "email") && (
@@ -394,7 +401,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Analytics - Right Column */}
-          <div className="lg:col-span-2 space-y-6">
+          {!isMemberOnly && <div className="lg:col-span-2 space-y-6">
             {/* Ticket Breakdown */}
             <Card>
               <CardHeader>
@@ -411,7 +418,6 @@ export default function ProfilePage() {
                     { label: "In Progress", value: ticketsByStatus.in_progress, color: "bg-accent/10 text-accent" },
                     { label: "UAT", value: ticketsByStatus.uat, color: "bg-[hsl(var(--info))]/10 text-[hsl(var(--info))]" },
                     { label: "Completed", value: ticketsByStatus.completed, color: "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]" },
-                    { label: "Closed", value: ticketsByStatus.closed, color: "bg-muted text-muted-foreground" },
                     { label: "Cancelled", value: ticketsByStatus.cancelled, color: "bg-destructive/10 text-destructive" },
                   ].map((s) => (
                     <div key={s.label} className={`rounded-xl p-3 ${s.color.split(" ")[0]}`}>
@@ -562,7 +568,7 @@ export default function ProfilePage() {
                 )}
               </CardContent>
             </Card>
-          </div>
+          </div>}
         </div>
       </div>
     </ProtectedLayout>

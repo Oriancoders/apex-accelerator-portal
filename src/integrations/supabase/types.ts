@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      agents: {
+        Row: {
+          created_at: string
+          default_commission_percent: number
+          display_name: string | null
+          email: string | null
+          id: string
+          is_active: boolean
+          metadata: Json
+          onboarded_by: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          default_commission_percent?: number
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          onboarded_by?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          default_commission_percent?: number
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          onboarded_by?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       articles: {
         Row: {
           author: string | null
@@ -115,6 +154,274 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_company_assignments: {
+        Row: {
+          agent_id: string
+          commission_percent: number | null
+          company_id: string
+          created_at: string
+          created_by: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          notes: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id: string
+          commission_percent?: number | null
+          company_id: string
+          created_at?: string
+          created_by: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string
+          commission_percent?: number | null
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_company_assignments_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agent_company_assignments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commission_rules: {
+        Row: {
+          agent_id: string | null
+          applies_to: string[]
+          assignment_id: string | null
+          commission_percent: number | null
+          company_id: string | null
+          created_at: string
+          created_by: string
+          currency: string
+          effective_from: string
+          effective_to: string | null
+          flat_amount: number | null
+          id: string
+          is_active: boolean
+          payout_model: string
+          priority: number
+          rule_name: string
+          scope: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id?: string | null
+          applies_to?: string[]
+          assignment_id?: string | null
+          commission_percent?: number | null
+          company_id?: string | null
+          created_at?: string
+          created_by: string
+          currency?: string
+          effective_from?: string
+          effective_to?: string | null
+          flat_amount?: number | null
+          id?: string
+          is_active?: boolean
+          payout_model?: string
+          priority?: number
+          rule_name?: string
+          scope: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string | null
+          applies_to?: string[]
+          assignment_id?: string | null
+          commission_percent?: number | null
+          company_id?: string | null
+          created_at?: string
+          created_by?: string
+          currency?: string
+          effective_from?: string
+          effective_to?: string | null
+          flat_amount?: number | null
+          id?: string
+          is_active?: boolean
+          payout_model?: string
+          priority?: number
+          rule_name?: string
+          scope?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commission_rules_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_rules_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "agent_company_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_rules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      companies: {
+        Row: {
+          created_at: string
+          created_by: string
+          created_via_agent_id: string | null
+          id: string
+          metadata: Json
+          name: string
+          slug: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          created_via_agent_id?: string | null
+          id?: string
+          metadata?: Json
+          name: string
+          slug: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          created_via_agent_id?: string | null
+          id?: string
+          metadata?: Json
+          name?: string
+          slug?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "companies_created_via_agent_id_fkey"
+            columns: ["created_via_agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_component_visibility: {
+        Row: {
+          company_id: string
+          component_key: string
+          config: Json
+          created_at: string
+          id: string
+          is_enabled: boolean
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          company_id: string
+          component_key: string
+          config?: Json
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          component_key?: string
+          config?: Json
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_component_visibility_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_memberships: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          invited_by: string | null
+          is_primary: boolean
+          role: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          is_primary?: boolean
+          role: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          is_primary?: boolean
+          role?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_memberships_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_settings: {
         Row: {
           id: string
@@ -173,6 +480,65 @@ export type Database = {
             columns: ["ticket_id"]
             isOneToOne: false
             referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_withdrawal_requests: {
+        Row: {
+          account_details: string
+          admin_notes: string | null
+          created_at: string
+          credit_transaction_id: string | null
+          id: string
+          payout_reference: string | null
+          payment_method: string
+          processed_at: string | null
+          processed_by: string | null
+          requested_credits: number
+          requester_note: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_details: string
+          admin_notes?: string | null
+          created_at?: string
+          credit_transaction_id?: string | null
+          id?: string
+          payout_reference?: string | null
+          payment_method?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          requested_credits: number
+          requester_note?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_details?: string
+          admin_notes?: string | null
+          created_at?: string
+          credit_transaction_id?: string | null
+          id?: string
+          payout_reference?: string | null
+          payment_method?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          requested_credits?: number
+          requester_note?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_withdrawal_requests_credit_transaction_id_fkey"
+            columns: ["credit_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "credit_transactions"
             referencedColumns: ["id"]
           },
         ]
@@ -554,6 +920,14 @@ export type Database = {
         Args: { p_amount: number; p_reason?: string; p_user_id: string }
         Returns: number
       }
+      admin_mark_withdrawal_paid: {
+        Args: {
+          p_admin_notes?: string
+          p_payout_reference?: string
+          p_request_id: string
+        }
+        Returns: string
+      }
       create_notification: {
         Args: {
           p_message: string
@@ -580,9 +954,13 @@ export type Database = {
         }
         Returns: boolean
       }
+      set_primary_company: {
+        Args: { p_company_id: string }
+        Returns: string
+      }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
+      app_role: "admin" | "moderator" | "user" | "agent"
       ticket_difficulty: "easy" | "medium" | "hard" | "expert"
       ticket_priority: "low" | "medium" | "high" | "critical"
       ticket_status:
@@ -721,7 +1099,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user"],
+      app_role: ["admin", "moderator", "user", "agent"],
       ticket_difficulty: ["easy", "medium", "hard", "expert"],
       ticket_priority: ["low", "medium", "high", "critical"],
       ticket_status: [

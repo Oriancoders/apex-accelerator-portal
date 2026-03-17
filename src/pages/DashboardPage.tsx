@@ -9,10 +9,14 @@ import ExtensionsWidget from "@/components/widgets/ExtensionsWidget";
 
 import TicketSubmissionWidget from "@/components/widgets/TicketSubmissionWidget";
 import TicketDashboardWidget from "@/components/widgets/TicketDashboardWidget";
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate, useLocation } from "react-router-dom";
+import { useAgentTenant } from "@/hooks/useAgentTenant";
+import { useUserRole } from "@/hooks/useUserRole";
+import { supabase } from "@/integrations/supabase/client";
 
 /*
  * HCI Principles Applied:
@@ -95,6 +99,93 @@ function SectionHeader({ title, subtitle }: { title: string; subtitle?: string }
 
 export default function DashboardPage() {
   const { profile, isGuest } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { isAgent, activeCompany, activeMembership, isLoading: tenantLoading, visibilityMap } = useAgentTenant();
+  const { role, isLoading: roleLoading } = useUserRole();
+
+  const hasCompanyDashboardMembership =
+    activeMembership?.role === "owner" || activeMembership?.role === "admin";
+
+  const { data: profileCompanySlug, isLoading: profileCompanyLoading } = useQuery({
+    queryKey: ["profile-company-slug", profile?.user_id],
+    queryFn: async () => {
+      if (!profile?.user_id) return null;
+
+      // @ts-ignore - company_id exists in DB, generated types may lag
+      const { data: profileRow, error: profileError } = await supabase
+        .from("profiles")
+        // @ts-ignore
+        .select("company_id")
+        .eq("user_id", profile.user_id)
+        .maybeSingle();
+
+      if (profileError) return null;
+      // @ts-ignore
+      const companyId = profileRow?.company_id as string | undefined;
+      if (!companyId) return null;
+
+      const { data: companyRow, error: companyError } = await supabase
+        .from("companies")
+        .select("slug")
+        .eq("id", companyId)
+        .maybeSingle();
+
+      if (companyError) return null;
+      return companyRow?.slug || null;
+    },
+    enabled: !!profile?.user_id && (role === "member" || role === "company_admin") && !activeCompany?.slug,
+    staleTime: 60_000,
+  });
+
+  if (roleLoading || profileCompanyLoading) {
+    return (
+      <ProtectedLayout>
+        <div className="flex items-center justify-center h-[50vh]">
+          <div className="animate-pulse text-muted-foreground">Loading dashboard...</div>
+        </div>
+      </ProtectedLayout>
+    );
+  }
+
+  // Redirect to company dashboard if logged in and has primary company
+  if (!isGuest && !tenantLoading && activeCompany?.slug && !location.search.includes("redirect=false")) {
+    if (role === "admin") return <Navigate to="/admin" replace />;
+
+    // Agent dashboard is only valid for users with an active agent profile.
+    if (isAgent) return <Navigate to="/agent/dashboard" replace />;
+
+    if (role === "company_admin") {
+      return <Navigate to={`/${activeCompany.slug}/dashboard`} replace />;
+    }
+
+    if (role === "member") {
+      return <Navigate to={`/${activeCompany.slug}/dashboard`} replace />;
+    }
+
+    // Legacy company membership support.
+    if (hasCompanyDashboardMembership) return <Navigate to={`/${activeCompany.slug}/dashboard`} replace />;
+  }
+
+  if (!isGuest && !tenantLoading && role === "admin" && !location.search.includes("redirect=false")) {
+    return <Navigate to="/admin" replace />;
+  }
+
+  if (!isGuest && !tenantLoading && isAgent && !location.search.includes("redirect=false")) {
+    return <Navigate to="/agent/dashboard" replace />;
+  }
+
+  if (!isGuest && !tenantLoading && !location.search.includes("redirect=false")) {
+    if ((role === "member" || role === "company_admin") && profileCompanySlug) {
+      return <Navigate to={`/${profileCompanySlug}/dashboard`} replace />;
+    }
+  }
+
+  const canShow = (componentKey: string) => {
+    if (!activeCompany) return true;
+    if (visibilityMap[componentKey] === undefined) return true;
+    return visibilityMap[componentKey];
+  };
 
   return (
     <ProtectedLayout>
@@ -115,25 +206,51 @@ export default function DashboardPage() {
           <motion.p {...stagger.item} className="text-sm sm:text-base text-muted-foreground">
             {isGuest
               ? "Explore our Salesforce services hub — sign up for full access."
-              : "Your Salesforce services hub — submit requests, track progress, and explore resources."}
+              : isAgent
+                ? "Your agent workspace — manage your company experience and tailored modules."
+                : "Your Salesforce services hub — submit requests, track progress, and explore resources."}
           </motion.p>
         </div>
+
+        {!isGuest && activeCompany && (
+          <motion.div {...stagger.item} className="inline-flex items-center rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-medium text-primary">
+            Active Company: {activeCompany.name}
+          </motion.div>
+        )}
 
         {/* ── Guest CTA Banner ─────────────────────────────────────────── */}
         {isGuest && <GuestBanner />}
 
+        {/* ── Agent onboarding CTA ─────────────────────────────────────── */}
+        {!isGuest && isAgent && !activeCompany && (
+          <motion.div {...stagger.item} className="rounded-2xl border border-warning/30 bg-warning/10 p-5 sm:p-6">
+            <h3 className="text-base font-semibold text-foreground">Complete Agent Onboarding</h3>
+            <p className="text-sm text-muted-foreground mt-1 max-w-xl">
+              Create your company account to enable tenant-specific dashboard modules and component visibility controls.
+            </p>
+            <Button className="mt-4 h-11 rounded-xl" onClick={() => navigate("/agent/dashboard")}>
+              Go to Dashboard
+              <ArrowRight className="h-4 w-4 ml-2" />
+            </Button>
+          </motion.div>
+        )}
+
         {/* ── Section 2: Ticket Area (Authenticated only — Primary task) ─ */}
-        {!isGuest && (
+        {!isGuest && !isAgent && (canShow("ticket_submission") || canShow("ticket_overview")) && (
           <div className="space-y-4">
             <SectionHeader title="Your Tickets" subtitle="Submit requests and track progress" />
             {/* Responsive: 1 col mobile → 2 col tablet+ */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
-              <motion.div {...stagger.item}>
-                <TicketSubmissionWidget />
-              </motion.div>
-              <motion.div {...stagger.item}>
-                <TicketDashboardWidget />
-              </motion.div>
+              {canShow("ticket_submission") && (
+                <motion.div {...stagger.item}>
+                  <TicketSubmissionWidget />
+                </motion.div>
+              )}
+              {canShow("ticket_overview") && (
+                <motion.div {...stagger.item}>
+                  <TicketDashboardWidget />
+                </motion.div>
+              )}
             </div>
           </div>
         )}
@@ -146,21 +263,31 @@ export default function DashboardPage() {
           />
           {/* Responsive grid: 1 col mobile → 2 col tablet → 3 col desktop */}
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
-            <motion.div {...stagger.item}>
-              <KnowledgeBaseWidget />
-            </motion.div>
-            <motion.div {...stagger.item}>
-              <RecipesWidget />
-            </motion.div>
-            <motion.div {...stagger.item}>
-              <AppExchangeWidget />
-            </motion.div>
-            <motion.div {...stagger.item}>
-              <NewsWidget />
-            </motion.div>
-            <motion.div {...stagger.item}>
-              <ExtensionsWidget />
-            </motion.div>
+            {canShow("knowledge_base") && (
+              <motion.div {...stagger.item}>
+                <KnowledgeBaseWidget />
+              </motion.div>
+            )}
+            {canShow("recipes") && (
+              <motion.div {...stagger.item}>
+                <RecipesWidget />
+              </motion.div>
+            )}
+            {canShow("appexchange") && (
+              <motion.div {...stagger.item}>
+                <AppExchangeWidget />
+              </motion.div>
+            )}
+            {canShow("news") && (
+              <motion.div {...stagger.item}>
+                <NewsWidget />
+              </motion.div>
+            )}
+            {canShow("extensions") && (
+              <motion.div {...stagger.item}>
+                <ExtensionsWidget />
+              </motion.div>
+            )}
           </div>
         </div>
       </motion.div>

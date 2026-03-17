@@ -32,10 +32,11 @@ interface SubTask { title: string; }
 interface RoadmapItem { hour: number; title: string; description: string; subtasks?: SubTask[]; }
 
 export default function TicketDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id, slug } = useParams<{ id: string; slug?: string }>();
   const { user, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const ticketListPath = slug ? `/${slug}/tickets` : "/tickets";
 
   const [review, setReview] = useState({ overall: 0, timeliness: 0, value: 0, comment: "" });
   const [activeTab, setActiveTab] = useState("overview");
@@ -151,7 +152,7 @@ export default function TicketDetailPage() {
           <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-lg font-semibold text-foreground mb-2">Ticket not found</p>
           <p className="text-muted-foreground mb-6">This ticket doesn't exist or you don't have access.</p>
-          <Button onClick={() => navigate("/tickets")}>← Back to Tickets</Button>
+          <Button onClick={() => navigate(ticketListPath)}>← Back to Tickets</Button>
         </div>
       </ProtectedLayout>
     );
@@ -164,7 +165,6 @@ export default function TicketDetailPage() {
   const isUnderReview = ticket.status === "under_review";
   const isUAT = ticket.status === "uat";
   const isActive = ["in_progress", "approved", "under_review", "uat"].includes(ticket.status);
-  const isClosed = ticket.status === "closed";
   const isCompleted = ticket.status === "completed";
 
   // Build timeline with durations
@@ -176,7 +176,7 @@ export default function TicketDetailPage() {
     return { ...ev, durationMins: durMins };
   });
 
-  // Stats for closed ticket
+  // Stats for completed ticket
   const totalMins = events.length > 1
     ? differenceInMinutes(new Date(events[events.length - 1].created_at), new Date(events[0].created_at))
     : 0;
@@ -185,8 +185,8 @@ export default function TicketDetailPage() {
     { id: "overview", label: "Overview", icon: <Activity className="h-3.5 w-3.5" /> },
     ...(hasProposal ? [{ id: "proposal", label: "Proposal", icon: <Target className="h-3.5 w-3.5" /> }] : []),
     ...(events.length > 0 ? [{ id: "timeline", label: "Timeline", icon: <TrendingUp className="h-3.5 w-3.5" /> }] : []),
-    ...(isActive || isClosed || isCompleted ? [{ id: "chat", label: "Chat", icon: <MessageSquare className="h-3.5 w-3.5" /> }] : []),
-    ...(isClosed ? [{ id: "stats", label: "Stats", icon: <BarChart3 className="h-3.5 w-3.5" /> }] : []),
+    ...(isActive || isCompleted ? [{ id: "chat", label: "Chat", icon: <MessageSquare className="h-3.5 w-3.5" /> }] : []),
+    ...(isCompleted ? [{ id: "stats", label: "Stats", icon: <BarChart3 className="h-3.5 w-3.5" /> }] : []),
   ];
 
   return (
@@ -194,7 +194,7 @@ export default function TicketDetailPage() {
       <div className="max-w-3xl mx-auto space-y-0">
         {/* Back nav + breadcrumb */}
         <div className="flex items-center gap-2 mb-5">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/tickets")} className="gap-1.5 -ml-2">
+          <Button variant="ghost" size="sm" onClick={() => navigate(ticketListPath)} className="gap-1.5 -ml-2">
             <ArrowLeft className="h-4 w-4" />
             <span className="hidden sm:inline">My Tickets</span>
           </Button>
@@ -396,8 +396,8 @@ export default function TicketDetailPage() {
           </Card>
         )}
 
-        {/* ── CLOSED: Review summary ── */}
-        {isClosed && existingReview && (
+        {/* ── COMPLETED: Review summary ── */}
+        {isCompleted && existingReview && (
           <Card className="rounded-2xl border-success/20 bg-success/5 mb-4 shadow-sm">
             <CardContent className="p-5">
               <div className="flex items-center gap-2 mb-3">
@@ -603,14 +603,14 @@ export default function TicketDetailPage() {
           )}
 
           {/* CHAT TAB */}
-          {(isActive || isClosed || isCompleted) && (
+          {(isActive || isCompleted) && (
             <TabsContent value="chat" className="mt-0">
               {user && <TicketChat ticketId={ticket.id} />}
             </TabsContent>
           )}
 
-          {/* STATS TAB — for closed tickets */}
-          {isClosed && (
+          {/* STATS TAB — for completed tickets */}
+          {isCompleted && (
             <TabsContent value="stats" className="mt-0 space-y-4">
               <Card className="rounded-2xl">
                 <CardContent className="p-5">

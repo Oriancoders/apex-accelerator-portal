@@ -1,8 +1,7 @@
 import { ReactNode, useState, useEffect } from "react";
-import { Navigate, Link, useLocation } from "react-router-dom";
+import { Navigate, Link, useLocation, useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { useAdminRole } from "@/hooks/useAdminRole";
 import {
   SidebarProvider, SidebarTrigger, Sidebar, SidebarContent, SidebarGroup,
   SidebarGroupLabel, SidebarGroupContent, SidebarMenu, SidebarMenuItem,
@@ -12,12 +11,17 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { NavLink } from "@/components/NavLink";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { LayoutDashboard, Ticket, Users, FileText, Coins, Shield, ArrowLeft, Bell, Menu, Lightbulb, Package, Newspaper, Chrome, MessageSquare, ChevronRight } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { LayoutDashboard, Ticket, Users, FileText, Coins, Shield, ArrowLeft, Menu, Lightbulb, Package, Newspaper, Chrome, MessageSquare, UserCog, SlidersHorizontal, Handshake, UsersRound } from "lucide-react";
 import NotificationBell from "@/components/NotificationBell";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 
 /*
@@ -58,7 +62,10 @@ const adminNavGroups = [
     label: "Administration",
     items: [
       { title: "Users", url: "/admin/users", icon: Users },
+      { title: "Agents", url: "/admin/agents", icon: UserCog },
+      { title: "Company Members", url: "/admin/company-members", icon: UsersRound },
       { title: "Credits", url: "/admin/credits", icon: Coins },
+      { title: "Company Components", url: "/admin/company-components", icon: SlidersHorizontal },
     ]
   },
   {
@@ -256,6 +263,7 @@ function MobileAdminNav() {
 function AdminHeader() {
   const { profile } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Recognition > Recall: Show current page name in header
   const currentPage = allAdminItems.find((item) =>
@@ -282,9 +290,28 @@ function AdminHeader() {
 
       <div className="flex items-center gap-2">
         <NotificationBell />
-        <Avatar className="h-8 w-8">
-          <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">{initials}</AvatarFallback>
-        </Avatar>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Open admin user menu"
+              title="Admin menu"
+            >
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">{initials}</AvatarFallback>
+              </Avatar>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-44 rounded-xl">
+            <DropdownMenuItem className="h-10 cursor-pointer" onClick={() => navigate("/profile")}>
+              Profile
+            </DropdownMenuItem>
+            <DropdownMenuItem className="h-10 cursor-pointer" onClick={() => navigate("/dashboard")}>
+              Portal Dashboard
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
@@ -304,9 +331,8 @@ function AccessDeniedRedirect({ to, message }: { to: string; message: string }) 
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const { user, loading, isGuest } = useAuth();
-  const { isAdmin, isLoading: roleLoading } = useAdminRole();
 
-  if (loading || roleLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
@@ -319,7 +345,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   if (isGuest) return <AccessDeniedRedirect to="/dashboard" message="Guest users cannot access the admin panel." />;
   if (!user) return <AccessDeniedRedirect to="/auth" message="Please sign in to access the admin panel." />;
-  if (!isAdmin) return <AccessDeniedRedirect to="/dashboard" message="You don't have admin privileges." />;
 
   return (
     <SidebarProvider>

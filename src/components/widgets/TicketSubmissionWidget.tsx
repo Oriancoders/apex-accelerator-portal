@@ -1,11 +1,20 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAgentTenant } from "@/hooks/useAgentTenant";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Button } from "@/components/ui/button";
 import { PlusCircle, ArrowRight } from "lucide-react";
 
 export default function TicketSubmissionWidget() {
   const navigate = useNavigate();
   const { profile, isGuest } = useAuth();
+  const { activeCompany } = useAgentTenant();
+  const { role } = useUserRole();
+
+  const newTicketPath =
+    (role === "company_admin" || role === "member") && activeCompany?.slug
+      ? `/${activeCompany.slug}/tickets/new`
+      : "/tickets/new";
 
   return (
     <div className="widget-card border-2 border-primary/20 relative overflow-hidden h-full">
@@ -40,7 +49,7 @@ export default function TicketSubmissionWidget() {
             {/* Fitts's Law: Large primary CTA */}
             <Button
               size="lg"
-              onClick={() => navigate("/tickets/new")}
+              onClick={() => navigate(newTicketPath)}
               className="gap-2 h-12 rounded-xl w-full sm:w-auto shadow-[var(--shadow-primary)] font-semibold"
             >
               Create Ticket

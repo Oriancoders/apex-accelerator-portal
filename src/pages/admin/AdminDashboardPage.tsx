@@ -158,7 +158,7 @@ export default function AdminDashboardPage() {
       submitted: statusCounts["submitted"] || 0,
       underReview: statusCounts["under_review"] || 0,
       inProgress: statusCounts["in_progress"] || 0,
-      completed: (statusCounts["completed"] || 0) + (statusCounts["closed"] || 0),
+      completed: statusCounts["completed"] || 0,
       totalUsers: profiles.length,
       totalCredits: profiles.reduce((s, p) => s + (p.credits || 0), 0),
       totalArticles: articles.length,

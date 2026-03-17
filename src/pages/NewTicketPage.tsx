@@ -11,15 +11,38 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ArrowLeft, Upload, Send } from "lucide-react";
-import { validateFiles } from "@/utils/file-validation";
-import type { Database } from "@/integrations/supabase/types";
+import { useAgentTenant } from "@/hooks/useAgentTenant";
 
 type Priority = Database["public"]["Enums"]["ticket_priority"];
 
 export default function NewTicketPage() {
   const { user, profile } = useAuth();
+  const { activeCompany, memberships, isLoading: isTenantLoading } = useAgentTenant();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
+
+  // Initialize selected company from active company or profile
+  useState(() => {
+    // 1. Try active company (from membership)
+    if (activeCompany?.id) {
+      setSelectedCompanyId(activeCompany.id);
+    } 
+    // 2. Fallback to profile's company_id (if not in memberships but linked in profile)
+    // @ts-ignore - profile might not have company_id typed yet
+    else if (profile?.company_id) {
+      // @ts-ignore
+      setSelectedCompanyId(profile.company_id);
+    }
+  });
+
+  // Ensure it updates if data loads late
+  if (!selectedCompanyId) {
+    if (activeCompany?.id) setSelectedCompanyId(activeCompany.id);
+    // @ts-ignore
+    else if (profile?.company_id) setSelectedCompanyId(profile.company_id);
+  }
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<Priority>("medium");
@@ -34,6 +57,12 @@ export default function NewTicketPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("--- Starting Ticket Submission ---");
+    console.log("Current User:", user?.id);
+    console.log("State - Selected Company ID:", selectedCompanyId);
+    console.log("State - Active Company:", activeCompany);
+    console.log("State - Profile:", profile);
+
     const trimmedTitle = title.trim();
     const trimmedDesc = description.trim();
 
@@ -78,8 +107,63 @@ export default function NewTicketPage() {
         fileUrls.push(path);
       }
 
+      let companyIdToUse = selectedCompanyId || activeCompany?.id;
+      console.log("Initial Company ID check:", companyIdToUse);
+      
+      // Fallback Strategy: If no company selected or found in context
+      if (!companyIdToUse) {
+        console.log("No company ID found yet, attempting database lookup...");
+        
+        // 1. Direct Primary Source: Check company_memberships table
+        const { data: memberData, error: memError } = await supabase
+          .from('company_memberships')
+          .select('company_id')
+          .eq('user_id', user.id)
+          .limit(1)
+          .maybeSingle();
+
+        console.log("Direct Company Membership Lookup:", memberData, memError);
+
+        if (memberData?.company_id) {
+          companyIdToUse = memberData.company_id;
+          console.log("Found Company ID in memberships:", companyIdToUse);
+        } else {
+           console.log("No company in memberships, trying profile fallback...");
+           
+           // DEBUG: Call the security definer function to see if RLS is blocking
+           const { data: debugData, error: debugError } = await supabase
+             .rpc('debug_my_memberships');
+           console.log("DEBUG: membership via RPC (bypasses RLS):", debugData, debugError);
+
+           if (debugData && debugData.length > 0) {
+             companyIdToUse = debugData[0].company_id;
+             console.log("Found Company ID via DEBUG RPC:", companyIdToUse);
+           } else {
+             // 2. Secondary Source: Check profile (in case sync trigger worked but membership query failed for some reason)
+             const { data: freshProfile, error: profError } = await supabase
+              .from('profiles')
+              .select('company_id')
+              .eq('user_id', user.id)
+              .maybeSingle();
+              
+             console.log("Fresh Profile Lookup:", freshProfile, profError);
+              
+             // @ts-ignore
+             if (freshProfile?.company_id) {
+               // @ts-ignore
+               companyIdToUse = freshProfile.company_id;
+               console.log("Found Company ID in profile:", companyIdToUse);
+             }
+           }
+        }
+      }
+
+      console.log("FINAL Ticket Insert Payload - company_id:", companyIdToUse);
+
       const { error } = await supabase.from("tickets").insert({
         user_id: user.id,
+        // @ts-ignore - Supabase type might not be updated yet
+        company_id: companyIdToUse || null,
         title: trimmedTitle,
         description: trimmedDesc,
         priority,
@@ -89,10 +173,14 @@ export default function NewTicketPage() {
       });
 
       if (error) {
+        console.error("Ticket Insert Failed:", error);
         toast.error("Failed to submit ticket. Please try again.");
       } else {
+        console.log("Ticket Insert Success - company_id:", companyIdToUse);
         toast.success("Ticket submitted successfully!");
-        navigate("/tickets");
+        const targetMembership = memberships.find((m) => m.company_id === companyIdToUse);
+        const targetSlug = targetMembership?.companies?.slug || activeCompany?.slug;
+        navigate(targetSlug ? `/${targetSlug}/tickets` : "/tickets");
       }
     } catch (err) {
       console.error("Ticket submission error:", err);
@@ -112,6 +200,26 @@ export default function NewTicketPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-xl">Submit a Service Request</CardTitle>
+            {activeCompany && !selectedCompanyId && memberships.length <= 1 && (
+              <p className="text-sm text-muted-foreground">Creating for company: <span className="font-medium text-foreground">{activeCompany.name}</span></p>
+            )}
+            {memberships.length > 1 && (
+              <div className="pt-2 flex items-center gap-2">
+                <Label className="text-xs font-semibold uppercase text-muted-foreground whitespace-nowrap">Creating for:</Label>
+                <select 
+                  value={selectedCompanyId} 
+                  onChange={(e) => setSelectedCompanyId(e.target.value)}
+                  className="h-8 rounded-md border border-input bg-background px-2 text-sm w-full max-w-xs"
+                >
+                  <option value="" disabled>Select Company</option>
+                  {memberships.map((m) => (
+                    <option key={m.company_id} value={m.company_id}>
+                      {m.companies?.name || m.company_id} {m.is_primary ? "(Primary)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-5">

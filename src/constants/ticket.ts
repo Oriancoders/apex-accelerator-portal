@@ -9,7 +9,6 @@ import {
   PlayCircle,
   Target,
   Award,
-  Lock,
   XCircle,
 } from "lucide-react";
 import { createElement } from "react";
@@ -72,15 +71,7 @@ export const STATUS_META: Record<string, StatusMeta> = {
     bg: "bg-success/10",
     border: "border-success/20",
     icon: createElement(Award, { className: "h-3.5 w-3.5" }),
-    desc: "Work is confirmed complete. Awaiting final closure.",
-  },
-  closed: {
-    label: "Closed",
-    color: "text-muted-foreground",
-    bg: "bg-muted",
-    border: "border-border",
-    icon: createElement(Lock, { className: "h-3.5 w-3.5" }),
-    desc: "This ticket has been closed and archived.",
+    desc: "Work is confirmed complete.",
   },
   cancelled: {
     label: "Cancelled",
@@ -116,7 +107,6 @@ export const STAGES = [
   "in_progress",
   "uat",
   "completed",
-  "closed",
 ] as const;
 
 export const STAGE_IDX: Record<string, number> = {
@@ -126,7 +116,6 @@ export const STAGE_IDX: Record<string, number> = {
   in_progress: 3,
   uat: 4,
   completed: 5,
-  closed: 6,
   cancelled: -1,
 };
 
@@ -138,8 +127,7 @@ export const STATUS_ACTION: Record<string, { label: string; desc: string; urgent
   approved: { label: "Start Work", desc: "Client approved. Move to In Progress.", urgent: true },
   in_progress: { label: "In Development", desc: "Move to UAT when work is ready.", urgent: false },
   uat: { label: "UAT Active", desc: "Client is testing. Monitor for issues." },
-  completed: { label: "Ready to Close", desc: "Client confirmed. Close the ticket.", urgent: true },
-  closed: { label: "Archived", desc: "This ticket is closed." },
+  completed: { label: "Completed", desc: "Client confirmed and review is submitted." },
   cancelled: { label: "Cancelled", desc: "This ticket was cancelled." },
 };
 

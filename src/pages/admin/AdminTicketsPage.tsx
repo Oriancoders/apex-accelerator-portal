@@ -23,7 +23,7 @@ import TicketChat from "@/components/TicketChat";
 import { toast } from "sonner";
 import { format, formatDistanceToNow } from "date-fns";
 import {
-  Search, Ticket, Filter, Lock, CheckCircle, XCircle, Clock,
+  Search, Ticket, Filter, CheckCircle, XCircle, Clock,
   PlayCircle, Target, Award, ClipboardCheck, HelpCircle, Activity,
   MessageSquare, TrendingUp, BarChart3, Paperclip, ArrowRight,
   Zap, Star, AlertCircle, ChevronRight, Coins, Timer, FileText,
@@ -45,7 +45,7 @@ type TicketStatus = Database["public"]["Enums"]["ticket_status"];
 interface RoadmapItem { hour: number; title: string; description: string; }
 
 const ALL_STATUSES: TicketStatus[] = [
-  "submitted", "under_review", "approved", "in_progress", "uat", "completed", "closed", "cancelled"
+  "submitted", "under_review", "approved", "in_progress", "uat", "completed", "cancelled"
 ];
 
 // ── UAT Panel (admin sends to UAT) ───────────────────────────────────────────
@@ -268,7 +268,7 @@ function TicketDialog({
       : []),
     { id: "timeline", label: "Timeline", icon: <TrendingUp className="h-3.5 w-3.5" /> },
     { id: "chat",     label: "Chat",     icon: <MessageSquare className="h-3.5 w-3.5" /> },
-    ...(ticket.status === "closed" ? [{ id: "stats", label: "Stats", icon: <BarChart3 className="h-3.5 w-3.5" /> }] : []),
+    ...(ticket.status === "completed" ? [{ id: "stats", label: "Stats", icon: <BarChart3 className="h-3.5 w-3.5" /> }] : []),
   ];
 
   // Smart default tab on open
@@ -309,7 +309,7 @@ function TicketDialog({
       </div>
 
       {/* ── Next Action Banner (Hick's Law: one primary action) ── */}
-      {action && ticket.status !== "closed" && ticket.status !== "cancelled" && (
+      {action && ticket.status !== "cancelled" && (
         <div className="px-6 py-2.5 bg-muted/50 border-b border-border flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
             <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -333,12 +333,6 @@ function TicketDialog({
             {ticket.status === "in_progress" && (
               <Button size="sm" className="h-7 text-xs rounded-lg gap-1" onClick={() => setDialogTab("uat")}>
                 <Target className="h-3 w-3" /> Send to UAT
-              </Button>
-            )}
-            {ticket.status === "completed" && (
-              <Button size="sm" className="h-7 text-xs rounded-lg gap-1"
-                onClick={() => updateStatusMutation.mutate({ status: "closed", note: "Admin closed the ticket." })}>
-                <Lock className="h-3 w-3" /> Close Ticket
               </Button>
             )}
           </div>
@@ -588,7 +582,7 @@ function TicketDialog({
             <TicketChat ticketId={ticket.id} isAdmin />
           </TabsContent>
 
-          {/* ── STATS TAB (closed tickets) ── */}
+          {/* ── STATS TAB (completed tickets) ── */}
           <TabsContent value="stats" className="p-6 mt-0">
             <LifecycleStats events={events} ticket={ticket} />
           </TabsContent>

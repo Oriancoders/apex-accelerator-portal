@@ -17,11 +17,15 @@ import { STATUS_META, PRIORITY_META, FILTER_TABS, isActiveStatus } from "@/const
 import StatusBadge from "@/shared/StatusBadge";
 import PriorityBadge from "@/shared/PriorityBadge";
 import EmptyState from "@/shared/EmptyState";
+import { useAgentTenant } from "@/hooks/useAgentTenant";
+import { useUserRole } from "@/hooks/useUserRole";
 
 type Ticket = Tables<"tickets">;
 
 export default function TicketsPage() {
   const { user, isGuest } = useAuth();
+  const { activeCompany } = useAgentTenant();
+  const { role } = useUserRole();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<string>("all");
@@ -35,15 +39,37 @@ export default function TicketsPage() {
     pulseTimerRef.current = setTimeout(() => setRealtimePulse(false), 2000);
   }, []);
 
+  const isCompanyContext = (role === "company_admin" || role === "member") && !!activeCompany?.id;
+  const isCompanyAdminView = role === "company_admin" && !!activeCompany?.id;
+  const ticketListPath =
+    (role === "company_admin" || role === "member") && activeCompany?.slug
+      ? `/${activeCompany.slug}/tickets`
+      : "/tickets";
+  const newTicketPath =
+    (role === "company_admin" || role === "member") && activeCompany?.slug
+      ? `/${activeCompany.slug}/tickets/new`
+      : "/tickets/new";
+
   const { data: tickets = [], isLoading } = useQuery({
-    queryKey: ["tickets", user?.id],
+    queryKey: ["tickets", user?.id, role, activeCompany?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data } = await supabase
+
+      let query = supabase
         .from("tickets")
         .select("*")
-        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
+
+      if (isCompanyContext && activeCompany?.id) {
+        query = query.eq("company_id", activeCompany.id);
+        if (!isCompanyAdminView) {
+          query = query.eq("user_id", user.id);
+        }
+      } else {
+        query = query.eq("user_id", user.id);
+      }
+
+      const { data } = await query;
       return (data || []) as Ticket[];
     },
     enabled: !!user && !isGuest,
@@ -53,11 +79,17 @@ export default function TicketsPage() {
   useEffect(() => {
     if (!user) return;
 
+    const realtimeFilter = isCompanyContext && activeCompany?.id
+      ? isCompanyAdminView
+        ? `company_id=eq.${activeCompany.id}`
+        : `user_id=eq.${user.id}`
+      : `user_id=eq.${user.id}`;
+
     const channel = supabase
       .channel("client-tickets-realtime")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "tickets", filter: `user_id=eq.${user.id}` },
+        { event: "*", schema: "public", table: "tickets", filter: realtimeFilter },
         (payload) => {
           const updated = payload.new as Ticket | undefined;
           if (updated && payload.eventType === "UPDATE") {
@@ -71,7 +103,7 @@ export default function TicketsPage() {
             }
             prevStatusRef.current[updated.id] = updated.status;
           }
-          queryClient.invalidateQueries({ queryKey: ["tickets", user.id] });
+          queryClient.invalidateQueries({ queryKey: ["tickets"] });
           pulse();
         }
       )
@@ -81,7 +113,7 @@ export default function TicketsPage() {
       supabase.removeChannel(channel);
       if (pulseTimerRef.current) clearTimeout(pulseTimerRef.current);
     };
-  }, [user, queryClient, pulse]);
+  }, [user, queryClient, pulse, isCompanyContext, isCompanyAdminView, activeCompany?.id]);
 
   // Seed prevStatusRef when tickets first load
   useEffect(() => {
@@ -111,13 +143,13 @@ export default function TicketsPage() {
 
   const filtered = tickets.filter((t) => {
     if (filter === "active") return isActiveStatus(t.status);
-    if (filter === "completed") return ["completed", "closed"].includes(t.status);
+    if (filter === "completed") return t.status === "completed";
     if (filter === "cancelled") return t.status === "cancelled";
     return true;
   });
 
   const activeCount = tickets.filter(t => isActiveStatus(t.status)).length;
-  const doneCount = tickets.filter(t => ["completed", "closed"].includes(t.status)).length;
+  const doneCount = tickets.filter(t => t.status === "completed").length;
 
   return (
     <ProtectedLayout>
@@ -125,7 +157,9 @@ export default function TicketsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">My Tickets</h1>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">
+              {isCompanyAdminView ? "Company Tickets" : "My Tickets"}
+            </h1>
             <div className="flex items-center gap-2 mt-0.5">
               <p className="text-sm text-muted-foreground">{tickets.length} total · {activeCount} active · {doneCount} completed</p>
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border transition-all duration-500 ${realtimePulse ? "bg-success/20 border-success/40 text-success scale-110" : "bg-success/10 border-success/20 text-success"}`}>
@@ -134,7 +168,7 @@ export default function TicketsPage() {
               </span>
             </div>
           </div>
-          <Button onClick={() => navigate("/tickets/new")} className="gap-2 rounded-xl h-11 font-semibold">
+          <Button onClick={() => navigate(newTicketPath)} className="gap-2 rounded-xl h-11 font-semibold">
             <PlusCircle className="h-4 w-4" />
             New Ticket
           </Button>
@@ -207,7 +241,7 @@ export default function TicketsPage() {
                 {filter === "all" ? "Submit your first request to get started." : "Check other filters."}
               </p>
               {filter === "all" && (
-                <Button onClick={() => navigate("/tickets/new")} className="gap-2 rounded-xl">
+                <Button onClick={() => navigate(newTicketPath)} className="gap-2 rounded-xl">
                   <PlusCircle className="h-4 w-4" />
                   Create Ticket
                 </Button>
@@ -227,7 +261,7 @@ export default function TicketsPage() {
                   className={`rounded-2xl hover:shadow-md transition-all cursor-pointer group border ${
                     needsAction ? "border-warning/30 bg-warning/3" : "border-border"
                   }`}
-                  onClick={() => navigate(`/tickets/${ticket.id}`)}
+                  onClick={() => navigate(`${ticketListPath}/${ticket.id}`)}
                 >
                   <CardContent className="p-4 sm:p-5">
                     <div className="flex items-start gap-3">

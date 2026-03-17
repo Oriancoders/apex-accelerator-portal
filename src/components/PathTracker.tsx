@@ -10,7 +10,6 @@ const stages: { key: TicketStatus; label: string }[] = [
   { key: "in_progress", label: "In Progress" },
   { key: "uat", label: "UAT" },
   { key: "completed", label: "Completed" },
-  { key: "closed", label: "Closed" },
 ];
 
 const statusIndex: Record<TicketStatus, number> = {
@@ -20,7 +19,6 @@ const statusIndex: Record<TicketStatus, number> = {
   in_progress: 3,
   uat: 4,
   completed: 5,
-  closed: 6,
   cancelled: -1,
 };
 

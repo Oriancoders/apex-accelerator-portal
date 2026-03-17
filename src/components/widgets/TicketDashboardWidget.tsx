@@ -3,16 +3,42 @@ import { useNavigate } from "react-router-dom";
 import { Ticket, Clock, CheckCircle2, AlertCircle, Coins } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAgentTenant } from "@/hooks/useAgentTenant";
+import { useUserRole } from "@/hooks/useUserRole";
 
-export default function TicketDashboardWidget() {
+interface TicketDashboardWidgetProps {
+  companyId?: string;
+  showCompanyWide?: boolean;
+}
+
+export default function TicketDashboardWidget({ companyId, showCompanyWide = false }: TicketDashboardWidgetProps) {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const { activeCompany } = useAgentTenant();
+  const { role } = useUserRole();
+
+  const ticketListPath =
+    (role === "company_admin" || role === "member") && activeCompany?.slug
+      ? `/${activeCompany.slug}/tickets`
+      : "/tickets";
 
   const { data: tickets = [] } = useQuery({
-    queryKey: ["tickets-summary", user?.id],
+    queryKey: ["tickets-summary", user?.id, companyId, showCompanyWide],
     queryFn: async () => {
       if (!user) return [];
-      const { data } = await supabase.from("tickets").select("status").eq("user_id", user.id);
+
+      let query = supabase.from("tickets").select("status");
+
+      if (companyId) {
+        query = query.eq("company_id", companyId);
+        if (!showCompanyWide) {
+          query = query.eq("user_id", user.id);
+        }
+      } else {
+        query = query.eq("user_id", user.id);
+      }
+
+      const { data } = await query;
       return data || [];
     },
     enabled: !!user,
@@ -32,7 +58,7 @@ export default function TicketDashboardWidget() {
           <Ticket className="h-4 w-4 text-primary" />
           <h3 className="font-semibold text-sm text-foreground">Ticket Overview</h3>
         </div>
-        <button onClick={() => navigate("/tickets")} className="text-primary text-xs font-medium hover:underline">View All</button>
+        <button onClick={() => navigate(ticketListPath)} className="text-primary text-xs font-medium hover:underline">View All</button>
       </div>
       <div className="widget-card-body space-y-4">
         {/* Chunking: 2x2 grid for 4 stats — within Miller's 7±2 */}

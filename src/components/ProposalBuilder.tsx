@@ -70,7 +70,7 @@ export default function ProposalBuilder({
   const perHourRate = priorityRate + difficultyRate;
   const totalHours = steps.length;
   const autoCredit = perHourRate * totalHours;
-  const finalCredit = manualOverride ? parseInt(manualCost) || 0 : autoCredit;
+  const finalCredit = manualOverride ? parseFloat(manualCost) || 0 : autoCredit;
 
   // Sync manual cost when switching to manual
   useEffect(() => {

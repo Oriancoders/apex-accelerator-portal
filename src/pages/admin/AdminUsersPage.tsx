@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/AdminLayout";
@@ -19,11 +19,27 @@ import { Search, Coins, Edit, Plus, Minus, Users } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Profile = Tables<"profiles">;
+type AppRole = "admin" | "company_admin" | "agent" | "member";
+type UserCompanyMembershipRow = {
+  user_id: string;
+  is_primary: boolean;
+  companies: { name: string } | null;
+};
+
+const ROLE_PRIORITY: Record<string, number> = {
+  admin: 1,
+  company_admin: 2,
+  agent: 3,
+  member: 4,
+};
+
+const ASSIGNABLE_ROLES: AppRole[] = ["admin", "company_admin", "agent", "member"];
 
 export default function AdminUsersPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
+  const [selectedRole, setSelectedRole] = useState<AppRole | "">("");
   const [creditAdjust, setCreditAdjust] = useState("");
   const [creditReason, setCreditReason] = useState("");
 
@@ -37,6 +53,77 @@ export default function AdminUsersPage() {
       return (data || []) as Profile[];
     },
   });
+
+  const userIds = useMemo(() => users.map((u) => u.user_id), [users]);
+
+  const { data: userCompanyMemberships = [] } = useQuery({
+    queryKey: ["admin-user-company-memberships", userIds],
+    queryFn: async () => {
+      if (!userIds.length) return [];
+
+      const { data, error } = await supabase
+        .from("company_memberships")
+        .select("user_id, is_primary, companies:company_id(name)")
+        .in("user_id", userIds)
+        .order("is_primary", { ascending: false });
+
+      if (error) throw error;
+      return (data || []) as UserCompanyMembershipRow[];
+    },
+    enabled: userIds.length > 0,
+  });
+
+  const { data: userRoles = [] } = useQuery({
+    queryKey: ["admin-user-roles"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("user_id, role, created_at")
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+      return (data || []) as { user_id: string; role: string; created_at: string }[];
+    },
+  });
+
+  const roleByUserId = useMemo(() => {
+    const map = new Map<string, AppRole>();
+
+    userRoles.forEach((row) => {
+      if (!ASSIGNABLE_ROLES.includes(row.role as AppRole)) return;
+      const nextRole = row.role as AppRole;
+      const currentRole = map.get(row.user_id);
+
+      if (!currentRole || ROLE_PRIORITY[nextRole] < ROLE_PRIORITY[currentRole]) {
+        map.set(row.user_id, nextRole);
+      }
+    });
+
+    return map;
+  }, [userRoles]);
+
+  const companyNameByUserId = useMemo(() => {
+    const map = new Map<string, string>();
+
+    userCompanyMemberships.forEach((row) => {
+      const companyName = row.companies?.name;
+      if (!companyName) return;
+      if (!map.has(row.user_id)) {
+        map.set(row.user_id, companyName);
+      }
+    });
+
+    return map;
+  }, [userCompanyMemberships]);
+
+  useEffect(() => {
+    if (!selectedUser) {
+      setSelectedRole("");
+      return;
+    }
+
+    setSelectedRole(roleByUserId.get(selectedUser.user_id) || "member");
+  }, [selectedUser, roleByUserId]);
 
   const adjustCreditsMutation = useMutation({
     mutationFn: async ({ userId, amount, reason }: { userId: string; amount: number; reason: string }) => {
@@ -58,18 +145,58 @@ export default function AdminUsersPage() {
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const updateRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
+      const { error: deleteError } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("user_id", userId);
+
+      if (deleteError) throw deleteError;
+
+      const { error: insertError } = await supabase
+        .from("user_roles")
+        .insert({ user_id: userId, role: role as any });
+
+      if (insertError) throw insertError;
+    },
+    onSuccess: () => {
+      toast.success("Role updated successfully");
+      queryClient.invalidateQueries({ queryKey: ["admin-user-roles"] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
   const handleAdjustCredits = (positive: boolean) => {
     if (!selectedUser || !creditAdjust) return;
-    const amount = Math.abs(parseInt(creditAdjust)) * (positive ? 1 : -1);
+    const amount = Math.abs(parseFloat(creditAdjust)) * (positive ? 1 : -1);
     adjustCreditsMutation.mutate({ userId: selectedUser.user_id, amount, reason: creditReason });
   };
 
-  const filtered = users.filter(
-    (u) =>
-      (u.full_name || "").toLowerCase().includes(search.toLowerCase()) ||
-      (u.email || "").toLowerCase().includes(search.toLowerCase()) ||
-      (u.company || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const getCompanyLabel = (u: Profile) => companyNameByUserId.get(u.user_id) || u.company || "—";
+
+  const filtered = users.filter((u) => {
+    const q = search.toLowerCase();
+    return (
+      (u.full_name || "").toLowerCase().includes(q) ||
+      (u.email || "").toLowerCase().includes(q) ||
+      getCompanyLabel(u).toLowerCase().includes(q)
+    );
+  });
+
+  const roleBadgeVariant = (role: AppRole | undefined) => {
+    if (role === "admin") return "default" as const;
+    if (role === "company_admin") return "secondary" as const;
+    if (role === "agent") return "outline" as const;
+    return "secondary" as const;
+  };
+
+  const roleLabel = (role: AppRole | undefined) => {
+    if (!role) return "member";
+    if (role === "company_admin") return "companyAdmin";
+    if (role === "agent") return "Partner";
+    return role;
+  };
 
   return (
     <AdminLayout>
@@ -99,6 +226,7 @@ export default function AdminUsersPage() {
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
                         <TableHead>Company</TableHead>
+                        <TableHead>Role</TableHead>
                         <TableHead>Credits</TableHead>
                         <TableHead>Provider</TableHead>
                         <TableHead>Joined</TableHead>
@@ -110,7 +238,12 @@ export default function AdminUsersPage() {
                         <TableRow key={user.id}>
                           <TableCell className="font-medium">{user.full_name || "—"}</TableCell>
                           <TableCell className="text-sm">{user.email || "—"}</TableCell>
-                          <TableCell className="text-sm">{user.company || "—"}</TableCell>
+                          <TableCell className="text-sm">{getCompanyLabel(user)}</TableCell>
+                          <TableCell>
+                            <Badge variant={roleBadgeVariant(roleByUserId.get(user.user_id))} className="capitalize">
+                              {roleLabel(roleByUserId.get(user.user_id))}
+                            </Badge>
+                          </TableCell>
                           <TableCell>
                             <Badge variant="outline" className="bg-accent/10 text-accent">
                               <Coins className="h-3 w-3 mr-1" />{user.credits}
@@ -127,7 +260,7 @@ export default function AdminUsersPage() {
                       ))}
                       {filtered.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                          <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                             <Users className="h-8 w-8 mx-auto mb-2 opacity-30" />
                             No users found
                           </TableCell>
@@ -153,8 +286,11 @@ export default function AdminUsersPage() {
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">{user.email}</p>
                       <div className="flex items-center gap-2 mt-2">
+                        <Badge variant={roleBadgeVariant(roleByUserId.get(user.user_id))} className="text-[10px] capitalize">
+                          {roleLabel(roleByUserId.get(user.user_id))}
+                        </Badge>
                         <Badge variant="secondary" className="text-[10px]">{user.auth_provider || "email"}</Badge>
-                        <span className="text-xs text-muted-foreground">{user.company || ""}</span>
+                        <span className="text-xs text-muted-foreground">{getCompanyLabel(user)}</span>
                       </div>
                     </div>
                   ))}
@@ -181,9 +317,39 @@ export default function AdminUsersPage() {
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-sm">
                   <div className="p-3 rounded-xl bg-muted/50"><span className="text-muted-foreground">Email:</span> {selectedUser.email}</div>
-                  <div className="p-3 rounded-xl bg-muted/50"><span className="text-muted-foreground">Company:</span> {selectedUser.company || "—"}</div>
+                  <div className="p-3 rounded-xl bg-muted/50"><span className="text-muted-foreground">Company:</span> {getCompanyLabel(selectedUser)}</div>
                   <div className="p-3 rounded-xl bg-muted/50"><span className="text-muted-foreground">Phone:</span> {selectedUser.phone || "—"}</div>
                   <div className="p-3 rounded-xl bg-muted/50"><span className="text-muted-foreground">Credits:</span> <span className="font-bold text-accent">{selectedUser.credits}</span></div>
+                </div>
+                <div className="border-t pt-4 space-y-3">
+                  <h4 className="font-semibold text-sm">Role</h4>
+                  <div>
+                    <Label className="text-sm">Assigned Role</Label>
+                    <select
+                      value={selectedRole}
+                      onChange={(e) => setSelectedRole(e.target.value as AppRole)}
+                      className="mt-1 h-11 w-full rounded-xl border border-input bg-background px-3 text-sm"
+                    >
+                      {ASSIGNABLE_ROLES.map((role) => (
+                        <option key={role} value={role}>
+                          {role === "company_admin" ? "companyAdmin" : role === "agent" ? "Partner" : role}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <Button
+                    className="h-11 rounded-xl"
+                    disabled={!selectedRole || updateRoleMutation.isPending}
+                    onClick={() => {
+                      if (!selectedRole) return;
+                      updateRoleMutation.mutate({
+                        userId: selectedUser.user_id,
+                        role: selectedRole,
+                      });
+                    }}
+                  >
+                    {updateRoleMutation.isPending ? "Saving..." : "Save Role"}
+                  </Button>
                 </div>
                 <div className="border-t pt-4 space-y-3">
                   <h4 className="font-semibold text-sm">Adjust Credits</h4>

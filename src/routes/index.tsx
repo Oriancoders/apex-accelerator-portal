@@ -4,6 +4,7 @@
  */
 import { lazy } from "react";
 import { Navigate } from "react-router-dom";
+import RoleAccessGuard from "@/components/RoleAccessGuard";
 
 // ── Lazy-loaded pages ────────────────────────────────────────────────────────
 const AuthPage = lazy(() => import("@/pages/AuthPage"));
@@ -23,6 +24,10 @@ const ExtensionsPage = lazy(() => import("@/pages/ExtensionsPage"));
 const WhyChooseUsPage = lazy(() => import("@/pages/WhyChooseUsPage"));
 const AboutContactPage = lazy(() => import("@/pages/AboutContactPage"));
 const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
+const CompanyMembersPage = lazy(() => import("@/pages/CompanyMembersPage"));
+const AgentDashboardPage = lazy(() => import("@/pages/AgentDashboardPage"));
+const CompanySettingsPage = lazy(() => import("@/pages/CompanySettingsPage"));
+const CompanyDashboardPage = lazy(() => import("@/pages/CompanyDashboardPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
 // Admin
@@ -37,6 +42,9 @@ const AdminNewsPage = lazy(() => import("@/pages/admin/AdminNewsPage"));
 const AdminAppExchangePage = lazy(() => import("@/pages/admin/AdminAppExchangePage"));
 const AdminExtensionsPage = lazy(() => import("@/pages/admin/AdminExtensionsPage"));
 const AdminContactSubmissionsPage = lazy(() => import("@/pages/admin/AdminContactSubmissionsPage"));
+const AdminAgentsPage = lazy(() => import("@/pages/admin/AdminAgentsPage"));
+const AdminCompanyComponentsPage = lazy(() => import("@/pages/admin/AdminCompanyComponentsPage"));
+const AdminCompanyMembersPage = lazy(() => import("@/pages/admin/AdminCompanyMembersPage"));
 
 export interface RouteConfig {
   path: string;
@@ -54,6 +62,30 @@ export const appRoutes: RouteConfig[] = [
   { path: "/tickets", element: <TicketsPage /> },
   { path: "/tickets/new", element: <NewTicketPage /> },
   { path: "/tickets/:id", element: <TicketDetailPage /> },
+  {
+    path: "/:slug/tickets",
+    element: (
+      <RoleAccessGuard policy="company_dashboard">
+        <TicketsPage />
+      </RoleAccessGuard>
+    ),
+  },
+  {
+    path: "/:slug/tickets/new",
+    element: (
+      <RoleAccessGuard policy="company_dashboard">
+        <NewTicketPage />
+      </RoleAccessGuard>
+    ),
+  },
+  {
+    path: "/:slug/tickets/:id",
+    element: (
+      <RoleAccessGuard policy="company_dashboard">
+        <TicketDetailPage />
+      </RoleAccessGuard>
+    ),
+  },
   { path: "/credits", element: <CreditsPage /> },
   { path: "/pricing", element: <PricingGuidePage /> },
   { path: "/notifications", element: <NotificationsPage /> },
@@ -65,20 +97,154 @@ export const appRoutes: RouteConfig[] = [
   { path: "/why-choose-us", element: <WhyChooseUsPage /> },
   { path: "/about", element: <AboutContactPage /> },
   { path: "/profile", element: <ProfilePage /> },
+  {
+    path: "/company/members",
+    element: (
+      <RoleAccessGuard policy="company_manage">
+        <CompanyMembersPage />
+      </RoleAccessGuard>
+    ),
+  },
+  {
+    path: "/agent/dashboard",
+    element: (
+      <RoleAccessGuard policy="agent">
+        <AgentDashboardPage />
+      </RoleAccessGuard>
+    ),
+  },
+  {
+    path: "/:slug/dashboard",
+    element: (
+      <RoleAccessGuard policy="company_dashboard">
+        <CompanyDashboardPage />
+      </RoleAccessGuard>
+    ),
+  },
+  {
+    path: "/:slug/settings",
+    element: (
+      <RoleAccessGuard policy="company_manage">
+        <CompanySettingsPage />
+      </RoleAccessGuard>
+    ),
+  },
 ];
 
 export const adminRoutes: RouteConfig[] = [
-  { path: "/admin", element: <AdminDashboardPage /> },
-  { path: "/admin/tickets", element: <AdminTicketsPage /> },
-  { path: "/admin/notifications", element: <AdminNotificationsPage /> },
-  { path: "/admin/users", element: <AdminUsersPage /> },
-  { path: "/admin/articles", element: <AdminArticlesPage /> },
-  { path: "/admin/credits", element: <AdminCreditsPage /> },
-  { path: "/admin/recipes", element: <AdminRecipesPage /> },
-  { path: "/admin/appexchange", element: <AdminAppExchangePage /> },
-  { path: "/admin/news", element: <AdminNewsPage /> },
-  { path: "/admin/extensions", element: <AdminExtensionsPage /> },
-  { path: "/admin/contacts", element: <AdminContactSubmissionsPage /> },
+  {
+    path: "/admin",
+    element: (
+      <RoleAccessGuard policy="admin">
+        <AdminDashboardPage />
+      </RoleAccessGuard>
+    ),
+  },
+  {
+    path: "/admin/tickets",
+    element: (
+      <RoleAccessGuard policy="admin">
+        <AdminTicketsPage />
+      </RoleAccessGuard>
+    ),
+  },
+  {
+    path: "/admin/notifications",
+    element: (
+      <RoleAccessGuard policy="admin">
+        <AdminNotificationsPage />
+      </RoleAccessGuard>
+    ),
+  },
+  {
+    path: "/admin/users",
+    element: (
+      <RoleAccessGuard policy="admin">
+        <AdminUsersPage />
+      </RoleAccessGuard>
+    ),
+  },
+  {
+    path: "/admin/agents",
+    element: (
+      <RoleAccessGuard policy="admin">
+        <AdminAgentsPage />
+      </RoleAccessGuard>
+    ),
+  },
+  {
+    path: "/admin/company-members",
+    element: (
+      <RoleAccessGuard policy="admin">
+        <AdminCompanyMembersPage />
+      </RoleAccessGuard>
+    ),
+  },
+
+  {
+    path: "/admin/articles",
+    element: (
+      <RoleAccessGuard policy="admin">
+        <AdminArticlesPage />
+      </RoleAccessGuard>
+    ),
+  },
+  {
+    path: "/admin/credits",
+    element: (
+      <RoleAccessGuard policy="admin">
+        <AdminCreditsPage />
+      </RoleAccessGuard>
+    ),
+  },
+  {
+    path: "/admin/company-components",
+    element: (
+      <RoleAccessGuard policy="admin">
+        <AdminCompanyComponentsPage />
+      </RoleAccessGuard>
+    ),
+  },
+  {
+    path: "/admin/recipes",
+    element: (
+      <RoleAccessGuard policy="admin">
+        <AdminRecipesPage />
+      </RoleAccessGuard>
+    ),
+  },
+  {
+    path: "/admin/appexchange",
+    element: (
+      <RoleAccessGuard policy="admin">
+        <AdminAppExchangePage />
+      </RoleAccessGuard>
+    ),
+  },
+  {
+    path: "/admin/news",
+    element: (
+      <RoleAccessGuard policy="admin">
+        <AdminNewsPage />
+      </RoleAccessGuard>
+    ),
+  },
+  {
+    path: "/admin/extensions",
+    element: (
+      <RoleAccessGuard policy="admin">
+        <AdminExtensionsPage />
+      </RoleAccessGuard>
+    ),
+  },
+  {
+    path: "/admin/contacts",
+    element: (
+      <RoleAccessGuard policy="admin">
+        <AdminContactSubmissionsPage />
+      </RoleAccessGuard>
+    ),
+  },
 ];
 
 export const fallbackRoute: RouteConfig = {

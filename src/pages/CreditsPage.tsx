@@ -3,16 +3,21 @@ import ProtectedLayout from "@/components/ProtectedLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Coins, CreditCard, Sparkles, Gift, Loader2, ArrowUpRight, ArrowDownRight, History, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { useCreditSettings } from "@/hooks/useCreditSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useLocation } from "react-router-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
+import type { Tables } from "@/integrations/supabase/types";
+
+type WithdrawalRequest = Tables<"credit_withdrawal_requests">;
 
 export default function CreditsPage() {
   const { profile, user, refreshProfile } = useAuth();
@@ -23,11 +28,21 @@ export default function CreditsPage() {
   const [verifying, setVerifying] = useState(false);
   const queryClient = useQueryClient();
   const historyRef = useRef<HTMLDivElement>(null);
+  const withdrawRef = useRef<HTMLDivElement>(null);
+  const [withdrawCredits, setWithdrawCredits] = useState("");
+  const [withdrawMethod, setWithdrawMethod] = useState("bank_transfer");
+  const [withdrawAccountDetails, setWithdrawAccountDetails] = useState("");
+  const [withdrawNote, setWithdrawNote] = useState("");
 
-  // Scroll to history section if hash is #history
+  // Scroll to hash section anchors.
   useEffect(() => {
     if (location.hash === "#history" && historyRef.current) {
       setTimeout(() => historyRef.current?.scrollIntoView({ behavior: "smooth" }), 300);
+      return;
+    }
+
+    if (location.hash === "#withdraw" && withdrawRef.current) {
+      setTimeout(() => withdrawRef.current?.scrollIntoView({ behavior: "smooth" }), 300);
     }
   }, [location.hash, isLoading]);
 
@@ -55,6 +70,64 @@ export default function CreditsPage() {
   const transactions = txData?.rows ?? [];
   const totalCount = txData?.total ?? 0;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
+  const { data: withdrawalRequests = [], isLoading: withdrawalsLoading } = useQuery({
+    queryKey: ["my-withdrawal-requests", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("credit_withdrawal_requests")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []) as WithdrawalRequest[];
+    },
+    enabled: !!user?.id,
+  });
+
+  const submitWithdrawalMutation = useMutation({
+    mutationFn: async () => {
+      if (!user?.id) throw new Error("You must be logged in");
+
+      const requested = Number(withdrawCredits);
+      if (!Number.isFinite(requested) || requested <= 0) {
+        throw new Error("Enter a valid credit amount");
+      }
+
+      if (requested < settings.minWithdrawalCredits) {
+        throw new Error(`Minimum withdrawal is ${settings.minWithdrawalCredits} credits`);
+      }
+
+      const available = Number(profile?.credits ?? 0);
+      if (requested > available) {
+        throw new Error("Requested credits exceed your balance");
+      }
+
+      if (!withdrawAccountDetails.trim()) {
+        throw new Error("Account details are required");
+      }
+
+      const { error } = await supabase.from("credit_withdrawal_requests").insert({
+        user_id: user.id,
+        requested_credits: requested,
+        payment_method: withdrawMethod,
+        account_details: withdrawAccountDetails.trim(),
+        requester_note: withdrawNote.trim() || null,
+      });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Withdrawal request sent to admin");
+      setWithdrawCredits("");
+      setWithdrawMethod("bank_transfer");
+      setWithdrawAccountDetails("");
+      setWithdrawNote("");
+      queryClient.invalidateQueries({ queryKey: ["my-withdrawal-requests", user?.id] });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
 
   // Handle Stripe success redirect
   useEffect(() => {
@@ -186,6 +259,113 @@ export default function CreditsPage() {
               </Card>
             );
           })}
+        </div>
+
+        <Separator className="my-10" />
+
+        <div ref={withdrawRef} className="space-y-4">
+          <h2 className="text-xl font-bold text-foreground">Credit Withdrawal</h2>
+          <p className="text-sm text-muted-foreground">
+            Request admin to manually send your payout. Credits are deducted only after admin marks the payout as paid.
+          </p>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Submit Withdrawal Request</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Requested Credits</Label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={withdrawCredits}
+                    onChange={(e) => setWithdrawCredits(e.target.value)}
+                    className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm"
+                    placeholder="e.g. 100"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Payout Method</Label>
+                  <select
+                    value={withdrawMethod}
+                    onChange={(e) => setWithdrawMethod(e.target.value)}
+                    className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm"
+                  >
+                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="paypal">PayPal</option>
+                    <option value="upi">UPI</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Account Details</Label>
+                <Textarea
+                  value={withdrawAccountDetails}
+                  onChange={(e) => setWithdrawAccountDetails(e.target.value)}
+                  placeholder="Enter account name, account number/UPI/PayPal ID, bank name, IFSC/SWIFT, etc."
+                  rows={4}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label>Note (optional)</Label>
+                <Textarea
+                  value={withdrawNote}
+                  onChange={(e) => setWithdrawNote(e.target.value)}
+                  placeholder="Anything admin should know for this payout"
+                  rows={2}
+                />
+              </div>
+
+              <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                <span>
+                  Available: {profile?.credits ?? 0} · Min withdrawal: {settings.minWithdrawalCredits}
+                </span>
+                <Button
+                  onClick={() => submitWithdrawalMutation.mutate()}
+                  disabled={submitWithdrawalMutation.isPending}
+                  className="rounded-xl"
+                >
+                  {submitWithdrawalMutation.isPending ? "Sending..." : "Send Request"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">My Withdrawal Requests</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {withdrawalsLoading ? (
+                <div className="text-sm text-muted-foreground">Loading requests...</div>
+              ) : withdrawalRequests.length === 0 ? (
+                <div className="text-sm text-muted-foreground">No withdrawal requests yet.</div>
+              ) : (
+                <div className="space-y-2">
+                  {withdrawalRequests.slice(0, 8).map((req) => (
+                    <div key={req.id} className="rounded-xl border border-border p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-medium text-foreground">{req.requested_credits} credits</p>
+                        <Badge variant="outline" className="capitalize">{req.status}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {req.payment_method.replace("_", " ")} · {format(new Date(req.created_at), "MMM d, yyyy h:mm a")}
+                      </p>
+                      {req.admin_notes && (
+                        <p className="text-xs text-muted-foreground mt-2">Admin note: {req.admin_notes}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* Transaction History */}

@@ -1,5 +1,9 @@
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminRole } from "@/hooks/useAdminRole";
+import { useAgentTenant } from "@/hooks/useAgentTenant";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -15,9 +19,10 @@ import {
   SheetContent,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Cloud, Coins, LogOut, User, LayoutDashboard, Shield, Ticket, BookOpen, Menu, ArrowRight, DollarSign, History, Lightbulb, Star, Info } from "lucide-react";
+import { Cloud as CloudIcon, Coins, LogOut, User, Shield, Ticket, Menu, ArrowRight, DollarSign, History, Star, Info, Building2, Check, LayoutDashboard, Wallet } from "lucide-react";
 import { useState } from "react";
 import NotificationBell from "@/components/NotificationBell";
+import { toast } from "sonner";
 
 /*
  * HCI Principles:
@@ -31,9 +36,54 @@ import NotificationBell from "@/components/NotificationBell";
 export default function Navbar() {
   const { user, profile, signOut, isGuest } = useAuth();
   const { isAdmin } = useAdminRole();
+  const { role } = useUserRole();
+  const { isAgent, memberships, activeCompany, activeMembership } = useAgentTenant();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const companyDashboardPath = activeCompany?.slug ? `/${activeCompany.slug}/dashboard` : "/dashboard";
+
+  const setPrimaryCompany = useMutation({
+    mutationFn: async (companyId: string) => {
+      const { error } = await supabase.rpc("set_primary_company", { p_company_id: companyId });
+      if (error) throw error;
+    },
+    onSuccess: (_, companyId) => {
+      queryClient.invalidateQueries({ queryKey: ["company-memberships", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["company-component-visibility"] });
+
+      const selectedMembership = memberships.find((m) => m.company_id === companyId);
+      const selectedSlug = selectedMembership?.companies?.slug;
+
+      // Keep URL aligned with active company when user is on company-scoped pages.
+      if (selectedSlug) {
+        const path = location.pathname;
+
+        // Handle current slug routes and preserve the rest of the path.
+        const scopedMatch = path.match(/^\/[^/]+\/(dashboard|settings|tickets(?:\/new|\/[^/]+)?)$/);
+        if (scopedMatch) {
+          const nextPath = `/${selectedSlug}/${scopedMatch[1]}${location.search}${location.hash}`;
+          if (`${path}${location.search}${location.hash}` !== nextPath) {
+            navigate(nextPath, { replace: true });
+          }
+        }
+
+        // Handle legacy non-slug pages still present in older navigation paths.
+        if (path === "/company/dashboard") {
+          navigate(`/${selectedSlug}/dashboard`, { replace: true });
+        } else if (path === "/company/settings") {
+          navigate(`/${selectedSlug}/settings`, { replace: true });
+        } else if (path === "/company/tickets") {
+          navigate(`/${selectedSlug}/tickets`, { replace: true });
+        }
+      }
+
+      toast.success("Active company switched");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
 
   const handleSignOut = async () => {
     await signOut();
@@ -46,14 +96,21 @@ export default function Navbar() {
       ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
       : "U";
 
+  const ticketListPath =
+    (role === "company_admin" || role === "member") && activeCompany?.slug
+      ? `/${activeCompany.slug}/tickets`
+      : "/tickets";
+
   // Hick's Law: fewer nav items for guests
   const navItems = [
-    { label: "My Tickets", to: "/tickets", icon: Ticket, show: !isGuest },
+    { label: "My Tickets", to: ticketListPath, icon: Ticket, show: !isGuest },
     { label: "Why Us", to: "/why-choose-us", icon: Star, show: true },
     { label: "Get to Know Us", to: "/about", icon: Info, show: true },
   ].filter((n) => n.show);
 
   const isActive = (path: string) => location.pathname === path;
+  const canManageMembers = !isGuest && (isAdmin || activeMembership?.role === "owner" || activeMembership?.role === "admin");
+  const canWithdraw = !isGuest && (role === "agent" || role === "company_admin" || role === "member");
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
@@ -61,7 +118,7 @@ export default function Navbar() {
         {/* Chunk 1: Brand */}
         <Link to="/dashboard" className="flex items-center gap-2 flex-shrink-0">
           <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shadow-sm">
-            <Cloud className="h-4 w-4 text-primary-foreground" />
+            <CloudIcon className="h-4 w-4 text-primary-foreground" />
           </div>
           <span className="font-bold text-foreground text-base hidden sm:inline tracking-tight">SF Services</span>
         </Link>
@@ -90,6 +147,33 @@ export default function Navbar() {
 
         {/* Chunk 3: User actions */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {!isGuest && memberships.length > 1 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="hidden md:inline-flex h-9 rounded-lg gap-1.5">
+                  <Building2 className="h-3.5 w-3.5" />
+                  <span className="max-w-[130px] truncate">{activeCompany?.name || "Company"}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64 rounded-xl">
+                <div className="px-3 py-2 text-xs text-muted-foreground">Switch Active Company</div>
+                <DropdownMenuSeparator />
+                {memberships.map((m) => (
+                  <DropdownMenuItem
+                    key={m.company_id}
+                    className="h-10 cursor-pointer"
+                    disabled={m.is_primary || setPrimaryCompany.isPending}
+                    onClick={() => setPrimaryCompany.mutate(m.company_id)}
+                  >
+                    <Building2 className="mr-2 h-4 w-4" />
+                    <span className="flex-1 truncate">{m.companies?.name || m.company_id}</span>
+                    {m.is_primary && <Check className="h-4 w-4 text-primary" />}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
           {isGuest && (
             <Button
               variant="default"
@@ -146,10 +230,34 @@ export default function Navbar() {
                     <Coins className="mr-2 h-4 w-4" />
                     Buy Credits
                   </DropdownMenuItem>
+                  {canWithdraw && (
+                    <DropdownMenuItem onClick={() => navigate("/credits#withdraw")} className="h-10 cursor-pointer">
+                      <Wallet className="mr-2 h-4 w-4" />
+                      Withdraw Credits
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={() => navigate("/pricing")} className="h-10 cursor-pointer">
                     <DollarSign className="mr-2 h-4 w-4" />
                     Pricing Guide
                   </DropdownMenuItem>
+                  {canManageMembers && (
+                    <DropdownMenuItem onClick={() => navigate("/company/members")} className="h-10 cursor-pointer">
+                      <Building2 className="mr-2 h-4 w-4" />
+                      Company Members
+                    </DropdownMenuItem>
+                  )}
+                    {isAgent && (
+                      <DropdownMenuItem onClick={() => navigate("/agent/dashboard")} className="h-10 cursor-pointer">
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        Agent Dashboard
+                      </DropdownMenuItem>
+                    )}
+                    {canManageMembers && (
+                      <DropdownMenuItem onClick={() => navigate(companyDashboardPath)} className="h-10 cursor-pointer">
+                        <Building2 className="mr-2 h-4 w-4" />
+                        Company Dashboard
+                      </DropdownMenuItem>
+                    )}
                   <DropdownMenuItem onClick={() => navigate("/credits#history")} className="h-10 cursor-pointer">
                     <History className="mr-2 h-4 w-4" />
                     Transaction History
@@ -212,6 +320,33 @@ export default function Navbar() {
                 ))}
                 {!isGuest && (
                   <>
+                    {memberships.length > 1 && (
+                      <>
+                        <div className="px-4 pt-2 pb-1 text-[11px] uppercase tracking-wider text-muted-foreground">
+                          Active Company
+                        </div>
+                        {memberships.map((m) => (
+                          <button
+                            key={m.company_id}
+                            onClick={() => {
+                              if (!m.is_primary) setPrimaryCompany.mutate(m.company_id);
+                              setMobileOpen(false);
+                            }}
+                            disabled={setPrimaryCompany.isPending}
+                            className={`flex items-center gap-3 w-full h-11 px-4 rounded-xl text-sm font-medium transition-all ${
+                              m.is_primary
+                                ? "bg-primary/10 text-primary"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                            }`}
+                          >
+                            <Building2 className="h-4 w-4" />
+                            <span className="flex-1 text-left truncate">{m.companies?.name || m.company_id}</span>
+                            {m.is_primary && <Check className="h-4 w-4" />}
+                          </button>
+                        ))}
+                      </>
+                    )}
+
                     <button
                       onClick={() => { navigate("/credits"); setMobileOpen(false); }}
                       className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
@@ -219,6 +354,15 @@ export default function Navbar() {
                       <Coins className="h-5 w-5" />
                       Buy Credits
                     </button>
+                    {canWithdraw && (
+                      <button
+                        onClick={() => { navigate("/credits#withdraw"); setMobileOpen(false); }}
+                        className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                      >
+                        <Wallet className="h-5 w-5" />
+                        Withdraw Credits
+                      </button>
+                    )}
                     <button
                       onClick={() => { navigate("/pricing"); setMobileOpen(false); }}
                       className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
@@ -226,6 +370,33 @@ export default function Navbar() {
                       <DollarSign className="h-5 w-5" />
                       Pricing Guide
                     </button>
+                    {canManageMembers && (
+                      <button
+                        onClick={() => { navigate("/company/members"); setMobileOpen(false); }}
+                        className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                      >
+                        <Building2 className="h-5 w-5" />
+                        Company Members
+                      </button>
+                    )}
+                      {isAgent && (
+                        <button
+                          onClick={() => { navigate("/agent/dashboard"); setMobileOpen(false); }}
+                          className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                        >
+                          <LayoutDashboard className="h-5 w-5" />
+                          Agent Dashboard
+                        </button>
+                      )}
+                      {canManageMembers && (
+                        <button
+                          onClick={() => { navigate(companyDashboardPath); setMobileOpen(false); }}
+                          className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                        >
+                          <Building2 className="h-5 w-5" />
+                          Company Dashboard
+                        </button>
+                      )}
                     <button
                       onClick={() => { navigate("/credits#history"); setMobileOpen(false); }}
                       className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"

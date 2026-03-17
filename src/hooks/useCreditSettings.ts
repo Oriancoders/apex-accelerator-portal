@@ -11,6 +11,7 @@ export interface CreditRates {
   priorityRates: Record<string, number>;
   difficultyRates: Record<string, number>;
   packages: CreditPackage[];
+  minWithdrawalCredits: number;
 }
 
 const DEFAULTS: CreditRates = {
@@ -23,6 +24,7 @@ const DEFAULTS: CreditRates = {
     { buy: 50, bonus: 15 },
     { buy: 100, bonus: 35 },
   ],
+  minWithdrawalCredits: 10,
 };
 
 export function useCreditSettings() {
@@ -46,6 +48,7 @@ export function useCreditSettings() {
         priorityRates: map.priority_rates || DEFAULTS.priorityRates,
         difficultyRates: map.difficulty_rates || DEFAULTS.difficultyRates,
         packages: map.credit_packages || DEFAULTS.packages,
+        minWithdrawalCredits: Number(map.min_withdrawal_credits) || DEFAULTS.minWithdrawalCredits,
       } as CreditRates;
     },
     staleTime: 60_000,
@@ -55,8 +58,10 @@ export function useCreditSettings() {
     mutationFn: async ({ key, value }: { key: string; value: any }) => {
       const { error } = await (supabase as any)
         .from("credit_settings")
-        .update({ value, updated_at: new Date().toISOString() })
-        .eq("key", key);
+        .upsert(
+          { key, value, updated_at: new Date().toISOString() },
+          { onConflict: "key" }
+        );
       if (error) throw error;
     },
     onSuccess: () => {

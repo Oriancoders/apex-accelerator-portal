@@ -282,11 +282,10 @@ function SignInForm({ email, setEmail, password, setPassword, loading, onSubmit,
 
 // ─── Sign Up Form (Progressive disclosure, chunked fields) ────────────────────
 
-function SignUpForm({ email, setEmail, password, setPassword, fullName, setFullName, company, setCompany, loading, onSubmit }: {
+function SignUpForm({ email, setEmail, password, setPassword, fullName, setFullName, loading, onSubmit }: {
   email: string; setEmail: (v: string) => void;
   password: string; setPassword: (v: string) => void;
   fullName: string; setFullName: (v: string) => void;
-  company: string; setCompany: (v: string) => void;
   loading: boolean; onSubmit: (e: React.FormEvent) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -317,21 +316,6 @@ function SignUpForm({ email, setEmail, password, setPassword, fullName, setFullN
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               required
-            />
-          </div>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="signup-company" className="text-sm font-medium">
-            Company <span className="text-muted-foreground font-normal">(optional)</span>
-          </Label>
-          <div className="relative">
-            <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="signup-company"
-              placeholder="Acme Inc."
-              className="pl-10 h-12 rounded-xl text-sm"
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
             />
           </div>
         </div>
@@ -406,18 +390,42 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
-  const [company, setCompany] = useState("");
   // Hick's Law: One view at a time, no competing tabs
   const [view, setView] = useState<AuthView>("signin");
+
+  const getPostLoginPath = async (userId: string): Promise<string> => {
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .limit(1)
+      .maybeSingle();
+
+    const role = data?.role as string | undefined;
+
+    if (role === "admin") return "/admin";
+    if (role === "agent") {
+      const { data: agentProfile } = await supabase
+        .from("agents")
+        .select("id, is_active")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (agentProfile?.is_active) return "/agent/dashboard";
+    }
+    return "/dashboard";
+  };
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
       toast.error(error.message);
     } else {
-      navigate("/dashboard");
+      const userId = data.user?.id;
+      const postLoginPath = userId ? await getPostLoginPath(userId) : "/dashboard";
+      navigate(postLoginPath);
     }
     setLoading(false);
   };
@@ -429,7 +437,7 @@ export default function AuthPage() {
       email,
       password,
       options: {
-        data: { full_name: fullName, company },
+        data: { full_name: fullName },
         emailRedirectTo: window.location.origin + "/dashboard",
       },
     });
@@ -510,7 +518,6 @@ export default function AuthPage() {
                   email={email} setEmail={setEmail}
                   password={password} setPassword={setPassword}
                   fullName={fullName} setFullName={setFullName}
-                  company={company} setCompany={setCompany}
                   loading={loading} onSubmit={handleEmailSignUp}
                 />
               )}
