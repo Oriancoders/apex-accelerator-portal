@@ -128,7 +128,7 @@ export default function AdminCompanyMembersPage() {
       setNewRole("member");
       queryClient.invalidateQueries({ queryKey: ["admin-company-memberships", companyId] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   const updateRoleMutation = useMutation({
@@ -143,7 +143,7 @@ export default function AdminCompanyMembersPage() {
       toast.success("Member role updated");
       queryClient.invalidateQueries({ queryKey: ["admin-company-memberships", companyId] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   const removeMemberMutation = useMutation({
@@ -156,7 +156,7 @@ export default function AdminCompanyMembersPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-company-memberships", companyId] });
       setMemberToDelete(null);
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   return (

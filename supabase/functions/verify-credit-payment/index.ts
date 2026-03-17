@@ -37,6 +37,27 @@ serve(async (req) => {
     const user = data.user;
     if (!user) throw new Error("User not authenticated");
 
+    const { data: rlData, error: rlError } = await supabaseAdmin.rpc("check_rate_limit", {
+      p_key: `verify-credit-payment:${user.id}`,
+      p_window_seconds: 60,
+      p_max_requests: 20,
+    });
+
+    if (rlError) {
+      console.error("verify-credit-payment rate-limit error:", rlError);
+      return new Response(JSON.stringify({ error: "Service temporarily unavailable" }), {
+        status: 503,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!(rlData as any)?.allowed) {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { sessionId } = await req.json();
     if (!sessionId || typeof sessionId !== "string") throw new Error("Missing or invalid session ID");
 

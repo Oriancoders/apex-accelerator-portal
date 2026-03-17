@@ -47,6 +47,27 @@ serve(async (req) => {
     const user = data.user;
     if (!user?.email) throw new Error("User not authenticated");
 
+    const { data: rlData, error: rlError } = await supabaseAdmin.rpc("check_rate_limit", {
+      p_key: `create-credit-checkout:${user.id}`,
+      p_window_seconds: 60,
+      p_max_requests: 10,
+    });
+
+    if (rlError) {
+      console.error("checkout rate-limit error:", rlError);
+      return new Response(JSON.stringify({ error: "Service temporarily unavailable" }), {
+        status: 503,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!(rlData as any)?.allowed) {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { packageIndex } = await req.json();
     if (typeof packageIndex !== "number" || packageIndex < 0) {
       throw new Error("Invalid package selection");

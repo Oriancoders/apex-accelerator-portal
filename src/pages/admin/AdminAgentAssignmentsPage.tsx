@@ -167,7 +167,7 @@ export default function AdminAgentAssignmentsPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-agent-company-assignments"] });
       setCommissionPercent("");
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   const updateAssignmentStatus = useMutation({
@@ -181,7 +181,7 @@ export default function AdminAgentAssignmentsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-agent-company-assignments"] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   const createCompanyRule = useMutation({
@@ -226,7 +226,7 @@ export default function AdminAgentAssignmentsPage() {
       toast.success("Company commission rule created");
       queryClient.invalidateQueries({ queryKey: ["admin-company-commission-rules", ruleCompanyId] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   const toggleRuleActive = useMutation({
@@ -237,7 +237,7 @@ export default function AdminAgentAssignmentsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-company-commission-rules", ruleCompanyId] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   const openEditRule = (rule: RuleRow) => {
@@ -290,7 +290,7 @@ export default function AdminAgentAssignmentsPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-company-commission-rules", ruleCompanyId] });
       setEditingRule(null);
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   const deleteCompanyRule = useMutation({
@@ -303,7 +303,7 @@ export default function AdminAgentAssignmentsPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-company-commission-rules", ruleCompanyId] });
       setRuleToDelete(null);
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   return (

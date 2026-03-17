@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageCircle, Send } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { getUserFacingError } from "@/lib/errors";
 
 interface TicketChatProps {
   ticketId: string;
@@ -70,7 +71,7 @@ export default function TicketChat({ ticketId, isAdmin = false }: TicketChatProp
       setMessage("");
       queryClient.invalidateQueries({ queryKey: ["chat-messages", ticketId] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error(getUserFacingError(err, "Unable to send message right now.")),
   });
 
   const handleSend = (e: React.FormEvent) => {

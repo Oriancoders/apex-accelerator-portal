@@ -20,6 +20,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import CreditSettingsPanel from "@/components/admin/CreditSettingsPanel";
 import { toast } from "sonner";
 import { useCreditSettings } from "@/hooks/useCreditSettings";
+import { getUserFacingError } from "@/lib/errors";
 
 type Transaction = Tables<"credit_transactions">;
 type WithdrawalRequest = Tables<"credit_withdrawal_requests">;
@@ -103,7 +104,7 @@ export default function AdminCreditsPage() {
       toast.success("Withdrawal request updated");
       queryClient.invalidateQueries({ queryKey: ["admin-withdrawal-requests"] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error(getUserFacingError(err, "Unable to update withdrawal request.")),
   });
 
   const markPaidMutation = useMutation({
@@ -120,7 +121,7 @@ export default function AdminCreditsPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-withdrawal-requests"] });
       queryClient.invalidateQueries({ queryKey: ["admin-transactions"] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error(getUserFacingError(err, "Unable to mark payout as paid.")),
   });
 
   const totalPurchased = transactions.filter((t) => t.amount > 0).reduce((sum, t) => sum + t.amount, 0);
@@ -158,7 +159,7 @@ export default function AdminCreditsPage() {
       toast.success("Minimum withdrawal credits updated");
       queryClient.invalidateQueries({ queryKey: ["credit-settings"] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error(getUserFacingError(err, "Unable to update minimum withdrawal setting.")),
   });
 
   const effectiveMinWithdraw = Number(settings.minWithdrawalCredits || 0);

@@ -21,7 +21,8 @@ import {
   ClipboardCheck, Lock, BarChart3, PlayCircle, HelpCircle
 } from "lucide-react";
 import { format, formatDistanceToNow, differenceInMinutes, differenceInHours, differenceInDays } from "date-fns";
-import { sanitizeHtml } from "@/lib/sanitize";
+import { sanitizeTicketHtml } from "@/lib/sanitize";
+import { getUserFacingError } from "@/lib/errors";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -87,7 +88,7 @@ export default function TicketDetailPage() {
       p_user_id: user.id, p_amount: ticket.credit_cost,
       p_ticket_id: ticket.id, p_description: `Service: ${ticket.title}`,
     });
-    if (error) { toast.error("Failed: " + error.message); }
+    if (error) { toast.error(getUserFacingError(error, "Unable to process this request right now.")); }
     else if (data === false) { toast.error("Insufficient credits."); navigate("/credits"); }
     else {
       // log event
@@ -102,7 +103,7 @@ export default function TicketDetailPage() {
     if (!error) {
       await supabase.from("ticket_events").insert({ ticket_id: ticket.id, from_status: ticket.status, to_status: "cancelled", changed_by: user.id, note: "Client cancelled the ticket." });
       toast.success("Ticket cancelled."); refetch();
-    } else toast.error(error.message);
+    } else toast.error(getUserFacingError(error, "Unable to cancel ticket right now."));
   };
 
   const submitReviewMutation = useMutation({
@@ -128,7 +129,7 @@ export default function TicketDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["ticket-review", id] });
       refetch();
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => toast.error(getUserFacingError(e, "Unable to submit review right now.")),
   });
 
   if (isLoading) {
@@ -436,7 +437,7 @@ export default function TicketDetailPage() {
                 <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Request Description</CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <div className="prose prose-sm max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: sanitizeHtml(ticket.description) }} />
+                <div className="prose prose-sm max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: sanitizeTicketHtml(ticket.description) }} />
               </CardContent>
             </Card>
 

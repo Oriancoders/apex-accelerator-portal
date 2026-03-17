@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Lock, Cloud } from "lucide-react";
+import { Lock, Cloud, Eye, EyeOff } from "lucide-react";
 import { motion } from "framer-motion";
+import { getUserFacingError } from "@/lib/errors";
 
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
@@ -15,6 +16,17 @@ export default function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [isRecovery, setIsRecovery] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const passwordRules = {
+    minLength: password.length >= 10,
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    number: /\d/.test(password),
+    special: /[^A-Za-z0-9]/.test(password),
+  };
+  const passwordStrong = Object.values(passwordRules).every(Boolean);
 
   useEffect(() => {
     // Listen for the PASSWORD_RECOVERY event
@@ -36,14 +48,14 @@ export default function ResetPasswordPage() {
       toast.error("Passwords do not match");
       return;
     }
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters");
+    if (!passwordStrong) {
+      toast.error("Please use a strong password that meets all criteria");
       return;
     }
     setLoading(true);
     const { error } = await supabase.auth.updateUser({ password });
     if (error) {
-      toast.error(error.message);
+      toast.error(getUserFacingError(error, "Unable to update password right now."));
     } else {
       toast.success("Password updated successfully!");
       navigate("/dashboard");
@@ -87,17 +99,58 @@ export default function ResetPasswordPage() {
                   <Label htmlFor="new-password">New Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input id="new-password" type="password" placeholder="Min 6 characters" className="pl-9" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
+                    <Input
+                      id="new-password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Use a strong password"
+                      className="pl-9 pr-10"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={10}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={() => setShowPassword((v) => !v)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs pt-1">
+                    <p className={passwordRules.minLength ? "text-[hsl(var(--success))]" : "text-muted-foreground"}>At least 10 characters</p>
+                    <p className={passwordRules.uppercase ? "text-[hsl(var(--success))]" : "text-muted-foreground"}>One uppercase letter</p>
+                    <p className={passwordRules.lowercase ? "text-[hsl(var(--success))]" : "text-muted-foreground"}>One lowercase letter</p>
+                    <p className={passwordRules.number ? "text-[hsl(var(--success))]" : "text-muted-foreground"}>One number</p>
+                    <p className={passwordRules.special ? "text-[hsl(var(--success))]" : "text-muted-foreground"}>One special character</p>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirm-password">Confirm Password</Label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input id="confirm-password" type="password" placeholder="Repeat password" className="pl-9" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} />
+                    <Input
+                      id="confirm-password"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Repeat password"
+                      className="pl-9 pr-10"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      required
+                      minLength={10}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={() => setShowConfirmPassword((v) => !v)}
+                      aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
                   </div>
                 </div>
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button type="submit" className="w-full" disabled={loading || !passwordStrong}>
                   {loading ? "Updating..." : "Update Password"}
                 </Button>
               </form>

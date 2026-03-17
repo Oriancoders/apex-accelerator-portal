@@ -142,29 +142,23 @@ export default function AdminUsersPage() {
       setCreditAdjust("");
       setCreditReason("");
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   const updateRoleMutation = useMutation({
     mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
-      const { error: deleteError } = await supabase
-        .from("user_roles")
-        .delete()
-        .eq("user_id", userId);
+      const { error } = await (supabase as any).rpc("admin_set_user_role", {
+        p_target_user_id: userId,
+        p_role: role,
+      });
 
-      if (deleteError) throw deleteError;
-
-      const { error: insertError } = await supabase
-        .from("user_roles")
-        .insert({ user_id: userId, role: role as any });
-
-      if (insertError) throw insertError;
+      if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Role updated successfully");
       queryClient.invalidateQueries({ queryKey: ["admin-user-roles"] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   const handleAdjustCredits = (positive: boolean) => {

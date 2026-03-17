@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.verify-credit-payment]
 verify_jwt = false
+
+[functions.auth-guard]
+verify_jwt = false

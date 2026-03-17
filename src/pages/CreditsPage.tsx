@@ -16,6 +16,7 @@ import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import type { Tables } from "@/integrations/supabase/types";
+import { getUserFacingError } from "@/lib/errors";
 
 type WithdrawalRequest = Tables<"credit_withdrawal_requests">;
 
@@ -126,7 +127,7 @@ export default function CreditsPage() {
       setWithdrawNote("");
       queryClient.invalidateQueries({ queryKey: ["my-withdrawal-requests", user?.id] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error(getUserFacingError(err, "Unable to submit withdrawal request right now.")),
   });
 
   // Handle Stripe success redirect
@@ -169,7 +170,7 @@ export default function CreditsPage() {
         throw new Error("No checkout URL returned");
       }
     } catch (err: any) {
-      toast.error(err.message || "Failed to create checkout session");
+      toast.error(getUserFacingError(err, "Failed to create checkout session."));
       setPurchasingIndex(null);
     }
   };

@@ -17,6 +17,7 @@ import {
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getUserFacingError } from "@/lib/errors";
 
 type AgentCompanyAssignment = Tables<"agent_company_assignments"> & {
   companies?: Pick<Tables<"companies">, "name" | "slug"> | Pick<Tables<"companies">, "name" | "slug">[] | null;
@@ -386,11 +387,43 @@ export default function AgentDashboardPage() {
       queryClient.invalidateQueries({ queryKey: ["company-memberships", user?.id] });
     },
     onError: (err: Error) => {
-      if (err.message.toLowerCase().includes("duplicate") || err.message.toLowerCase().includes("unique")) {
-        toast.error("Company slug already exists. Try a different slug.");
-      } else {
-        toast.error(err.message);
+      const pgError = err as Error & {
+        code?: string;
+        details?: string;
+        hint?: string;
+      };
+
+      const message = (pgError.message || "").toLowerCase();
+      const details = (pgError.details || "").toLowerCase();
+      const isSlugConflict =
+        pgError.code === "23505" &&
+        (message.includes("slug") || details.includes("(slug)"));
+
+      if (isSlugConflict) {
+        const suffix = Math.floor(100 + Math.random() * 900);
+        const suggestedSlug = toSlug(`${newCompanySlug}-${suffix}`);
+        if (suggestedSlug) {
+          setNewCompanySlug(suggestedSlug);
+          toast.error(`This slug is already in use. Try: ${suggestedSlug}`);
+          return;
+        }
+        toast.error("This slug is already in use globally. Try a different one.");
+        return;
       }
+
+      if (pgError.code === "42501" || message.includes("row-level security") || message.includes("permission denied")) {
+        toast.error("You are not allowed to create a company with this account.");
+        return;
+      }
+
+      console.error("Create company failed:", {
+        code: pgError.code,
+        message: pgError.message,
+        details: pgError.details,
+        hint: pgError.hint,
+      });
+
+      toast.error(getUserFacingError(pgError, "Operation failed. Please try again."));
     },
   });
 
@@ -423,7 +456,7 @@ export default function AgentDashboardPage() {
       // Invalidate tickets so any newly 'claimed' tickets appear immediately
       queryClient.invalidateQueries({ queryKey: ["agent-company-tickets"] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   if (isLoading) {

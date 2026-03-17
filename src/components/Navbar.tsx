@@ -23,6 +23,7 @@ import { Cloud as CloudIcon, Coins, LogOut, User, Shield, Ticket, Menu, ArrowRig
 import { useState } from "react";
 import NotificationBell from "@/components/NotificationBell";
 import { toast } from "sonner";
+import { getUserFacingError } from "@/lib/errors";
 
 /*
  * HCI Principles:
@@ -82,7 +83,7 @@ export default function Navbar() {
 
       toast.success("Active company switched");
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error(getUserFacingError(err, "Unable to switch active company right now.")),
   });
 
   const handleSignOut = async () => {

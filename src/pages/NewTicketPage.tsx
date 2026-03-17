@@ -12,6 +12,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ArrowLeft, Upload, Send } from "lucide-react";
 import { useAgentTenant } from "@/hooks/useAgentTenant";
+import { validateFiles, ALLOWED_FILE_TYPES } from "@/utils/file-validation";
+import { sanitizeTicketHtml } from "@/lib/sanitize";
+import { Database } from "@/integrations/supabase/types";
 
 type Priority = Database["public"]["Enums"]["ticket_priority"];
 
@@ -57,11 +60,6 @@ export default function NewTicketPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("--- Starting Ticket Submission ---");
-    console.log("Current User:", user?.id);
-    console.log("State - Selected Company ID:", selectedCompanyId);
-    console.log("State - Active Company:", activeCompany);
-    console.log("State - Profile:", profile);
 
     const trimmedTitle = title.trim();
     const trimmedDesc = description.trim();
@@ -100,7 +98,7 @@ export default function NewTicketPage() {
           .from("ticket-attachments")
           .upload(path, file, { contentType: file.type });
         if (error) {
-          toast.error(`Failed to upload "${file.name}": ${error.message}`);
+          toast.error(`Failed to upload "${file.name}". Please try another file or retry.`);
           setLoading(false);
           return;
         }
@@ -108,12 +106,9 @@ export default function NewTicketPage() {
       }
 
       let companyIdToUse = selectedCompanyId || activeCompany?.id;
-      console.log("Initial Company ID check:", companyIdToUse);
       
       // Fallback Strategy: If no company selected or found in context
       if (!companyIdToUse) {
-        console.log("No company ID found yet, attempting database lookup...");
-        
         // 1. Direct Primary Source: Check company_memberships table
         const { data: memberData, error: memError } = await supabase
           .from('company_memberships')
@@ -122,50 +117,30 @@ export default function NewTicketPage() {
           .limit(1)
           .maybeSingle();
 
-        console.log("Direct Company Membership Lookup:", memberData, memError);
-
         if (memberData?.company_id) {
           companyIdToUse = memberData.company_id;
-          console.log("Found Company ID in memberships:", companyIdToUse);
         } else {
-           console.log("No company in memberships, trying profile fallback...");
-           
-           // DEBUG: Call the security definer function to see if RLS is blocking
-           const { data: debugData, error: debugError } = await supabase
-             .rpc('debug_my_memberships');
-           console.log("DEBUG: membership via RPC (bypasses RLS):", debugData, debugError);
+           // 2. Secondary Source: Check profile (in case sync trigger worked but membership query failed for some reason)
+           const { data: freshProfile } = await supabase
+            .from('profiles')
+            .select('company_id')
+            .eq('user_id', user.id)
+            .maybeSingle();
 
-           if (debugData && debugData.length > 0) {
-             companyIdToUse = debugData[0].company_id;
-             console.log("Found Company ID via DEBUG RPC:", companyIdToUse);
-           } else {
-             // 2. Secondary Source: Check profile (in case sync trigger worked but membership query failed for some reason)
-             const { data: freshProfile, error: profError } = await supabase
-              .from('profiles')
-              .select('company_id')
-              .eq('user_id', user.id)
-              .maybeSingle();
-              
-             console.log("Fresh Profile Lookup:", freshProfile, profError);
-              
+           // @ts-ignore
+           if (freshProfile?.company_id) {
              // @ts-ignore
-             if (freshProfile?.company_id) {
-               // @ts-ignore
-               companyIdToUse = freshProfile.company_id;
-               console.log("Found Company ID in profile:", companyIdToUse);
-             }
+             companyIdToUse = freshProfile.company_id;
            }
         }
       }
-
-      console.log("FINAL Ticket Insert Payload - company_id:", companyIdToUse);
 
       const { error } = await supabase.from("tickets").insert({
         user_id: user.id,
         // @ts-ignore - Supabase type might not be updated yet
         company_id: companyIdToUse || null,
         title: trimmedTitle,
-        description: trimmedDesc,
+        description: sanitizeTicketHtml(trimmedDesc),
         priority,
         contact_email: contactEmail.trim() || null,
         contact_phone: contactPhone.trim() || null,
@@ -173,17 +148,14 @@ export default function NewTicketPage() {
       });
 
       if (error) {
-        console.error("Ticket Insert Failed:", error);
         toast.error("Failed to submit ticket. Please try again.");
       } else {
-        console.log("Ticket Insert Success - company_id:", companyIdToUse);
         toast.success("Ticket submitted successfully!");
         const targetMembership = memberships.find((m) => m.company_id === companyIdToUse);
         const targetSlug = targetMembership?.companies?.slug || activeCompany?.slug;
         navigate(targetSlug ? `/${targetSlug}/tickets` : "/tickets");
       }
     } catch (err) {
-      console.error("Ticket submission error:", err);
       toast.error("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
@@ -268,12 +240,13 @@ export default function NewTicketPage() {
               <div className="space-y-2">
                 <Label>Attachments</Label>
                 <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors cursor-pointer">
-                  <input type="file" multiple onChange={handleFileChange} className="hidden" id="file-upload" />
+                  <input type="file" multiple accept={ALLOWED_FILE_TYPES.join(",")} onChange={handleFileChange} className="hidden" id="file-upload" />
                   <label htmlFor="file-upload" className="cursor-pointer">
                     <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                     <p className="text-sm text-muted-foreground">
                       {files.length > 0 ? `${files.length} file(s) selected` : "Click to upload files"}
                     </p>
+                    <p className="text-xs text-muted-foreground mt-1">Allowed: PDF, JPG, PNG (max 10MB each)</p>
                   </label>
                 </div>
               </div>

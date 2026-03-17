@@ -115,7 +115,7 @@ export default function CompanyMembersPage() {
       // Invalidate agent tickets if this user is in an agent's view
       queryClient.invalidateQueries({ queryKey: ["agent-company-tickets"] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   const updateRoleMutation = useMutation({
@@ -130,7 +130,7 @@ export default function CompanyMembersPage() {
       toast.success("Member role updated");
       queryClient.invalidateQueries({ queryKey: ["company-memberships-manage", activeCompany?.id] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   const removeMemberMutation = useMutation({
@@ -145,7 +145,7 @@ export default function CompanyMembersPage() {
       queryClient.invalidateQueries({ queryKey: ["agent-company-tickets"] });
       setMemberToDelete(null);
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   return (

@@ -237,7 +237,7 @@ export default function CompanySettingsPage() {
       queryClient.invalidateQueries({ queryKey: ["company-dash-members", activeCompany?.id] });
       queryClient.invalidateQueries({ queryKey: ["company-memberships", user?.id] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   const updateRoleMutation = useMutation({
@@ -248,7 +248,7 @@ export default function CompanySettingsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["company-dash-members", activeCompany?.id] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   const removeMemberMutation = useMutation({
@@ -261,7 +261,7 @@ export default function CompanySettingsPage() {
       setMemberToDelete(null);
       queryClient.invalidateQueries({ queryKey: ["company-dash-members", activeCompany?.id] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   const toggleComponentMutation = useMutation({
@@ -282,7 +282,7 @@ export default function CompanySettingsPage() {
       queryClient.invalidateQueries({ queryKey: ["company-dash-visibility", activeCompany?.id] });
       queryClient.invalidateQueries({ queryKey: ["company-component-visibility", activeCompany?.id] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   const updateAssignmentCommissionMutation = useMutation({
@@ -304,7 +304,7 @@ export default function CompanySettingsPage() {
       toast.success("Commission updated");
       queryClient.invalidateQueries({ queryKey: ["company-dash-agent-assignments", activeCompany?.id] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   if (tenantLoading) {

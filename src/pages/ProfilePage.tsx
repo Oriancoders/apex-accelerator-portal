@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import { getUserFacingError } from "@/lib/errors";
 import { motion } from "framer-motion";
 import { useUserRole } from "@/hooks/useUserRole";
 import {
@@ -148,7 +149,11 @@ export default function ProfilePage() {
     const { error } = await supabase.auth.updateUser({ password: passwordForm.newPassword });
     setPasswordLoading(false);
     if (error) {
-      toast({ title: "Error changing password", description: error.message, variant: "destructive" });
+      toast({
+        title: "Error changing password",
+        description: getUserFacingError(error, "Unable to change password right now."),
+        variant: "destructive",
+      });
     } else {
       toast({ title: "Password changed successfully" });
       setPasswordForm({ newPassword: "", confirmPassword: "" });

@@ -192,7 +192,36 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const supabaseAdmin = createClient(
+    Deno.env.get("SUPABASE_URL") ?? "",
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+  );
+
   try {
+    const forwardedFor = req.headers.get("x-forwarded-for") || "unknown";
+    const sourceKey = forwardedFor.split(",")[0].trim() || "unknown";
+
+    const { data: rlData, error: rlError } = await supabaseAdmin.rpc("check_rate_limit", {
+      p_key: `resend-webhook:${sourceKey}`,
+      p_window_seconds: 60,
+      p_max_requests: 120,
+    });
+
+    if (rlError) {
+      console.error("resend-webhook rate-limit error:", rlError);
+      return new Response(JSON.stringify({ error: "Service temporarily unavailable" }), {
+        status: 503,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!(rlData as any)?.allowed) {
+      return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again shortly." }), {
+        status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // This function is called internally by a database trigger via pg_net.
     // JWT verification is handled at the platform level (config.toml).
 

@@ -7,8 +7,127 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Cloud, Mail, Lock, User, Building2, Eye, ArrowLeft, CheckCircle2, Sparkles } from "lucide-react";
+import { Cloud, Mail, Lock, User, Eye, EyeOff, ArrowLeft, CheckCircle2, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { getUserFacingError } from "@/lib/errors";
+
+type AuthRateLimitKind = "signin" | "signup" | "reset";
+
+type AuthRateLimitConfig = {
+  maxAttempts: number;
+  windowMs: number;
+  lockMs: number;
+};
+
+type AuthRateLimitState = {
+  attempts: number[];
+  blockedUntil?: number;
+};
+
+const AUTH_RATE_LIMIT_CONFIG: Record<AuthRateLimitKind, AuthRateLimitConfig> = {
+  signin: { maxAttempts: 5, windowMs: 60_000, lockMs: 5 * 60_000 },
+  signup: { maxAttempts: 4, windowMs: 5 * 60_000, lockMs: 10 * 60_000 },
+  reset: { maxAttempts: 3, windowMs: 5 * 60_000, lockMs: 10 * 60_000 },
+};
+
+const AUTH_RATE_LIMIT_STORAGE_KEY = "auth-rate-limit-v1";
+
+function readAuthRateLimits(): Record<AuthRateLimitKind, AuthRateLimitState> {
+  if (typeof window === "undefined") {
+    return { signin: { attempts: [] }, signup: { attempts: [] }, reset: { attempts: [] } };
+  }
+
+  try {
+    const raw = window.localStorage.getItem(AUTH_RATE_LIMIT_STORAGE_KEY);
+    if (!raw) {
+      return { signin: { attempts: [] }, signup: { attempts: [] }, reset: { attempts: [] } };
+    }
+    const parsed = JSON.parse(raw) as Partial<Record<AuthRateLimitKind, AuthRateLimitState>>;
+    return {
+      signin: { attempts: parsed.signin?.attempts ?? [], blockedUntil: parsed.signin?.blockedUntil },
+      signup: { attempts: parsed.signup?.attempts ?? [], blockedUntil: parsed.signup?.blockedUntil },
+      reset: { attempts: parsed.reset?.attempts ?? [], blockedUntil: parsed.reset?.blockedUntil },
+    };
+  } catch {
+    return { signin: { attempts: [] }, signup: { attempts: [] }, reset: { attempts: [] } };
+  }
+}
+
+function writeAuthRateLimits(next: Record<AuthRateLimitKind, AuthRateLimitState>) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(AUTH_RATE_LIMIT_STORAGE_KEY, JSON.stringify(next));
+}
+
+function getRateLimitStatus(kind: AuthRateLimitKind): { blocked: boolean; retryAfterSeconds: number } {
+  const now = Date.now();
+  const all = readAuthRateLimits();
+  const config = AUTH_RATE_LIMIT_CONFIG[kind];
+  const current = all[kind] ?? { attempts: [] };
+  const attempts = (current.attempts ?? []).filter((ts) => now - ts <= config.windowMs);
+
+  all[kind] = {
+    attempts,
+    blockedUntil: current.blockedUntil,
+  };
+  writeAuthRateLimits(all);
+
+  if ((current.blockedUntil ?? 0) > now) {
+    return {
+      blocked: true,
+      retryAfterSeconds: Math.ceil(((current.blockedUntil ?? 0) - now) / 1000),
+    };
+  }
+
+  return { blocked: false, retryAfterSeconds: 0 };
+}
+
+function recordAuthFailure(kind: AuthRateLimitKind): { blocked: boolean; retryAfterSeconds: number } {
+  const now = Date.now();
+  const all = readAuthRateLimits();
+  const config = AUTH_RATE_LIMIT_CONFIG[kind];
+  const current = all[kind] ?? { attempts: [] };
+  const attempts = (current.attempts ?? []).filter((ts) => now - ts <= config.windowMs);
+  attempts.push(now);
+
+  let blockedUntil = current.blockedUntil;
+  if (attempts.length >= config.maxAttempts) {
+    blockedUntil = now + config.lockMs;
+  }
+
+  all[kind] = { attempts, blockedUntil };
+  writeAuthRateLimits(all);
+
+  if ((blockedUntil ?? 0) > now) {
+    return {
+      blocked: true,
+      retryAfterSeconds: Math.ceil(((blockedUntil ?? 0) - now) / 1000),
+    };
+  }
+
+  return { blocked: false, retryAfterSeconds: 0 };
+}
+
+function clearAuthRateLimit(kind: AuthRateLimitKind) {
+  const all = readAuthRateLimits();
+  all[kind] = { attempts: [], blockedUntil: undefined };
+  writeAuthRateLimits(all);
+}
+
+function isStrongPassword(password: string) {
+  return {
+    minLength: password.length >= 10,
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    number: /\d/.test(password),
+    special: /[^A-Za-z0-9]/.test(password),
+  };
+}
+
+function formatRetryTime(totalSeconds: number) {
+  if (totalSeconds <= 60) return `${totalSeconds}s`;
+  const minutes = Math.ceil(totalSeconds / 60);
+  return `${minutes}m`;
+}
 
 /*
  * HCI Principles Applied:
@@ -49,7 +168,7 @@ function OAuthButtons() {
       provider: "google",
       options: { redirectTo: window.location.origin + "/dashboard" },
     });
-    if (error) toast.error(error.message);
+    if (error) toast.error(getUserFacingError(error, "Unable to sign in with Google right now."));
   };
 
   const handleSalesforceSignIn = async () => {
@@ -58,7 +177,7 @@ function OAuthButtons() {
       provider: "google",
       options: { redirectTo: window.location.origin + "/dashboard" },
     });
-    if (error) toast.error(error.message);
+    if (error) toast.error(getUserFacingError(error, "Unable to continue with Salesforce right now."));
   };
 
   return (
@@ -110,25 +229,53 @@ function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [blockedUntil, setBlockedUntil] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // KLM: Auto-focus reduces pointing time
   useEffect(() => { inputRef.current?.focus(); }, []);
 
+  useEffect(() => {
+    const status = getRateLimitStatus("reset");
+    if (status.blocked) {
+      setBlockedUntil(Date.now() + status.retryAfterSeconds * 1000);
+    }
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const status = getRateLimitStatus("reset");
+    if (status.blocked) {
+      toast.error(`Too many reset attempts. Try again in ${formatRetryTime(status.retryAfterSeconds)}.`);
+      setBlockedUntil(Date.now() + status.retryAfterSeconds * 1000);
+      return;
+    }
+
     setLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+    const { error } = await supabase.functions.invoke("auth-guard", {
+      body: {
+        action: "reset",
+        email,
+        redirectTo: `${window.location.origin}/reset-password`,
+      },
     });
+
     if (error) {
-      toast.error(error.message);
+      const limiter = recordAuthFailure("reset");
+      if (limiter.blocked) {
+        setBlockedUntil(Date.now() + limiter.retryAfterSeconds * 1000);
+      }
+      toast.error(getUserFacingError(error, "Unable to send reset link right now."));
     } else {
+      clearAuthRateLimit("reset");
       setSent(true);
       toast.success("Password reset link sent!");
     }
     setLoading(false);
   };
+
+  const resetRetrySeconds = blockedUntil > Date.now() ? Math.ceil((blockedUntil - Date.now()) / 1000) : 0;
 
   return (
     <motion.div
@@ -179,9 +326,16 @@ function ForgotPasswordForm({ onBack }: { onBack: () => void }) {
               </div>
             </div>
             {/* Fitts's Law: Large primary button */}
-            <Button type="submit" className="w-full h-12 rounded-xl text-sm font-semibold shadow-[var(--shadow-primary)]" disabled={loading}>
-              {loading ? "Sending…" : "Send Reset Link"}
+            <Button
+              type="submit"
+              className="w-full h-12 rounded-xl text-sm font-semibold shadow-[var(--shadow-primary)]"
+              disabled={loading || resetRetrySeconds > 0}
+            >
+              {loading ? "Sending…" : resetRetrySeconds > 0 ? `Try again in ${formatRetryTime(resetRetrySeconds)}` : "Send Reset Link"}
             </Button>
+            {resetRetrySeconds > 0 && (
+              <p className="text-xs text-destructive">Too many reset requests. Please wait before trying again.</p>
+            )}
           </form>
           <button
             type="button"
@@ -205,6 +359,7 @@ function SignInForm({ email, setEmail, password, setPassword, loading, onSubmit,
   onForgot: () => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   // KLM: Auto-focus first field
   useEffect(() => { inputRef.current?.focus(); }, []);
@@ -252,13 +407,21 @@ function SignInForm({ email, setEmail, password, setPassword, loading, onSubmit,
             <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               id="signin-password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               placeholder="••••••••"
-              className="pl-10 h-12 rounded-xl text-sm"
+              className="pl-10 pr-11 h-12 rounded-xl text-sm"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
+            <button
+              type="button"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
           </div>
         </div>
       </div>
@@ -289,6 +452,10 @@ function SignUpForm({ email, setEmail, password, setPassword, fullName, setFullN
   loading: boolean; onSubmit: (e: React.FormEvent) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const passwordRules = isStrongPassword(password);
+  const passwordStrong = Object.values(passwordRules).every(Boolean);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
@@ -345,14 +512,29 @@ function SignUpForm({ email, setEmail, password, setPassword, fullName, setFullN
             <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               id="signup-password"
-              type="password"
-              placeholder="Min 6 characters"
-              className="pl-10 h-12 rounded-xl text-sm"
+              type={showPassword ? "text" : "password"}
+              placeholder="Use a strong password"
+              className="pl-10 pr-11 h-12 rounded-xl text-sm"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              minLength={6}
+              minLength={10}
             />
+            <button
+              type="button"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs pt-1">
+            <p className={passwordRules.minLength ? "text-[hsl(var(--success))]" : "text-muted-foreground"}>At least 10 characters</p>
+            <p className={passwordRules.uppercase ? "text-[hsl(var(--success))]" : "text-muted-foreground"}>One uppercase letter</p>
+            <p className={passwordRules.lowercase ? "text-[hsl(var(--success))]" : "text-muted-foreground"}>One lowercase letter</p>
+            <p className={passwordRules.number ? "text-[hsl(var(--success))]" : "text-muted-foreground"}>One number</p>
+            <p className={passwordRules.special ? "text-[hsl(var(--success))]" : "text-muted-foreground"}>One special character</p>
           </div>
         </div>
       </fieldset>
@@ -361,7 +543,7 @@ function SignUpForm({ email, setEmail, password, setPassword, fullName, setFullN
       <Button
         type="submit"
         className="w-full h-13 rounded-xl text-sm font-semibold shadow-[var(--shadow-primary)]"
-        disabled={loading}
+        disabled={loading || !passwordStrong}
       >
         {loading ? (
           <span className="flex items-center gap-2">
@@ -390,8 +572,22 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [signinBlockedUntil, setSigninBlockedUntil] = useState(0);
+  const [signupBlockedUntil, setSignupBlockedUntil] = useState(0);
   // Hick's Law: One view at a time, no competing tabs
   const [view, setView] = useState<AuthView>("signin");
+
+  useEffect(() => {
+    const signinStatus = getRateLimitStatus("signin");
+    if (signinStatus.blocked) {
+      setSigninBlockedUntil(Date.now() + signinStatus.retryAfterSeconds * 1000);
+    }
+
+    const signupStatus = getRateLimitStatus("signup");
+    if (signupStatus.blocked) {
+      setSignupBlockedUntil(Date.now() + signupStatus.retryAfterSeconds * 1000);
+    }
+  }, []);
 
   const getPostLoginPath = async (userId: string): Promise<string> => {
     const { data } = await supabase
@@ -418,12 +614,52 @@ export default function AuthPage() {
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const limitStatus = getRateLimitStatus("signin");
+    if (limitStatus.blocked) {
+      toast.error(`Too many sign in attempts. Try again in ${formatRetryTime(limitStatus.retryAfterSeconds)}.`);
+      setSigninBlockedUntil(Date.now() + limitStatus.retryAfterSeconds * 1000);
+      return;
+    }
+
     setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.functions.invoke("auth-guard", {
+      body: {
+        action: "signin",
+        email,
+        password,
+      },
+    });
+
     if (error) {
-      toast.error(error.message);
+      const limiter = recordAuthFailure("signin");
+      if (limiter.blocked) {
+        setSigninBlockedUntil(Date.now() + limiter.retryAfterSeconds * 1000);
+      }
+      toast.error(getUserFacingError(error, "Sign in failed. Please try again."));
     } else {
-      const userId = data.user?.id;
+      const accessToken = (data as any)?.session?.access_token as string | undefined;
+      const refreshToken = (data as any)?.session?.refresh_token as string | undefined;
+
+      if (!accessToken || !refreshToken) {
+        toast.error("Sign in failed. Please try again.");
+        setLoading(false);
+        return;
+      }
+
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+
+      if (sessionError) {
+        toast.error("Unable to complete sign in right now.");
+        setLoading(false);
+        return;
+      }
+
+      clearAuthRateLimit("signin");
+      const userId = (data as any)?.user?.id as string | undefined;
       const postLoginPath = userId ? await getPostLoginPath(userId) : "/dashboard";
       navigate(postLoginPath);
     }
@@ -432,22 +668,46 @@ export default function AuthPage() {
 
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const passwordRules = isStrongPassword(password);
+    const passwordStrong = Object.values(passwordRules).every(Boolean);
+    if (!passwordStrong) {
+      toast.error("Please use a stronger password that meets all criteria.");
+      return;
+    }
+
+    const limitStatus = getRateLimitStatus("signup");
+    if (limitStatus.blocked) {
+      toast.error(`Too many sign up attempts. Try again in ${formatRetryTime(limitStatus.retryAfterSeconds)}.`);
+      setSignupBlockedUntil(Date.now() + limitStatus.retryAfterSeconds * 1000);
+      return;
+    }
+
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName },
-        emailRedirectTo: window.location.origin + "/dashboard",
+    const { error } = await supabase.functions.invoke("auth-guard", {
+      body: {
+        action: "signup",
+        email,
+        password,
+        fullName,
+        redirectTo: window.location.origin + "/dashboard",
       },
     });
     if (error) {
-      toast.error(error.message);
+      const limiter = recordAuthFailure("signup");
+      if (limiter.blocked) {
+        setSignupBlockedUntil(Date.now() + limiter.retryAfterSeconds * 1000);
+      }
+      toast.error(getUserFacingError(error, "Sign up failed. Please try again."));
     } else {
+      clearAuthRateLimit("signup");
       toast.success("Check your email to confirm your account. You start with 50 free credits!");
     }
     setLoading(false);
   };
+
+  const signinRetrySeconds = signinBlockedUntil > Date.now() ? Math.ceil((signinBlockedUntil - Date.now()) / 1000) : 0;
+  const signupRetrySeconds = signupBlockedUntil > Date.now() ? Math.ceil((signupBlockedUntil - Date.now()) / 1000) : 0;
 
   const handleGuestLogin = () => {
     loginAsGuest();
@@ -504,22 +764,32 @@ export default function AuthPage() {
             {/* Chunk 2b: Dynamic form area — one view at a time (Hick's Law) */}
             <AnimatePresence mode="wait">
               {view === "signin" && (
-                <SignInForm
-                  key="signin"
-                  email={email} setEmail={setEmail}
-                  password={password} setPassword={setPassword}
-                  loading={loading} onSubmit={handleEmailSignIn}
-                  onForgot={() => setView("forgot")}
-                />
+                <div key="signin" className="space-y-2">
+                  <SignInForm
+                    email={email} setEmail={setEmail}
+                    password={password} setPassword={setPassword}
+                    loading={loading || signinRetrySeconds > 0}
+                    onSubmit={handleEmailSignIn}
+                    onForgot={() => setView("forgot")}
+                  />
+                  {signinRetrySeconds > 0 && (
+                    <p className="text-xs text-destructive">Sign in temporarily locked. Try again in {formatRetryTime(signinRetrySeconds)}.</p>
+                  )}
+                </div>
               )}
               {view === "signup" && (
-                <SignUpForm
-                  key="signup"
-                  email={email} setEmail={setEmail}
-                  password={password} setPassword={setPassword}
-                  fullName={fullName} setFullName={setFullName}
-                  loading={loading} onSubmit={handleEmailSignUp}
-                />
+                <div key="signup" className="space-y-2">
+                  <SignUpForm
+                    email={email} setEmail={setEmail}
+                    password={password} setPassword={setPassword}
+                    fullName={fullName} setFullName={setFullName}
+                    loading={loading || signupRetrySeconds > 0}
+                    onSubmit={handleEmailSignUp}
+                  />
+                  {signupRetrySeconds > 0 && (
+                    <p className="text-xs text-destructive">Sign up temporarily locked. Try again in {formatRetryTime(signupRetrySeconds)}.</p>
+                  )}
+                </div>
               )}
               {view === "forgot" && (
                 <ForgotPasswordForm

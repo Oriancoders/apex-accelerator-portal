@@ -95,7 +95,7 @@ export default function AdminCompanyComponentsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-company-component-visibility", companyId] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   return (

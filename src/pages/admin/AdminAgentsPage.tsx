@@ -167,7 +167,7 @@ export default function AdminAgentsPage() {
       queryClient.invalidateQueries({ queryKey: ["admin-agents"] });
       queryClient.invalidateQueries({ queryKey: ["admin-agent-candidates"] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   const toggleActiveMutation = useMutation({
@@ -181,7 +181,7 @@ export default function AdminAgentsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-agents"] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   const createAssignmentMutation = useMutation({
@@ -228,7 +228,7 @@ export default function AdminAgentsPage() {
         toast.error("This company already has an active partner");
         return;
       }
-      toast.error(err.message);
+      toast.error("Operation failed. Please try again.");
     },
   });
 
@@ -250,7 +250,7 @@ export default function AdminAgentsPage() {
       toast.success("Commission updated");
       queryClient.invalidateQueries({ queryKey: ["admin-agent-assignments-by-agent", manageAgent?.id] });
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   const updateAssignmentStatusMutation = useMutation({
@@ -271,7 +271,7 @@ export default function AdminAgentsPage() {
         toast.error("This company already has an active partner");
         return;
       }
-      toast.error(err.message);
+      toast.error("Operation failed. Please try again.");
     },
   });
 

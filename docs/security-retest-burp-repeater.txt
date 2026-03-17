@@ -1,0 +1,481 @@
+Apex Accelerator Portal - Burp Repeater Retest Pack
+
+Target Host:
+xfucpvivifshrcagfann.supabase.co
+
+How to use:
+1) Open Burp Repeater.
+2) Replace placeholders below:
+   - <ANON_KEY>
+   - <USER_JWT>
+   - <ADMIN_JWT>
+   - <USER_ID_A>
+   - <USER_ID_B>
+3) Send each request and record status code + body.
+
+====================================================================
+TC1 - Non-admin privilege escalation attempt (must FAIL)
+Risk: user self-promotes to admin via direct table PATCH
+Expected: NOT 200/204 success
+====================================================================
+PATCH /rest/v1/user_roles?user_id=eq.<USER_ID_A> HTTP/2
+Host: xfucpvivifshrcagfann.supabase.co
+apikey: <ANON_KEY>
+authorization: Bearer <USER_JWT>
+content-type: application/json
+prefer: return=representation
+
+{"role":"admin"}
+
+Pass condition:
+- Request denied (RLS/permission error) OR no row update.
+
+
+====================================================================
+TC2 - Non-admin role insert attempt (must FAIL)
+Risk: unauthorized role row creation
+Expected: denied
+====================================================================
+POST /rest/v1/user_roles HTTP/2
+Host: xfucpvivifshrcagfann.supabase.co
+apikey: <ANON_KEY>
+authorization: Bearer <USER_JWT>
+content-type: application/json
+prefer: return=representation
+
+{"user_id":"<USER_ID_A>","role":"admin"}
+
+Pass condition:
+- Request denied.
+
+
+====================================================================
+TC3 - Non-admin role delete attempt (must FAIL)
+Risk: unauthorized role deletion
+Expected: denied
+====================================================================
+DELETE /rest/v1/user_roles?user_id=eq.<USER_ID_A> HTTP/2
+Host: xfucpvivifshrcagfann.supabase.co
+apikey: <ANON_KEY>
+authorization: Bearer <USER_JWT>
+
+Pass condition:
+- Request denied.
+
+
+====================================================================
+TC4 - Admin role change via secure RPC (must PASS)
+Risk: verify secure admin path still works
+Expected: 2xx success
+====================================================================
+POST /rest/v1/rpc/admin_set_user_role HTTP/2
+Host: xfucpvivifshrcagfann.supabase.co
+apikey: <ANON_KEY>
+authorization: Bearer <ADMIN_JWT>
+content-type: application/json
+
+{"p_target_user_id":"<USER_ID_A>","p_role":"member"}
+
+Pass condition:
+- Success response.
+- Target role changes to requested role.
+
+
+====================================================================
+TC5 - Non-admin RPC role change attempt (must FAIL)
+Risk: RPC misuse by non-admin
+Expected: unauthorized error
+====================================================================
+POST /rest/v1/rpc/admin_set_user_role HTTP/2
+Host: xfucpvivifshrcagfann.supabase.co
+apikey: <ANON_KEY>
+authorization: Bearer <USER_JWT>
+content-type: application/json
+
+{"p_target_user_id":"<USER_ID_A>","p_role":"admin"}
+
+Pass condition:
+- Unauthorized error from function guard.
+
+
+====================================================================
+TC6 - Normal user read scope (must return own role only)
+Risk: role data exposure
+Expected: only own role row visible
+====================================================================
+GET /rest/v1/user_roles?select=user_id,role HTTP/2
+Host: xfucpvivifshrcagfann.supabase.co
+apikey: <ANON_KEY>
+authorization: Bearer <USER_JWT>
+
+Pass condition:
+- Response contains only Account A role data.
+
+
+====================================================================
+TC7 - Admin read scope (must return all roles)
+Risk: validate admin read policy still functions
+Expected: admin can read full role set
+====================================================================
+GET /rest/v1/user_roles?select=user_id,role HTTP/2
+Host: xfucpvivifshrcagfann.supabase.co
+apikey: <ANON_KEY>
+authorization: Bearer <ADMIN_JWT>
+
+Pass condition:
+- Response contains role rows for multiple users.
+
+
+====================================================================
+Optional DB Verification (Supabase SQL Editor)
+====================================================================
+-- Policy inventory for user_roles
+select schemaname, tablename, policyname, cmd, roles, qual, with_check
+from pg_policies
+where schemaname = 'public' and tablename = 'user_roles'
+order by policyname;
+
+-- RLS and FORCE RLS flags
+select relname, relrowsecurity, relforcerowsecurity
+from pg_class
+where relname = 'user_roles';
+
+Expected:
+- relrowsecurity = true
+- relforcerowsecurity = true
+
+
+====================================================================
+Evidence Log Template
+====================================================================
+TC1 status/body: ____________________
+TC2 status/body: ____________________
+TC3 status/body: ____________________
+TC4 status/body: ____________________
+TC5 status/body: ____________________
+TC6 status/body: ____________________
+TC7 status/body: ____________________
+TC8 status/body: ____________________
+TC9 status/body: ____________________
+TC10 status/body: ___________________
+TC11 status/body: ___________________
+TC12 status/body: ___________________
+TC13 status/body: ___________________
+TC14 status/body: ___________________
+TC15 status/body: ___________________
+
+Overall result:
+[ ] Closed
+[ ] Re-opened
+
+Reason:
+____________________________________
+
+
+====================================================================
+TC8 - Non-admin credit tampering via profiles PATCH (must FAIL)
+Risk: direct financial manipulation by editing credits
+Expected: denied OR no update applied
+====================================================================
+PATCH /rest/v1/profiles?user_id=eq.<USER_ID_A> HTTP/2
+Host: xfucpvivifshrcagfann.supabase.co
+apikey: <ANON_KEY>
+authorization: Bearer <USER_JWT>
+content-type: application/json
+prefer: return=representation
+
+{"credits":99999}
+
+Pass condition:
+- Request denied by RLS/WITH CHECK OR credits remain unchanged.
+
+
+====================================================================
+TC9 - Admin-approved credit update path (must PASS)
+Risk: ensure valid financial admin path still works
+Expected: 2xx success for admin only
+====================================================================
+POST /rest/v1/rpc/admin_adjust_credits HTTP/2
+Host: xfucpvivifshrcagfann.supabase.co
+apikey: <ANON_KEY>
+authorization: Bearer <ADMIN_JWT>
+content-type: application/json
+
+{"p_user_id":"<USER_ID_A>","p_amount":10,"p_reason":"Security retest"}
+
+Pass condition:
+- Success response.
+- Credits increase by expected amount.
+- Matching transaction log exists.
+
+
+====================================================================
+Optional DB Verification - profiles (Supabase SQL Editor)
+====================================================================
+-- Policy inventory for profiles
+select schemaname, tablename, policyname, cmd, roles, qual, with_check
+from pg_policies
+where schemaname = 'public' and tablename = 'profiles'
+order by policyname;
+
+-- RLS and FORCE RLS flags for profiles
+select relname, relrowsecurity, relforcerowsecurity
+from pg_class
+where relname = 'profiles';
+
+Expected:
+- relrowsecurity = true
+- relforcerowsecurity = true
+
+
+====================================================================
+TC10 - Stored XSS injection attempt in ticket description (must be neutralized)
+Risk: malicious HTML/JS stored and executed in admin/user ticket views
+Expected: insert may succeed but stored payload is sanitized; no script execution on render
+====================================================================
+POST /rest/v1/tickets HTTP/2
+Host: xfucpvivifshrcagfann.supabase.co
+apikey: <ANON_KEY>
+authorization: Bearer <USER_JWT>
+content-type: application/json
+prefer: return=representation
+
+{
+   "user_id":"<USER_ID_A>",
+   "title":"XSS retest payload",
+   "description":"<img src=x onerror=alert('xss')><script>alert('xss2')</script><a href='javascript:alert(3)'>click</a><p>safe text</p>",
+   "priority":"medium"
+}
+
+Pass condition:
+- Ticket is stored with sanitized/neutralized description.
+- Script/event-handler payloads are removed.
+- Viewing ticket in user/admin pages does not execute JavaScript.
+
+
+====================================================================
+TC11 - Read back stored ticket to verify sanitization result
+Risk: ensure DB trigger/renderer removed dangerous payload content
+Expected: description does not contain script tags, on* handlers, or javascript: URIs
+====================================================================
+GET /rest/v1/tickets?select=id,title,description&title=eq.XSS%20retest%20payload&order=created_at.desc&limit=1 HTTP/2
+Host: xfucpvivifshrcagfann.supabase.co
+apikey: <ANON_KEY>
+authorization: Bearer <USER_JWT>
+
+Pass condition:
+- Returned description excludes: <script, onerror=, onclick=, javascript:.
+
+
+====================================================================
+Optional DB Verification - tickets sanitization trigger (Supabase SQL Editor)
+====================================================================
+select tgname, tgenabled
+from pg_trigger
+where tgrelid = 'public.tickets'::regclass
+   and tgname = 'trg_sanitize_ticket_description_input';
+
+Expected:
+- trigger exists and enabled.
+
+
+====================================================================
+TC12 - Verbose error leakage check (must return generic errors)
+Risk: API reveals schema/function/internal details that help attackers enumerate backend
+Expected: generic error messages only in production-facing responses
+====================================================================
+
+Probe A - malformed profiles PATCH type
+PATCH /rest/v1/profiles?user_id=eq.<USER_ID_A> HTTP/2
+Host: xfucpvivifshrcagfann.supabase.co
+apikey: <ANON_KEY>
+authorization: Bearer <USER_JWT>
+content-type: application/json
+prefer: return=representation
+
+{"credits":"not-a-number"}
+
+Probe B - invalid RPC payload
+POST /rest/v1/rpc/admin_set_user_role HTTP/2
+Host: xfucpvivifshrcagfann.supabase.co
+apikey: <ANON_KEY>
+authorization: Bearer <USER_JWT>
+content-type: application/json
+
+{"p_target_user_id":"invalid-uuid","p_role":"admin"}
+
+Probe C - edge function invalid payload
+POST /functions/v1/create-credit-checkout HTTP/2
+Host: xfucpvivifshrcagfann.supabase.co
+apikey: <ANON_KEY>
+authorization: Bearer <USER_JWT>
+content-type: application/json
+
+{"packageIndex":"bad"}
+
+Pass condition:
+- No response should disclose internal table names, SQL snippets, or function source details.
+- Error content should stay generic (for example: Unauthorized, Invalid request, Operation failed).
+- UI toasts should remain generic and not echo raw backend internals.
+
+
+====================================================================
+TC13 - File upload bypass attempts (must FAIL except valid files)
+Risk: weak server-side upload checks can allow unsafe files or cross-user uploads
+Expected: invalid uploads blocked by storage policy; only approved files accepted
+====================================================================
+
+Probe A - invalid extension (.exe) with spoofed MIME
+POST /storage/v1/object/ticket-attachments/<USER_ID_A>/evil.exe HTTP/2
+Host: xfucpvivifshrcagfann.supabase.co
+apikey: <ANON_KEY>
+authorization: Bearer <USER_JWT>
+content-type: image/png
+
+<binary test content>
+
+Probe B - valid extension but invalid MIME
+POST /storage/v1/object/ticket-attachments/<USER_ID_A>/fake.pdf HTTP/2
+Host: xfucpvivifshrcagfann.supabase.co
+apikey: <ANON_KEY>
+authorization: Bearer <USER_JWT>
+content-type: application/x-msdownload
+
+<binary test content>
+
+Probe C - oversize file (> 10MB)
+POST /storage/v1/object/ticket-attachments/<USER_ID_A>/big.pdf HTTP/2
+Host: xfucpvivifshrcagfann.supabase.co
+apikey: <ANON_KEY>
+authorization: Bearer <USER_JWT>
+content-type: application/pdf
+
+<binary content larger than 10MB>
+
+Probe D - cross-folder upload attempt (user A token writing user B folder)
+POST /storage/v1/object/ticket-attachments/<USER_ID_B>/cross-user.pdf HTTP/2
+Host: xfucpvivifshrcagfann.supabase.co
+apikey: <ANON_KEY>
+authorization: Bearer <USER_JWT>
+content-type: application/pdf
+
+<small valid pdf binary>
+
+Control Probe E - valid upload (should PASS)
+POST /storage/v1/object/ticket-attachments/<USER_ID_A>/ok.pdf HTTP/2
+Host: xfucpvivifshrcagfann.supabase.co
+apikey: <ANON_KEY>
+authorization: Bearer <USER_JWT>
+content-type: application/pdf
+
+<small valid pdf binary>
+
+Pass condition:
+- Probes A/B/C/D are rejected.
+- Probe E succeeds.
+- Frontend shows clear user-friendly upload error for rejected files.
+
+
+====================================================================
+TC14 - Rate-limit enforcement checks (must return 429 after threshold)
+Risk: endpoint abuse, brute-force, and resource exhaustion
+Expected: 429 responses once request threshold per window is exceeded
+====================================================================
+
+Target A - AI chat edge function
+Endpoint: POST /functions/v1/ai-chat
+Window/limit configured: 60s / 20 requests per user
+Method:
+1) Send 21+ valid requests quickly with same USER_JWT.
+2) Observe when 429 starts.
+
+Target B - create-credit-checkout
+Endpoint: POST /functions/v1/create-credit-checkout
+Window/limit configured: 60s / 10 requests per user
+Method:
+1) Send 11+ valid requests quickly with same USER_JWT.
+2) Observe 429 after threshold.
+
+Target C - verify-credit-payment
+Endpoint: POST /functions/v1/verify-credit-payment
+Window/limit configured: 60s / 20 requests per user
+Method:
+1) Send repeated valid/invalid session checks quickly.
+2) Observe 429 after threshold.
+
+Target D - resend-webhook
+Endpoint: POST /functions/v1/resend-webhook
+Window/limit configured: 60s / 120 requests per source IP
+Method:
+1) Replay webhook requests from same source.
+2) Observe 429 after threshold.
+
+Target E - ticket submission DB trigger limit
+Endpoint: POST /rest/v1/tickets
+Window/limit configured: 60s / 10 inserts per user
+Method:
+1) Submit >10 ticket inserts in under 1 minute.
+2) Observe DB rejection for rate limit.
+
+Pass condition:
+- All targets enforce limit and return failure when threshold exceeded.
+- Failures are generic (no internal details leaked).
+- Requests succeed again after window reset.
+
+
+====================================================================
+TC15 - Auth brute-force protection checks (must lock and return 429)
+Risk: credential stuffing and password brute-force against auth endpoints
+Expected: auth-guard enforces per-IP/per-email throttles and failed-login lockout
+====================================================================
+
+Target endpoint:
+POST /functions/v1/auth-guard
+
+Probe A - Sign in brute-force (wrong password)
+Use same email with wrong password repeatedly:
+
+POST /functions/v1/auth-guard HTTP/2
+Host: xfucpvivifshrcagfann.supabase.co
+apikey: <ANON_KEY>
+authorization: Bearer <USER_JWT>
+content-type: application/json
+
+{"action":"signin","email":"victim@example.com","password":"WrongPass123!"}
+
+Method:
+1) Send repeated requests from same IP and same email.
+2) Observe transition from 401 to 429.
+3) Verify Retry-After header appears on lock response.
+
+Probe B - Sign up abuse
+
+POST /functions/v1/auth-guard HTTP/2
+Host: xfucpvivifshrcagfann.supabase.co
+apikey: <ANON_KEY>
+content-type: application/json
+
+{"action":"signup","email":"newuser@example.com","password":"StrongPass123!","fullName":"Rate Test","redirectTo":"https://apex-accelerator-portal.vercel.app/dashboard"}
+
+Method:
+1) Send repeated requests quickly for same email.
+2) Observe 429 when limit is exceeded.
+
+Probe C - Password reset abuse
+
+POST /functions/v1/auth-guard HTTP/2
+Host: xfucpvivifshrcagfann.supabase.co
+apikey: <ANON_KEY>
+content-type: application/json
+
+{"action":"reset","email":"victim@example.com","redirectTo":"https://apex-accelerator-portal.vercel.app/reset-password"}
+
+Method:
+1) Send repeated reset calls for same email/IP.
+2) Observe 429 after threshold.
+
+Pass condition:
+- Signin wrong-password attempts become locked (429) after threshold.
+- Signup and reset receive 429 after threshold.
+- Error messages stay generic (no account existence leakage).
+- Successful signin (with correct credentials after window) clears failed-attempt lock key.

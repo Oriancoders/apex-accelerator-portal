@@ -90,7 +90,7 @@ export function useAdminCrud<T extends { id: string }, F extends Record<string, 
       invalidateAll();
       closeDialog();
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   // ── Delete ─────────────────────────────────────────────────────────────
@@ -103,7 +103,7 @@ export function useAdminCrud<T extends { id: string }, F extends Record<string, 
       toast.success("Deleted successfully");
       invalidateAll();
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   // ── Dialog helpers ─────────────────────────────────────────────────────

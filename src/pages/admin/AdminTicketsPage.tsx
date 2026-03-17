@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AdminLayout from "@/components/AdminLayout";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { sanitizeHtml } from "@/lib/sanitize";
+import { sanitizeTicketHtml } from "@/lib/sanitize";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -62,7 +62,7 @@ function UATPanel({ ticket, onUpdate }: { ticket: TicketType; onUpdate: () => vo
       uat_notes: uatNotes || null,
       uat_attachments: attachments.length ? attachments : null,
     }).eq("id", ticket.id);
-    if (error) { toast.error(error.message); }
+    if (error) { toast.error("Operation failed. Please try again."); }
     else {
       await supabase.from("ticket_events").insert({
         ticket_id: ticket.id,
@@ -221,7 +221,7 @@ function TicketDialog({
       refetchEvents();
       onRefresh();
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   const submitProposalMutation = useMutation({
@@ -250,7 +250,7 @@ function TicketDialog({
       onRefresh();
       onClose();
     },
-    onError: (err: Error) => toast.error(err.message),
+    onError: (err: Error) => toast.error("Operation failed. Please try again."),
   });
 
   const roadmap = (ticket.solution_roadmap as unknown) as RoadmapItem[] | null;
@@ -394,7 +394,7 @@ function TicketDialog({
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Description</p>
               <div
                 className="prose prose-sm max-w-none bg-muted/30 p-4 rounded-xl border border-border text-sm text-foreground leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: sanitizeHtml(ticket.description) }}
+                dangerouslySetInnerHTML={{ __html: sanitizeTicketHtml(ticket.description) }}
               />
             </div>
 
