@@ -25,3 +25,6 @@ WITH CHECK (
 );
 
 NOTIFY pgrst, 'reload schema';
+
+
+// Delete any existing attachments with invalid metadata to prevent future upload failures.
