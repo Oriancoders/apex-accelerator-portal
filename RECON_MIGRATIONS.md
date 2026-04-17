@@ -1,0 +1,193 @@
+# Migration Recon Report
+
+## Tables Found
+- agent_company_assignments
+- agents
+- api_rate_limits
+- articles
+- chat_messages
+- commission_rules
+- companies
+- company_component_visibility
+- company_memberships
+- contact_submissions
+- credit_settings
+- credit_transactions
+- credit_withdrawal_requests
+- extensions
+- news_items
+- notifications
+- profiles
+- ticket_updates
+- tickets
+- user_roles
+
+## tickets table
+- Status column: `status`
+- Status values: ['submitted', 'under_review', 'approved', 'in_progress', 'completed', 'cancelled', 'uat', 'closed']
+- Proposal-approved value: `approved`
+- Category column: `N/A (not present on tickets)`
+- Category values: []
+- Salesforce category value: `N/A (no ticket category field exists in current schema)`
+- Assigned-to column: `N/A (no assigned_to column on tickets)`
+
+## Users / Roles
+- Role storage: user_roles table (plus company_memberships.role for tenant role)
+- Role column: `role`
+- Admin role value: `admin`
+- Client role value: `member`
+- Consultant role value: `agent`
+
+## Existing RLS Policies
+- Admins and company managers can delete memberships
+- Admins and company managers can insert memberships
+- Admins and company managers can manage assignments
+- Admins and company managers can update memberships
+- Admins can delete roles
+- Admins can delete submissions
+- Admins can insert roles
+- Admins can insert ticket events
+- Admins can insert ticket updates
+- Admins can insert transactions
+- Admins can manage agents
+- Admins can manage articles
+- Admins can manage companies
+- Admins can manage extensions
+- Admins can manage global commission rules
+- Admins can manage news
+- Admins can manage settings
+- Admins can manage submissions
+- Admins can manage withdrawal requests
+- Admins can update all profiles
+- Admins can update all tickets
+- Admins can update notifications
+- Admins can update roles
+- Admins can update submissions
+- Admins can view all notifications
+- Admins can view all profiles
+- Admins can view all roles
+- Admins can view all ticket updates
+- Admins can view all tickets
+- Admins can view all transactions
+- Admins can view submissions
+- Agents and Managers can update company tickets
+- Agents and Managers can view company tickets
+- Agents can create companies
+- Agents can manage company memberships
+- Agents can view company memberships
+- Agents can view own profile
+- Anyone can read published articles
+- Anyone can read published extensions
+- Anyone can read published news
+- Anyone can submit contact form
+- Assignment visibility
+- Authenticated can insert notifications
+- Authenticated can read settings
+- Commission rule visibility
+- Company managers can manage company and assignment rules
+- Company managers can manage component visibility
+- Company managers can update companies
+- Company members can view assigned agent
+- Component visibility is tenant-scoped
+- Members and assigned agents can read companies
+- Membership visibility
+- System can insert notifications
+- Users can add updates to own tickets
+- Users can cancel pending withdrawal requests
+- Users can create own withdrawal requests
+- Users can create tickets
+- Users can delete own ticket attachments
+- Users can insert events on own tickets
+- Users can insert own profile
+- Users can insert own reviews
+- Users can insert own transactions
+- Users can send chat on own tickets
+- Users can update own notifications
+- Users can update own profile
+- Users can update own tickets
+- Users can upload ticket attachments
+- Users can view chat on own tickets
+- Users can view events on own tickets
+- Users can view own notifications
+- Users can view own profile
+- Users can view own reviews
+- Users can view own roles
+- Users can view own ticket attachments
+- Users can view own tickets
+- Users can view own transactions
+- Users can view own withdrawal requests
+- Users can view updates on own tickets
+
+## Existing Triggers & Functions
+- `public.add_purchase_credits`: service-role credit purchase crediting and ticket update
+- `public.admin_adjust_credits`: admin-only manual credit adjustment
+- `public.admin_mark_withdrawal_paid`: admin payout workflow helper
+- `public.admin_set_user_role`: controlled role assignment helper
+- `public.can_manage_company`: checks company owner/admin permissions
+- `public.can_view_agent`: checks if viewer can see assigned agent metadata
+- `public.check_rate_limit`: backend request rate limit check
+- `public.clear_rate_limit_key`: rate-limit reset helper
+- `public.create_notification`: central notification insert function
+- `public.debug_my_memberships`: membership debugging helper
+- `public.deduct_credits`: atomic deduction + transaction + status progression
+- `public.enforce_allowed_profile_roles`: blocks invalid profile roles
+- `public.enforce_ticket_submission_rate_limit`: throttle ticket creation
+- `public.ensure_ticket_company_id`: fills ticket.company_id from profile/membership
+- `public.get_rate_limit_status`: rate-limit introspection helper
+- `public.handle_agents_role_sync`: keeps user_roles synced from agent lifecycle
+- `public.handle_company_membership_role_sync`: syncs membership role changes
+- `public.handle_membership_ticket_updates`: reassigns/releases tickets by membership changes
+- `public.handle_new_company_membership`: bootstrap owner membership on company create
+- `public.handle_new_user`: auto-create profile on signup
+- `public.has_company_role`: tenant role lookup helper
+- `public.has_role`: app role lookup helper used by RLS
+- `public.is_agent`: checks if user is active agent
+- `public.is_company_assigned_agent`: assigned-agent helper
+- `public.is_company_member`: tenant membership helper
+- `public.notify_credit_purchase`: sends notifications for credit purchase events
+- `public.notify_new_ticket`: sends notifications on ticket creation
+- `public.notify_new_user`: sends notifications on profile creation
+- `public.notify_ticket_status_change`: sends notifications on status transitions
+- `public.prevent_closed_ticket_status`: prevents using closed status in workflow
+- `public.sanitize_ticket_description_input`: sanitizes ticket description content
+- `public.set_primary_company`: RPC to switch active membership
+- `public.sync_profile_company_id`: sync profiles.company_id from memberships
+- `public.sync_user_role_from_agents`: role sync from agents table
+- `public.sync_user_role_from_company_memberships`: role sync from memberships
+- `public.update_updated_at_column`: generic updated_at maintenance
+- Trigger `on_auth_user_created`
+- Trigger `on_company_created_add_owner`
+- Trigger `on_credit_purchase`
+- Trigger `on_membership_change_tickets`
+- Trigger `on_membership_sync_profile`
+- Trigger `on_new_profile`
+- Trigger `on_new_profile_notify`
+- Trigger `on_new_ticket`
+- Trigger `on_new_ticket_notify`
+- Trigger `on_ticket_insert_resend`
+- Trigger `on_ticket_status_change`
+- Trigger `on_ticket_status_change_notify`
+- Trigger `on_ticket_update_resend`
+- Trigger `tr_ensure_ticket_company_id`
+- Trigger `trg_enforce_allowed_profile_roles`
+- Trigger `trg_enforce_ticket_submission_rate_limit`
+- Trigger `trg_prevent_closed_ticket_status`
+- Trigger `trg_sanitize_ticket_description_input`
+- Trigger `trg_sync_user_role_from_agents`
+- Trigger `trg_sync_user_role_from_company_memberships`
+- Trigger `update_agent_company_assignments_updated_at`
+- Trigger `update_agents_updated_at`
+- Trigger `update_articles_updated_at`
+- Trigger `update_commission_rules_updated_at`
+- Trigger `update_companies_updated_at`
+- Trigger `update_company_component_visibility_updated_at`
+- Trigger `update_company_memberships_updated_at`
+- Trigger `update_credit_withdrawal_requests_updated_at`
+- Trigger `update_profiles_updated_at`
+- Trigger `update_tickets_updated_at`
+
+## sandbox_connections exists: NO
+## sandbox_audit_log exists: NO
+
+## Auth Pattern
+Supabase Auth with `auth.users` is used for authentication. App authorization is driven by `user_roles` and tenant-scoped `company_memberships`. New users are provisioned through `public.handle_new_user()` trigger (profile row creation). Frontend retrieves auth state through `useAuth()`/`supabase.auth` session APIs; RLS uses `auth.uid()` and helper functions such as `has_role` and company role helpers.

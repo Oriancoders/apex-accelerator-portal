@@ -171,15 +171,6 @@ function OAuthButtons() {
     if (error) toast.error(getUserFacingError(error, "Unable to sign in with Google right now."));
   };
 
-  const handleSalesforceSignIn = async () => {
-    toast.info("Salesforce OAuth will redirect to your sandbox login.");
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin + "/dashboard" },
-    });
-    if (error) toast.error(getUserFacingError(error, "Unable to continue with Salesforce right now."));
-  };
-
   return (
     <div className="space-y-2.5">
       {/* Fitts's Law: Large touch targets (h-12), full width */}
@@ -195,14 +186,6 @@ function OAuthButtons() {
           <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
         </svg>
         Continue with Google
-      </Button>
-      <Button
-        variant="outline"
-        className="w-full justify-center gap-3 h-12 text-sm font-medium rounded-xl border-border hover:bg-muted/50 transition-all duration-200"
-        onClick={handleSalesforceSignIn}
-      >
-        <Cloud className="h-5 w-5 text-primary flex-shrink-0" />
-        Continue with Salesforce
       </Button>
     </div>
   );
@@ -739,10 +722,10 @@ export default function AuthPage() {
             <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center shadow-[var(--shadow-primary)]">
               <Cloud className="h-5 w-5 text-primary-foreground" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground tracking-tight">SF Services</h1>
+            <h1 className="text-2xl font-bold text-foreground tracking-tight">CustomerPortol</h1>
           </motion.div>
           <p className="text-sm text-muted-foreground">
-            Salesforce org maintenance, features & integrations
+            Ticket-based delivery with pay-as-you-go credits
           </p>
         </div>
 

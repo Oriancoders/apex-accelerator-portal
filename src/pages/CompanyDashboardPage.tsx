@@ -6,11 +6,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import ProtectedLayout from "@/components/ProtectedLayout";
 import TicketSubmissionWidget from "@/components/widgets/TicketSubmissionWidget";
 import TicketDashboardWidget from "@/components/widgets/TicketDashboardWidget";
-import AppExchangeWidget from "@/components/widgets/AppExchangeWidget";
-import NewsWidget from "@/components/widgets/NewsWidget";
-import KnowledgeBaseWidget from "@/components/widgets/KnowledgeBaseWidget";
-import RecipesWidget from "@/components/widgets/RecipesWidget";
-import ExtensionsWidget from "@/components/widgets/ExtensionsWidget";
 import { Button } from "@/components/ui/button";
 import { Settings, UserCheck } from "lucide-react";
 import { motion } from "framer-motion";
@@ -231,28 +226,6 @@ export default function CompanyDashboardPage() {
             </section>
           )}
 
-          {/* 2. Resources & Tools */}
-          {(isVisible("knowledge_base") || isVisible("recipes") || isVisible("extensions")) && (
-            <section className="space-y-4">
-              <SectionHeader title="Resources" subtitle="Helpful guides and tools" />
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {isVisible("knowledge_base") && <KnowledgeBaseWidget />}
-                {isVisible("recipes") && <RecipesWidget />}
-                {isVisible("extensions") && <ExtensionsWidget />}
-              </div>
-            </section>
-          )}
-
-          {/* 3. News & Updates */}
-          {(isVisible("news") || isVisible("appexchange")) && (
-            <section className="space-y-4">
-              <SectionHeader title="Latest Updates" subtitle="News and AppExchange" />
-              <div className="grid gap-4 sm:grid-cols-2">
-                {isVisible("news") && <NewsWidget />}
-                {isVisible("appexchange") && <AppExchangeWidget />}
-              </div>
-            </section>
-          )}
         </motion.div>
       </div>
     </ProtectedLayout>

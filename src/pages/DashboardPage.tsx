@@ -1,11 +1,6 @@
 import ProtectedLayout from "@/components/ProtectedLayout";
 import Footer from "@/components/Footer";
 import { useAuth } from "@/contexts/AuthContext";
-import AppExchangeWidget from "@/components/widgets/AppExchangeWidget";
-import NewsWidget from "@/components/widgets/NewsWidget";
-import KnowledgeBaseWidget from "@/components/widgets/KnowledgeBaseWidget";
-import RecipesWidget from "@/components/widgets/RecipesWidget";
-import ExtensionsWidget from "@/components/widgets/ExtensionsWidget";
 
 import TicketSubmissionWidget from "@/components/widgets/TicketSubmissionWidget";
 import TicketDashboardWidget from "@/components/widgets/TicketDashboardWidget";
@@ -71,7 +66,7 @@ function GuestBanner() {
             <h2 className="text-lg font-bold text-foreground">Get Full Access</h2>
           </div>
           <p className="text-sm text-muted-foreground max-w-md">
-            Sign up to submit service requests, track tickets, chat with experts, and earn 50 free credits.
+            Sign up to submit tasks, track ticket progress, chat with experts, and start with 50 free credits.
           </p>
         </div>
         {/* Fitts's Law: Large CTA */}
@@ -205,10 +200,10 @@ export default function DashboardPage() {
           </motion.h1>
           <motion.p {...stagger.item} className="text-sm sm:text-base text-muted-foreground">
             {isGuest
-              ? "Explore our Salesforce services hub — sign up for full access."
+              ? "Explore CustomerPortol and sign up for full access."
               : isAgent
                 ? "Your agent workspace — manage your company experience and tailored modules."
-                : "Your Salesforce services hub — submit requests, track progress, and explore resources."}
+                : "Your workspace to submit tasks, approve proposals, and track delivery."}
           </motion.p>
         </div>
 
@@ -255,41 +250,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ── Section 3: Resources Grid (Chunking — ≤4 items per row) ── */}
-        <div className="space-y-4">
-          <SectionHeader
-            title="Resources & Tools"
-            subtitle="Explore guides, apps, and productivity tools"
-          />
-          {/* Responsive grid: 1 col mobile → 2 col tablet → 3 col desktop */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
-            {canShow("knowledge_base") && (
-              <motion.div {...stagger.item}>
-                <KnowledgeBaseWidget />
-              </motion.div>
-            )}
-            {canShow("recipes") && (
-              <motion.div {...stagger.item}>
-                <RecipesWidget />
-              </motion.div>
-            )}
-            {canShow("appexchange") && (
-              <motion.div {...stagger.item}>
-                <AppExchangeWidget />
-              </motion.div>
-            )}
-            {canShow("news") && (
-              <motion.div {...stagger.item}>
-                <NewsWidget />
-              </motion.div>
-            )}
-            {canShow("extensions") && (
-              <motion.div {...stagger.item}>
-                <ExtensionsWidget />
-              </motion.div>
-            )}
-          </div>
-        </div>
       </motion.div>
       <Footer />
     </ProtectedLayout>

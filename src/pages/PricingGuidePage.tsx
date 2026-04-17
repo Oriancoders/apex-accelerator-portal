@@ -50,11 +50,11 @@ export default function PricingGuidePage() {
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground space-y-2">
             <p>
-              Credits are the currency used to pay for Salesforce service requests. Each credit is worth{" "}
+              Credits are the currency used to pay for delivered work. Each credit is worth{" "}
               <span className="font-semibold text-foreground">${settings.dollarPerCredit.toFixed(2)} USD</span>.
             </p>
             <p>
-              When you submit a ticket, our experts review it and propose a solution with a credit cost based on the complexity and urgency of the work.
+              When you submit a ticket, our team reviews it and proposes a solution with a credit cost based on urgency and complexity.
             </p>
           </CardContent>
         </Card>
@@ -203,8 +203,8 @@ export default function PricingGuidePage() {
           <CardContent>
             <div className="space-y-3">
               {[
-                { step: 1, title: "Submit a Ticket", desc: "Describe your Salesforce issue or request with as much detail as possible." },
-                { step: 2, title: "Expert Review", desc: "Our experts review your ticket, assess difficulty, and create a solution roadmap." },
+                { step: 1, title: "Submit a Ticket", desc: "Describe your issue or request with as much detail as possible." },
+                { step: 2, title: "Review", desc: "Our team reviews your ticket, assesses difficulty, and creates a solution roadmap." },
                 { step: 3, title: "Review Proposal", desc: "You'll see the detailed action plan, estimated hours, and total credit cost." },
                 { step: 4, title: "Approve & Pay", desc: "If you agree with the proposal, approve it and credits will be deducted from your balance." },
                 { step: 5, title: "Work In Progress", desc: "Our team works on your request. You can chat with the expert and track progress." },

@@ -37,11 +37,6 @@ const ADD_MEMBER_ROLES = ["admin", "member"] as const;
 const COMPONENT_KEYS = [
   "ticket_submission",
   "ticket_overview",
-  "knowledge_base",
-  "recipes",
-  "appexchange",
-  "news",
-  "extensions",
 ] as const;
 
 function labelFromKey(key: string) {

@@ -4,26 +4,20 @@ import { useAgentTenant } from "@/hooks/useAgentTenant";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { Cloud as CloudIcon, Coins, LogOut, User, Shield, Ticket, Menu, ArrowRight, DollarSign, History, Star, Info, Building2, Check, LayoutDashboard, Wallet } from "lucide-react";
+import { ArrowRight, Coins, Info, Ticket } from "lucide-react";
 import { useState } from "react";
 import NotificationBell from "@/components/NotificationBell";
 import { toast } from "sonner";
 import { getUserFacingError } from "@/lib/errors";
+import BrandLink from "@/components/navbar/BrandLink";
+import CompanySwitcher from "@/components/navbar/CompanySwitcher";
+import DesktopNavigation from "@/components/navbar/DesktopNavigation";
+import MobileMenu from "@/components/navbar/MobileMenu";
+import UserDropdownMenu from "@/components/navbar/UserDropdownMenu";
+import { getInitials } from "@/components/navbar/getInitials";
+import type { Membership, NavItem } from "@/components/navbar/types";
 
 /*
  * HCI Principles:
@@ -91,11 +85,7 @@ export default function Navbar() {
     navigate("/auth");
   };
 
-  const initials = isGuest
-    ? "G"
-    : profile?.full_name
-      ? profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
-      : "U";
+  const initials = isGuest ? "G" : getInitials(profile?.full_name);
 
   const ticketListPath =
     (role === "company_admin" || role === "member") && activeCompany?.slug
@@ -103,11 +93,10 @@ export default function Navbar() {
       : "/tickets";
 
   // Hick's Law: fewer nav items for guests
-  const navItems = [
-    { label: "My Tickets", to: ticketListPath, icon: Ticket, show: !isGuest },
-    { label: "Why Us", to: "/why-choose-us", icon: Star, show: true },
-    { label: "Get to Know Us", to: "/about", icon: Info, show: true },
-  ].filter((n) => n.show);
+  const navItems: NavItem[] = [
+    ...(isGuest ? [] : [{ label: "My Tickets", to: ticketListPath, icon: Ticket }]),
+    { label: "Get to Know Us", to: "/about", icon: Info },
+  ];
 
   const isActive = (path: string) => location.pathname === path;
   const canManageMembers = !isGuest && (isAdmin || activeMembership?.role === "owner" || activeMembership?.role === "admin");
@@ -116,63 +105,18 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
       <div className="flex h-14 sm:h-16 items-center justify-between px-4 sm:px-6 max-w-7xl mx-auto">
-        {/* Chunk 1: Brand */}
-        <Link to="/dashboard" className="flex items-center gap-2 flex-shrink-0">
-          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shadow-sm">
-            <CloudIcon className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <span className="font-bold text-foreground text-base hidden sm:inline tracking-tight">SF Services</span>
-        </Link>
+        <BrandLink />
 
-        {/* Chunk 2: Desktop Navigation — Gestalt Proximity, active state feedback */}
-        <nav className="hidden md:flex items-center gap-0.5">
-          {navItems.map((item) => (
-            <Button
-              key={item.to}
-              variant="ghost"
-              size="sm"
-              asChild
-              className={`h-10 px-4 rounded-lg text-sm font-medium transition-all duration-200 ${
-                isActive(item.to)
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              }`}
-            >
-              <Link to={item.to}>
-                <item.icon className="h-4 w-4 mr-1.5" />
-                {item.label}
-              </Link>
-            </Button>
-          ))}
-        </nav>
+        <DesktopNavigation navItems={navItems} isActive={isActive} />
 
-        {/* Chunk 3: User actions */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {!isGuest && memberships.length > 1 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="hidden md:inline-flex h-9 rounded-lg gap-1.5">
-                  <Building2 className="h-3.5 w-3.5" />
-                  <span className="max-w-[130px] truncate">{activeCompany?.name || "Company"}</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64 rounded-xl">
-                <div className="px-3 py-2 text-xs text-muted-foreground">Switch Active Company</div>
-                <DropdownMenuSeparator />
-                {memberships.map((m) => (
-                  <DropdownMenuItem
-                    key={m.company_id}
-                    className="h-10 cursor-pointer"
-                    disabled={m.is_primary || setPrimaryCompany.isPending}
-                    onClick={() => setPrimaryCompany.mutate(m.company_id)}
-                  >
-                    <Building2 className="mr-2 h-4 w-4" />
-                    <span className="flex-1 truncate">{m.companies?.name || m.company_id}</span>
-                    {m.is_primary && <Check className="h-4 w-4 text-primary" />}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+          {!isGuest && (
+            <CompanySwitcher
+              memberships={memberships as Membership[]}
+              activeCompanyName={activeCompany?.name}
+              isPending={setPrimaryCompany.isPending}
+              onSwitch={(companyId) => setPrimaryCompany.mutate(companyId)}
+            />
           )}
 
           {isGuest && (
@@ -203,234 +147,40 @@ export default function Navbar() {
 
           {!isGuest && <NotificationBell />}
 
-          {/* Desktop dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              {/* Fitts's Law: Large round target */}
-              <button type="button" className="relative h-10 w-10 rounded-full p-0 inline-flex items-center justify-center hover:bg-accent hover:text-accent-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                <Avatar className="h-9 w-9">
-                  <AvatarFallback className={`text-sm font-semibold ${isGuest ? 'bg-warning/20 text-warning' : 'bg-primary/10 text-primary'}`}>
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56 rounded-xl" align="end" sideOffset={8}>
-              <div className="px-3 py-2.5">
-                <p className="text-sm font-semibold">{isGuest ? "Guest User" : profile?.full_name || "User"}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{isGuest ? "Read-only access" : user?.email}</p>
-              </div>
-              <DropdownMenuSeparator />
-              {!isGuest && (
-                <>
-                  <DropdownMenuItem onClick={() => navigate("/profile")} className="h-10 cursor-pointer">
-                    <User className="mr-2 h-4 w-4" />
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/credits")} className="h-10 cursor-pointer">
-                    <Coins className="mr-2 h-4 w-4" />
-                    Buy Credits
-                  </DropdownMenuItem>
-                  {canWithdraw && (
-                    <DropdownMenuItem onClick={() => navigate("/credits#withdraw")} className="h-10 cursor-pointer">
-                      <Wallet className="mr-2 h-4 w-4" />
-                      Withdraw Credits
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuItem onClick={() => navigate("/pricing")} className="h-10 cursor-pointer">
-                    <DollarSign className="mr-2 h-4 w-4" />
-                    Pricing Guide
-                  </DropdownMenuItem>
-                  {canManageMembers && (
-                    <DropdownMenuItem onClick={() => navigate("/company/members")} className="h-10 cursor-pointer">
-                      <Building2 className="mr-2 h-4 w-4" />
-                      Company Members
-                    </DropdownMenuItem>
-                  )}
-                    {isAgent && (
-                      <DropdownMenuItem onClick={() => navigate("/agent/dashboard")} className="h-10 cursor-pointer">
-                        <LayoutDashboard className="mr-2 h-4 w-4" />
-                        Agent Dashboard
-                      </DropdownMenuItem>
-                    )}
-                    {canManageMembers && (
-                      <DropdownMenuItem onClick={() => navigate(companyDashboardPath)} className="h-10 cursor-pointer">
-                        <Building2 className="mr-2 h-4 w-4" />
-                        Company Dashboard
-                      </DropdownMenuItem>
-                    )}
-                  <DropdownMenuItem onClick={() => navigate("/credits#history")} className="h-10 cursor-pointer">
-                    <History className="mr-2 h-4 w-4" />
-                    Transaction History
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
-              {isAdmin && !isGuest && (
-                <>
-                  <DropdownMenuItem onClick={() => navigate("/admin")} className="h-10 cursor-pointer">
-                    <Shield className="mr-2 h-4 w-4" />
-                    Admin Panel
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
-              <DropdownMenuItem onClick={handleSignOut} className="h-10 cursor-pointer text-destructive focus:text-destructive">
-                <LogOut className="mr-2 h-4 w-4" />
-                {isGuest ? "Exit Guest Mode" : "Sign Out"}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <UserDropdownMenu
+            initials={initials}
+            isGuest={isGuest}
+            fullName={profile?.full_name}
+            email={user?.email}
+            isAdmin={isAdmin}
+            canWithdraw={canWithdraw}
+            canManageMembers={canManageMembers}
+            isAgent={isAgent}
+            companyDashboardPath={companyDashboardPath}
+            onNavigate={navigate}
+            onSignOut={handleSignOut}
+          />
 
-          {/* Mobile hamburger — Fitts's Law: large touch target */}
-          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden h-10 w-10">
-                <Menu className="h-5 w-5" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-72 p-0">
-              <div className="p-5 border-b border-border">
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-11 w-11">
-                    <AvatarFallback className={`text-sm font-semibold ${isGuest ? 'bg-warning/20 text-warning' : 'bg-primary/10 text-primary'}`}>
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-sm font-semibold">{isGuest ? "Guest" : profile?.full_name || "User"}</p>
-                    <p className="text-xs text-muted-foreground">{isGuest ? "Read-only" : user?.email}</p>
-                  </div>
-                </div>
-              </div>
-              {/* Fitts's Law: Tall mobile nav items (h-12) for easy thumb reach */}
-              <nav className="p-3 space-y-1">
-                {navItems.map((item) => (
-                  <button
-                    key={item.to}
-                    onClick={() => { navigate(item.to); setMobileOpen(false); }}
-                    className={`flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium transition-all ${
-                      isActive(item.to)
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                    }`}
-                  >
-                    <item.icon className="h-5 w-5" />
-                    {item.label}
-                  </button>
-                ))}
-                {!isGuest && (
-                  <>
-                    {memberships.length > 1 && (
-                      <>
-                        <div className="px-4 pt-2 pb-1 text-[11px] uppercase tracking-wider text-muted-foreground">
-                          Active Company
-                        </div>
-                        {memberships.map((m) => (
-                          <button
-                            key={m.company_id}
-                            onClick={() => {
-                              if (!m.is_primary) setPrimaryCompany.mutate(m.company_id);
-                              setMobileOpen(false);
-                            }}
-                            disabled={setPrimaryCompany.isPending}
-                            className={`flex items-center gap-3 w-full h-11 px-4 rounded-xl text-sm font-medium transition-all ${
-                              m.is_primary
-                                ? "bg-primary/10 text-primary"
-                                : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                            }`}
-                          >
-                            <Building2 className="h-4 w-4" />
-                            <span className="flex-1 text-left truncate">{m.companies?.name || m.company_id}</span>
-                            {m.is_primary && <Check className="h-4 w-4" />}
-                          </button>
-                        ))}
-                      </>
-                    )}
-
-                    <button
-                      onClick={() => { navigate("/credits"); setMobileOpen(false); }}
-                      className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
-                    >
-                      <Coins className="h-5 w-5" />
-                      Buy Credits
-                    </button>
-                    {canWithdraw && (
-                      <button
-                        onClick={() => { navigate("/credits#withdraw"); setMobileOpen(false); }}
-                        className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
-                      >
-                        <Wallet className="h-5 w-5" />
-                        Withdraw Credits
-                      </button>
-                    )}
-                    <button
-                      onClick={() => { navigate("/pricing"); setMobileOpen(false); }}
-                      className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
-                    >
-                      <DollarSign className="h-5 w-5" />
-                      Pricing Guide
-                    </button>
-                    {canManageMembers && (
-                      <button
-                        onClick={() => { navigate("/company/members"); setMobileOpen(false); }}
-                        className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
-                      >
-                        <Building2 className="h-5 w-5" />
-                        Company Members
-                      </button>
-                    )}
-                      {isAgent && (
-                        <button
-                          onClick={() => { navigate("/agent/dashboard"); setMobileOpen(false); }}
-                          className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
-                        >
-                          <LayoutDashboard className="h-5 w-5" />
-                          Agent Dashboard
-                        </button>
-                      )}
-                      {canManageMembers && (
-                        <button
-                          onClick={() => { navigate(companyDashboardPath); setMobileOpen(false); }}
-                          className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
-                        >
-                          <Building2 className="h-5 w-5" />
-                          Company Dashboard
-                        </button>
-                      )}
-                    <button
-                      onClick={() => { navigate("/credits#history"); setMobileOpen(false); }}
-                      className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
-                    >
-                      <History className="h-5 w-5" />
-                      Transaction History
-                    </button>
-                  </>
-                )}
-                {isAdmin && !isGuest && (
-                  <button
-                    onClick={() => { navigate("/admin"); setMobileOpen(false); }}
-                    className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
-                  >
-                    <Shield className="h-5 w-5" />
-                    Admin Panel
-                  </button>
-                )}
-              </nav>
-              <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
-                {isGuest ? (
-                  <Button className="w-full h-12 rounded-xl font-semibold" onClick={() => { navigate("/auth"); setMobileOpen(false); }}>
-                    Sign Up Free <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                ) : (
-                  <Button variant="outline" className="w-full h-12 rounded-xl text-destructive border-destructive/20 hover:bg-destructive/5" onClick={handleSignOut}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Sign Out
-                  </Button>
-                )}
-              </div>
-            </SheetContent>
-          </Sheet>
+          <MobileMenu
+            mobileOpen={mobileOpen}
+            setMobileOpen={setMobileOpen}
+            navItems={navItems}
+            isActive={isActive}
+            initials={initials}
+            isGuest={isGuest}
+            fullName={profile?.full_name}
+            email={user?.email}
+            memberships={memberships as Membership[]}
+            setPrimaryPending={setPrimaryCompany.isPending}
+            canWithdraw={canWithdraw}
+            canManageMembers={canManageMembers}
+            isAgent={isAgent}
+            companyDashboardPath={companyDashboardPath}
+            isAdmin={isAdmin}
+            onNavigate={navigate}
+            onSignOut={handleSignOut}
+            onSwitchCompany={(companyId) => setPrimaryCompany.mutate(companyId)}
+          />
         </div>
       </div>
     </header>

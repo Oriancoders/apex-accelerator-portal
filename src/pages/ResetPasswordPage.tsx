@@ -74,7 +74,7 @@ export default function ResetPasswordPage() {
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-4">
             <Cloud className="h-8 w-8 text-primary" />
-            <h1 className="text-2xl font-bold text-foreground">SF Services Portal</h1>
+            <h1 className="text-2xl font-bold text-foreground">CustomerPortol</h1>
           </div>
         </div>
 

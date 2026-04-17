@@ -1,6 +1,6 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import ProtectedLayout from "@/components/ProtectedLayout";
@@ -14,6 +14,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import SandboxConnect from "@/components/sandbox/SandboxConnect";
+import SandboxDashboard from "@/components/sandbox/SandboxDashboard";
 import {
   ArrowLeft, FileText, Clock, CheckCircle, XCircle, Coins, Timer,
   Info, Star, MessageSquare, TrendingUp, Activity, AlertTriangle,
@@ -33,6 +35,7 @@ interface SubTask { title: string; }
 interface RoadmapItem { hour: number; title: string; description: string; subtasks?: SubTask[]; }
 
 export default function TicketDetailPage() {
+  const db = supabase as any;
   const { id, slug } = useParams<{ id: string; slug?: string }>();
   const { user, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
@@ -41,6 +44,7 @@ export default function TicketDetailPage() {
 
   const [review, setReview] = useState({ overall: 0, timeliness: 0, value: 0, comment: "" });
   const [activeTab, setActiveTab] = useState("overview");
+  const [hasActiveConnection, setHasActiveConnection] = useState(false);
 
   const { data: ticket, isLoading, refetch } = useQuery({
     queryKey: ["ticket", id],
@@ -75,6 +79,36 @@ export default function TicketDetailPage() {
     },
     enabled: !!id && !!user,
   });
+
+  useEffect(() => {
+    let active = true;
+
+    const checkConnection = async () => {
+      if (!ticket?.id) {
+        if (active) {
+          setHasActiveConnection(false);
+        }
+        return;
+      }
+
+      const { data } = await db
+        .from("sandbox_connections")
+        .select("id")
+        .eq("ticket_id", ticket.id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (active) {
+        setHasActiveConnection(Boolean(data));
+      }
+    };
+
+    checkConnection();
+
+    return () => {
+      active = false;
+    };
+  }, [ticket?.id]);
 
   const handleProceed = async () => {
     if (!ticket || !user) return;
@@ -167,6 +201,12 @@ export default function TicketDetailPage() {
   const isUAT = ticket.status === "uat";
   const isActive = ["in_progress", "approved", "under_review", "uat"].includes(ticket.status);
   const isCompleted = ticket.status === "completed";
+  const ticketCategory = (((ticket as any).category as string) || "general").toLowerCase();
+  const canShowSandboxConnect =
+    ticketCategory === "salesforcess" &&
+    ["approved", "in_progress"].includes(ticket.status) &&
+    !hasActiveConnection;
+  const canShowSandboxDashboard = hasActiveConnection;
 
   // Build timeline with durations
   const timelineWithDuration = events.map((ev, i) => {
@@ -308,6 +348,18 @@ export default function TicketDetailPage() {
               </Link>
             </CardContent>
           </Card>
+        )}
+
+        {(canShowSandboxConnect || canShowSandboxDashboard) && (
+          <div className="mb-4">
+            {canShowSandboxConnect && (
+              <SandboxConnect
+                ticket={ticket}
+                onConnected={() => setHasActiveConnection(true)}
+              />
+            )}
+            {canShowSandboxDashboard && <SandboxDashboard ticketId={ticket.id} />}
+          </div>
         )}
 
         {/* ── UAT CARD ── */}

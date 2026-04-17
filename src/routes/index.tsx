@@ -9,6 +9,7 @@ import RoleAccessGuard from "@/components/RoleAccessGuard";
 // ── Lazy-loaded pages ────────────────────────────────────────────────────────
 const AuthPage = lazy(() => import("@/pages/AuthPage"));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"));
+const SandboxCallback = lazy(() => import("@/components/sandbox/SandboxCallback"));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 const TicketsPage = lazy(() => import("@/pages/TicketsPage"));
 const NewTicketPage = lazy(() => import("@/pages/NewTicketPage"));
@@ -16,12 +17,6 @@ const TicketDetailPage = lazy(() => import("@/pages/TicketDetailPage"));
 const CreditsPage = lazy(() => import("@/pages/CreditsPage"));
 const PricingGuidePage = lazy(() => import("@/pages/PricingGuidePage"));
 const NotificationsPage = lazy(() => import("@/pages/NotificationsPage"));
-const KnowledgeBasePage = lazy(() => import("@/pages/KnowledgeBasePage"));
-const RecipesPage = lazy(() => import("@/pages/RecipesPage"));
-const AppExchangePage = lazy(() => import("@/pages/AppExchangePage"));
-const NewsPage = lazy(() => import("@/pages/NewsPage"));
-const ExtensionsPage = lazy(() => import("@/pages/ExtensionsPage"));
-const WhyChooseUsPage = lazy(() => import("@/pages/WhyChooseUsPage"));
 const AboutContactPage = lazy(() => import("@/pages/AboutContactPage"));
 const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
 const CompanyMembersPage = lazy(() => import("@/pages/CompanyMembersPage"));
@@ -33,14 +28,10 @@ const NotFound = lazy(() => import("@/pages/NotFound"));
 // Admin
 const AdminDashboardPage = lazy(() => import("@/pages/admin/AdminDashboardPage"));
 const AdminTicketsPage = lazy(() => import("@/pages/admin/AdminTicketsPage"));
+const AdminTicketDetailPage = lazy(() => import("@/pages/admin/AdminTicketDetailPage"));
 const AdminUsersPage = lazy(() => import("@/pages/admin/AdminUsersPage"));
-const AdminArticlesPage = lazy(() => import("@/pages/admin/AdminArticlesPage"));
 const AdminCreditsPage = lazy(() => import("@/pages/admin/AdminCreditsPage"));
 const AdminNotificationsPage = lazy(() => import("@/pages/admin/AdminNotificationsPage"));
-const AdminRecipesPage = lazy(() => import("@/pages/admin/AdminRecipesPage"));
-const AdminNewsPage = lazy(() => import("@/pages/admin/AdminNewsPage"));
-const AdminAppExchangePage = lazy(() => import("@/pages/admin/AdminAppExchangePage"));
-const AdminExtensionsPage = lazy(() => import("@/pages/admin/AdminExtensionsPage"));
 const AdminContactSubmissionsPage = lazy(() => import("@/pages/admin/AdminContactSubmissionsPage"));
 const AdminAgentsPage = lazy(() => import("@/pages/admin/AdminAgentsPage"));
 const AdminCompanyComponentsPage = lazy(() => import("@/pages/admin/AdminCompanyComponentsPage"));
@@ -54,6 +45,7 @@ export interface RouteConfig {
 export const publicRoutes: RouteConfig[] = [
   { path: "/", element: <Navigate to="/dashboard" replace /> },
   { path: "/auth", element: <AuthPage /> },
+  { path: "/oauth/callback", element: <SandboxCallback /> },
   { path: "/reset-password", element: <ResetPasswordPage /> },
 ];
 
@@ -89,12 +81,6 @@ export const appRoutes: RouteConfig[] = [
   { path: "/credits", element: <CreditsPage /> },
   { path: "/pricing", element: <PricingGuidePage /> },
   { path: "/notifications", element: <NotificationsPage /> },
-  { path: "/knowledge", element: <KnowledgeBasePage /> },
-  { path: "/recipes", element: <RecipesPage /> },
-  { path: "/appexchange", element: <AppExchangePage /> },
-  { path: "/news", element: <NewsPage /> },
-  { path: "/extensions", element: <ExtensionsPage /> },
-  { path: "/why-choose-us", element: <WhyChooseUsPage /> },
   { path: "/about", element: <AboutContactPage /> },
   { path: "/profile", element: <ProfilePage /> },
   {
@@ -149,6 +135,14 @@ export const adminRoutes: RouteConfig[] = [
     ),
   },
   {
+    path: "/admin/tickets/:id",
+    element: (
+      <RoleAccessGuard policy="admin">
+        <AdminTicketDetailPage />
+      </RoleAccessGuard>
+    ),
+  },
+  {
     path: "/admin/notifications",
     element: (
       <RoleAccessGuard policy="admin">
@@ -182,14 +176,6 @@ export const adminRoutes: RouteConfig[] = [
   },
 
   {
-    path: "/admin/articles",
-    element: (
-      <RoleAccessGuard policy="admin">
-        <AdminArticlesPage />
-      </RoleAccessGuard>
-    ),
-  },
-  {
     path: "/admin/credits",
     element: (
       <RoleAccessGuard policy="admin">
@@ -202,38 +188,6 @@ export const adminRoutes: RouteConfig[] = [
     element: (
       <RoleAccessGuard policy="admin">
         <AdminCompanyComponentsPage />
-      </RoleAccessGuard>
-    ),
-  },
-  {
-    path: "/admin/recipes",
-    element: (
-      <RoleAccessGuard policy="admin">
-        <AdminRecipesPage />
-      </RoleAccessGuard>
-    ),
-  },
-  {
-    path: "/admin/appexchange",
-    element: (
-      <RoleAccessGuard policy="admin">
-        <AdminAppExchangePage />
-      </RoleAccessGuard>
-    ),
-  },
-  {
-    path: "/admin/news",
-    element: (
-      <RoleAccessGuard policy="admin">
-        <AdminNewsPage />
-      </RoleAccessGuard>
-    ),
-  },
-  {
-    path: "/admin/extensions",
-    element: (
-      <RoleAccessGuard policy="admin">
-        <AdminExtensionsPage />
       </RoleAccessGuard>
     ),
   },

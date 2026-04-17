@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import ProtectedLayout from "@/components/ProtectedLayout";
+import NotificationTicketDialog from "@/components/notification-bell/NotificationTicketDialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,8 @@ export default function NotificationsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<string>("all");
+  const [selectedNotification, setSelectedNotification] = useState<any | null>(null);
+  const [openDetails, setOpenDetails] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -169,14 +172,28 @@ export default function NotificationsPage() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-semibold text-foreground">{n.title}</p>
+                            <p className={`text-sm ${!n.is_read ? "font-semibold text-foreground" : "font-medium text-foreground"}`}>{n.title}</p>
                           {!n.is_read && <Badge variant="outline" className="text-[10px] bg-primary/10 text-primary rounded-full">New</Badge>}
                         </div>
-                        <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{n.message}</p>
+                          <p className={`text-sm mt-0.5 line-clamp-2 ${!n.is_read ? "font-semibold text-foreground" : "font-normal text-muted-foreground"}`}>{n.message}</p>
                         <p className="text-xs text-muted-foreground mt-1.5">
                           {format(new Date(n.created_at), "MMM d, yyyy 'at' h:mm a")}
                         </p>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-9 rounded-lg text-xs"
+                        onClick={() => {
+                          setSelectedNotification(n);
+                          setOpenDetails(true);
+                          if (!n.is_read) {
+                            markReadMutation.mutate(n.id);
+                          }
+                        }}
+                      >
+                        View
+                      </Button>
                       {!n.is_read && (
                         <Button
                           variant="ghost"
@@ -195,6 +212,18 @@ export default function NotificationsPage() {
             })}
           </div>
         )}
+
+        <NotificationTicketDialog
+          open={openDetails}
+          onOpenChange={setOpenDetails}
+          ticketId={selectedNotification?.ticket_id}
+          notificationUserId={selectedNotification?.user_id}
+          notificationType={selectedNotification?.type}
+          notificationCreatedAt={selectedNotification?.created_at}
+          notificationTitle={selectedNotification?.title || "Notification"}
+          notificationMessage={selectedNotification?.message || ""}
+          isAdmin={false}
+        />
       </div>
     </ProtectedLayout>
   );

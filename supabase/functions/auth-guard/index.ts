@@ -23,6 +23,11 @@ const ACTION_LIMITS: Record<AuthAction, { windowSeconds: number; maxRequests: nu
   reset: { windowSeconds: 300, maxRequests: 4 },
 };
 
+const SIGNIN_FAILED_ATTEMPT_LIMIT = {
+  windowSeconds: 300,
+  maxRequests: 5,
+};
+
 function getClientIp(req: Request) {
   const xff = req.headers.get("x-forwarded-for") ?? "";
   const firstForwarded = xff.split(",")[0]?.trim();
@@ -196,7 +201,12 @@ serve(async (req) => {
       }
 
       const failKey = `auth:signin:fail:${email}`;
-      const failStatus = await getLimitStatus(supabaseAdmin, failKey, 900, 5);
+      const failStatus = await getLimitStatus(
+        supabaseAdmin,
+        failKey,
+        SIGNIN_FAILED_ATTEMPT_LIMIT.windowSeconds,
+        SIGNIN_FAILED_ATTEMPT_LIMIT.maxRequests
+      );
       if (failStatus.serviceError) {
         return new Response(JSON.stringify({ error: "Service temporarily unavailable" }), {
           status: 503,
@@ -224,8 +234,8 @@ serve(async (req) => {
         const failedAttemptLimit = await checkLimit(
           supabaseAdmin,
           failKey,
-          900,
-          5
+          SIGNIN_FAILED_ATTEMPT_LIMIT.windowSeconds,
+          SIGNIN_FAILED_ATTEMPT_LIMIT.maxRequests
         );
 
         if (failedAttemptLimit.serviceError) {

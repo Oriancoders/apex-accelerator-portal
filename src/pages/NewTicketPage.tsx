@@ -89,7 +89,7 @@ export default function NewTicketPage() {
     setLoading(true);
 
     try {
-      let fileUrls: string[] = [];
+      const fileUrls: string[] = [];
       for (const file of files) {
         // Sanitize filename to prevent path traversal
         const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
@@ -98,7 +98,9 @@ export default function NewTicketPage() {
           .from("ticket-attachments")
           .upload(path, file, { contentType: file.type });
         if (error) {
-          toast.error(`Failed to upload "${file.name}". Please try another file or retry.`);
+          console.error("Attachment upload failed", { fileName: file.name, path, error });
+          const reason = error.message ? ` (${error.message})` : "";
+          toast.error(`Failed to upload "${file.name}"${reason}. Please try another file or retry.`);
           setLoading(false);
           return;
         }
