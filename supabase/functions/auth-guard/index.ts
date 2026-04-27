@@ -57,8 +57,10 @@ function isValidEmail(email: string) {
 
 async function verifyCaptcha(token: string | undefined, ip: string) {
   const secret = Deno.env.get("TURNSTILE_SECRET_KEY") ?? "";
-  if (!secret) return true;
-  if (!token || token.length > 2048) return false;
+  if (!secret) return { ok: true };
+  if (!token || token.length > 2048) {
+    return { ok: false, codes: ["missing-input-response"] };
+  }
 
   const formData = new FormData();
   formData.append("secret", secret);
@@ -70,9 +72,11 @@ async function verifyCaptcha(token: string | undefined, ip: string) {
     body: formData,
   });
 
-  if (!response.ok) return false;
-  const result = (await response.json()) as { success?: boolean };
-  return Boolean(result.success);
+  if (!response.ok) {
+    return { ok: false, codes: [`siteverify-http-${response.status}`] };
+  }
+  const result = (await response.json()) as { success?: boolean; "error-codes"?: string[] };
+  return { ok: Boolean(result.success), codes: result["error-codes"] ?? [] };
 }
 
 function getAllowedRedirectOrigins() {
@@ -213,11 +217,16 @@ serve(async (req) => {
     }
 
     const clientIp = getClientIp(req);
-    const captchaOk = await verifyCaptcha(
+    const captchaResult = await verifyCaptcha(
       typeof body.captchaToken === "string" ? body.captchaToken : undefined,
       clientIp
     );
-    if (!captchaOk) {
+    if (!captchaResult.ok) {
+      console.warn("Turnstile verification failed", {
+        action,
+        codes: captchaResult.codes,
+        hasToken: typeof body.captchaToken === "string" && body.captchaToken.length > 0,
+      });
       return new Response(JSON.stringify({ error: "Security challenge failed. Please try again." }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

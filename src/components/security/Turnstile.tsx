@@ -13,6 +13,7 @@ declare global {
         }
       ) => string;
       remove: (widgetId: string) => void;
+      reset: (widgetId: string) => void;
     };
   }
 }
@@ -30,7 +31,7 @@ function loadTurnstileScript() {
   document.head.appendChild(script);
 }
 
-export function Turnstile({ onToken }: { onToken: (token: string) => void }) {
+export function Turnstile({ onToken, resetKey = 0 }: { onToken: (token: string) => void; resetKey?: number }) {
   const siteKey = (import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined)?.trim();
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
@@ -62,6 +63,13 @@ export function Turnstile({ onToken }: { onToken: (token: string) => void }) {
       onToken("");
     };
   }, [onToken, siteKey]);
+
+  useEffect(() => {
+    onToken("");
+    if (widgetIdRef.current && window.turnstile) {
+      window.turnstile.reset(widgetIdRef.current);
+    }
+  }, [onToken, resetKey]);
 
   if (!siteKey) return null;
 

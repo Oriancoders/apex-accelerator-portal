@@ -17,6 +17,7 @@ export function SignInForm({
   onSubmit,
   onForgot,
   onCaptchaToken,
+  captchaResetKey,
 }: {
   email: string;
   setEmail: (v: string) => void;
@@ -28,6 +29,7 @@ export function SignInForm({
   onSubmit: (e: React.FormEvent) => void;
   onForgot: () => void;
   onCaptchaToken: (token: string) => void;
+  captchaResetKey: number;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -100,7 +102,7 @@ export function SignInForm({
         </div>
       </div>
 
-      <Turnstile onToken={onCaptchaToken} />
+      <Turnstile onToken={onCaptchaToken} resetKey={captchaResetKey} />
 
       <Button
         type="submit"

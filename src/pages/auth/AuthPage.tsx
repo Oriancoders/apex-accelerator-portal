@@ -21,17 +21,20 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
   const [signinBlockedUntil, setSigninBlockedUntil] = useState(0);
   const [view, setView] = useState<AuthView>("signin");
 
   const updateEmail = (value: string) => {
     setEmail(value);
     setCaptchaToken("");
+    setCaptchaResetKey((key) => key + 1);
   };
 
   const updatePassword = (value: string) => {
     setPassword(value);
     setCaptchaToken("");
+    setCaptchaResetKey((key) => key + 1);
   };
 
   useEffect(() => {
@@ -73,6 +76,8 @@ export default function AuthPage() {
     });
 
     if (error) {
+      setCaptchaToken("");
+      setCaptchaResetKey((key) => key + 1);
       const limiter = recordAuthFailure("signin");
       if (limiter.blocked) {
         setSigninBlockedUntil(Date.now() + limiter.retryAfterSeconds * 1000);
@@ -155,6 +160,7 @@ export default function AuthPage() {
                       onSubmit={handleEmailSignIn}
                       onForgot={() => setView("forgot")}
                       onCaptchaToken={setCaptchaToken}
+                      captchaResetKey={captchaResetKey}
                     />
                     {signinRetrySeconds > 0 && (
                       <p className="text-xs text-destructive">Sign in temporarily locked. Try again in {formatRetryTime(signinRetrySeconds)}.</p>
