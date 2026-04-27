@@ -31,7 +31,7 @@ export default function ChatPanel({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 20, scale: 0.95 }}
       transition={{ duration: 0.2 }}
-      className="fixed bottom-5 right-5 z-50 w-[360px] sm:w-[400px] h-[520px] flex flex-col rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
+      className="fixed bottom-4 right-4 z-50 h-[min(520px,calc(100vh-2rem))] w-[calc(100vw-2rem)] max-w-[400px] flex flex-col rounded-ds-xl border border-border-subtle bg-card shadow-deep overflow-hidden"
     >
       <ChatHeader onClose={onClose} />
       <ChatMessages messages={messages} isLoading={isLoading} scrollRef={scrollRef} />

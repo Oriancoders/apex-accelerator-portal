@@ -35,7 +35,7 @@ export default function RegisterAgentDialog({
 }: RegisterAgentDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-2xl">
+      <DialogContent className="rounded-ds-xl">
         <DialogHeader>
           <DialogTitle>Register New Agent</DialogTitle>
         </DialogHeader>
@@ -44,7 +44,7 @@ export default function RegisterAgentDialog({
           <div className="space-y-1.5">
             <Label>Select user account</Label>
             <select
-              className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm"
+              className="w-full h-11 rounded-ds-md border border-input bg-background px-3 text-sm"
               value={selectedUserId}
               onChange={(e) => onSelectedUserChange(e.target.value)}
             >
@@ -66,16 +66,16 @@ export default function RegisterAgentDialog({
               step="0.01"
               value={commissionPercent}
               onChange={(e) => onCommissionPercentChange(e.target.value)}
-              className="h-11 rounded-xl"
+              className="h-11 rounded-ds-md"
             />
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" className="rounded-xl" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" className="rounded-ds-md" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button className="rounded-xl" disabled={!selectedUserId || isPending} onClick={onCreate}>
+          <Button className="rounded-ds-md" disabled={!selectedUserId || isPending} onClick={onCreate}>
             Create Agent
           </Button>
         </DialogFooter>

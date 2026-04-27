@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { adminDeleteEntity } from "@/lib/admin-delete";
 import {
   ASSIGNABLE_ROLES,
   ROLE_PRIORITY,
@@ -133,6 +134,23 @@ export function useAdminUsersPage() {
     onError: () => toast.error("Operation failed. Please try again."),
   });
 
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      await adminDeleteEntity({ entityType: "user", entityId: userId });
+    },
+    onSuccess: () => {
+      toast.success("User deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user-roles"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user-company-memberships"] });
+      setSelectedUser(null);
+      setSelectedRole("");
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Operation failed. Please try again.");
+    },
+  });
+
   const handleAdjustCredits = (positive: boolean) => {
     if (!selectedUser || !creditAdjust) return;
     const amount = Math.abs(parseFloat(creditAdjust)) * (positive ? 1 : -1);
@@ -165,6 +183,7 @@ export function useAdminUsersPage() {
     isLoading,
     roleByUserId,
     updateRoleMutation,
+    deleteUserMutation,
     adjustCreditsMutation,
     filtered,
     getCompanyLabel,

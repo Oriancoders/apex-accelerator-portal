@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -13,7 +13,6 @@ interface AuthContextType {
   isGuest: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
-  loginAsGuest: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -24,7 +23,6 @@ const AuthContext = createContext<AuthContextType>({
   isGuest: false,
   signOut: async () => {},
   refreshProfile: async () => {},
-  loginAsGuest: () => {},
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -35,29 +33,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
+  const currentUserIdRef = useRef<string | null>(null);
 
   const fetchProfile = async (userId: string) => {
+    // Prevent fetching the same profile twice
+    if (currentUserIdRef.current === userId) return;
+    currentUserIdRef.current = userId;
+
     const { data } = await supabase
       .from("profiles")
       .select("*")
       .eq("user_id", userId)
       .single();
+
     setProfile(data);
   };
 
   const refreshProfile = async () => {
-    if (user) await fetchProfile(user.id);
+    if (user) {
+      currentUserIdRef.current = null; // Reset to force refresh
+      await fetchProfile(user.id);
+    }
   };
 
   useEffect(() => {
+    let isSubscribed = true;
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (!isSubscribed) return;
+
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
           // Use setTimeout to avoid Supabase deadlock
-          setTimeout(() => fetchProfile(session.user.id), 0);
+          setTimeout(() => {
+            if (isSubscribed) fetchProfile(session.user.id);
+          }, 0);
         } else {
+          currentUserIdRef.current = null;
           setProfile(null);
         }
         setLoading(false);
@@ -65,6 +79,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!isSubscribed) return;
+
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -73,7 +89,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isSubscribed = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {
@@ -84,18 +103,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsGuest(false);
   };
 
-  const loginAsGuest = async () => {
-    // Clear any existing session before entering guest mode
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setProfile(null);
-    setIsGuest(true);
-    setLoading(false);
-  };
-
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, isGuest, signOut, refreshProfile, loginAsGuest }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, isGuest, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

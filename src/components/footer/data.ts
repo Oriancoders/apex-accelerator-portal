@@ -7,9 +7,10 @@ export const footerLinks: FooterLinksByGroup = {
     { label: "Submit Ticket", to: "/tickets/new" },
     { label: "Buy Credits", to: "/credits" },
     { label: "Pricing Guide", to: "/pricing" },
+    { label: "Help Center", to: "/help" },
   ],
   Resources: [
-    { label: "How It Works", to: "/about" },
+    { label: "How It Works", to: "/help" },
     { label: "Support", to: "/about" },
   ],
   Company: [
@@ -19,7 +20,7 @@ export const footerLinks: FooterLinksByGroup = {
 };
 
 export const footerContactItems: FooterContactItem[] = [
-  { icon: Mail, content: "support@customerportol.com", href: "mailto:support@customerportol.com" },
+  { icon: Mail, content: "support@customerconnect.com", href: "mailto:support@customerconnect.com" },
   { icon: Phone, content: "+1 (555) 123-4567" },
   { icon: MapPin, content: "Remote-first" },
 ];

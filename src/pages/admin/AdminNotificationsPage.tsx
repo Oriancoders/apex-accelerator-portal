@@ -84,7 +84,7 @@ export default function AdminNotificationsPage() {
               variant="outline"
               size="sm"
               onClick={() => markAllReadMutation.mutate()}
-              className="gap-1.5 h-10 rounded-xl self-start sm:self-auto"
+              className="gap-1.5 h-10 rounded-ds-md self-start sm:self-auto"
             >
               <CheckCheck className="h-4 w-4" />
               Mark All Read
@@ -110,7 +110,7 @@ export default function AdminNotificationsPage() {
         {isLoading ? (
           <div className="text-center py-16 text-muted-foreground">Loading...</div>
         ) : filtered.length === 0 ? (
-          <Card className="rounded-2xl">
+          <Card className="rounded-ds-xl">
             <CardContent className="text-center py-16 text-muted-foreground">
               <Bell className="h-12 w-12 mx-auto mb-3 opacity-20" />
               <p className="text-sm">No notifications</p>
@@ -127,10 +127,10 @@ export default function AdminNotificationsPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2, delay: Math.min(i * 0.02, 0.3) }}
                 >
-                  <Card className={`rounded-xl transition-all duration-200 ${!n.is_read ? "border-primary/30 bg-primary/[0.03] shadow-sm" : "hover:bg-muted/30"}`}>
+                  <Card className={`rounded-ds-md transition-all duration-200 ${!n.is_read ? "border-primary/30 bg-primary/[0.03] shadow-sm" : "hover:bg-muted/30"}`}>
                     {/* Fitts's Law: Generous padding for touch targets */}
                     <CardContent className="p-3 sm:p-4 flex items-start gap-3">
-                      <div className={`p-2 sm:p-2.5 rounded-xl ${typeColors[n.type] || "bg-muted"} flex-shrink-0`}>
+                      <div className={`p-2 sm:p-2.5 rounded-ds-md ${typeColors[n.type] || "bg-muted"} flex-shrink-0`}>
                         <Icon className="h-4 w-4" />
                       </div>
                       <div className="flex-1 min-w-0">

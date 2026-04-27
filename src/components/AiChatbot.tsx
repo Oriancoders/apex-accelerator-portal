@@ -12,7 +12,7 @@ export default function AiChatbot() {
     {
       role: "assistant",
       content:
-        "Hi! 👋 I'm your **CustomerPortol AI assistant**. Ask me anything about onboarding, tickets, proposals, pricing, and delivery workflows.",
+        "Hi! 👋 I'm your **Customer Connect AI assistant**. Ask me anything about onboarding, tickets, proposals, pricing, and delivery workflows.",
     },
   ]);
   const [input, setInput] = useState("");

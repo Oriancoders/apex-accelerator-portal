@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
-export type PortalRole = "admin" | "company_admin" | "agent" | "member" | "moderator" | "user";
+export type PortalRole = "admin" | "company_admin" | "agent" | "consultant" | "member" | "moderator" | "user";
 
 export function useUserRole() {
   const { user } = useAuth();

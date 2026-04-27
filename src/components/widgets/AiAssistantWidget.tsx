@@ -5,7 +5,11 @@ import { Input } from "@/components/ui/input";
 
 export default function AiAssistantWidget() {
   const [messages, setMessages] = useState<{ role: "user" | "assistant"; content: string }[]>([
-    { role: "assistant", content: "Hi! I'm your Salesforce AI assistant. Ask me anything about Salesforce — admin tips, Apex help, Flow guidance, or best practices." },
+    {
+      role: "assistant",
+      content:
+        "Hi! I'm your Customer Connect AI assistant. Ask me about tickets, proposals, credits, company access, or delivery workflows.",
+    },
   ]);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -15,7 +19,11 @@ export default function AiAssistantWidget() {
     setMessages((prev) => [
       ...prev,
       { role: "user", content: input },
-      { role: "assistant", content: "This is a placeholder response. Connect an AI API via a backend function to enable real AI responses scoped to Salesforce knowledge." },
+      {
+        role: "assistant",
+        content:
+          "This is a placeholder response. Connect an AI API via a backend function to enable real workflow-aware responses.",
+      },
     ]);
     setInput("");
     setTimeout(() => scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" }), 50);
@@ -30,30 +38,30 @@ export default function AiAssistantWidget() {
         </div>
         <span className="status-badge bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]">Online</span>
       </div>
-      {/* Chunking: Chat messages are a single scrollable region */}
       <div ref={scrollRef} className="flex-1 p-4 space-y-3 max-h-64 overflow-y-auto">
         {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
-              m.role === "user"
-                ? "bg-primary text-primary-foreground rounded-br-md"
-                : "bg-muted text-foreground rounded-bl-md"
-            }`}>
+            <div
+              className={`max-w-[85%] px-3.5 py-2.5 rounded-ds-xl text-sm leading-relaxed ${
+                m.role === "user"
+                  ? "bg-primary text-primary-foreground rounded-br-md"
+                  : "bg-muted text-foreground rounded-bl-md"
+              }`}
+            >
               {m.content}
             </div>
           </div>
         ))}
       </div>
-      {/* Fitts's Law: Large input + button for easy interaction */}
-      <div className="p-4 pt-2 flex gap-2 border-t border-border">
+      <div className="p-4 pt-2 flex gap-2 border-t border-border-subtle">
         <Input
-          placeholder="Ask a Salesforce question..."
+          placeholder="Ask about your workflow..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          className="text-sm h-11 rounded-xl"
+          className="text-sm h-11 rounded-ds-md"
         />
-        <Button size="icon" onClick={handleSend} className="flex-shrink-0 h-11 w-11 rounded-xl">
+        <Button size="icon" onClick={handleSend} className="flex-shrink-0 h-11 w-11 rounded-ds-md">
           <Send className="h-4 w-4" />
         </Button>
       </div>

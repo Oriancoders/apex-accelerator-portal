@@ -14,7 +14,7 @@ export default function ChatMessages({ messages, isLoading, scrollRef }: ChatMes
       {messages.map((m, i) => (
         <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
           <div
-            className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+            className={`max-w-[85%] px-3.5 py-2.5 rounded-ds-xl text-sm leading-relaxed whitespace-pre-wrap ${
               m.role === "user"
                 ? "bg-primary text-primary-foreground rounded-br-md"
                 : "bg-muted text-foreground rounded-bl-md"
@@ -26,7 +26,7 @@ export default function ChatMessages({ messages, isLoading, scrollRef }: ChatMes
       ))}
       {isLoading && messages[messages.length - 1]?.role === "user" && (
         <div className="flex justify-start">
-          <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3">
+          <div className="bg-muted rounded-ds-xl rounded-bl-md px-4 py-3">
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           </div>
         </div>

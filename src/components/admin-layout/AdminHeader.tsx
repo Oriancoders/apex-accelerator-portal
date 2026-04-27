@@ -34,7 +34,7 @@ export default function AdminHeader() {
   const initials = getInitials(profile?.full_name);
 
   return (
-    <header className="h-14 sm:h-16 flex items-center border-b border-border bg-card/80 backdrop-blur-md px-4 sm:px-6 sticky top-0 z-50">
+    <header className="h-14 sm:h-16 flex items-center border-b border-border-subtle bg-card/80 backdrop-blur-md px-4 sm:px-6 sticky top-0 z-50">
       <MobileAdminNav />
       <SidebarTrigger className="mr-3 hidden md:flex" />
 
@@ -59,7 +59,7 @@ export default function AdminHeader() {
               </Avatar>
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44 rounded-xl">
+          <DropdownMenuContent align="end" className="w-44 rounded-ds-md">
             <DropdownMenuItem className="h-10 cursor-pointer" onClick={() => navigate("/profile")}>
               Profile
             </DropdownMenuItem>

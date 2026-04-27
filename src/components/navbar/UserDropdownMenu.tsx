@@ -17,6 +17,7 @@ type UserDropdownProps = {
   canWithdraw: boolean;
   canManageMembers: boolean;
   isAgent: boolean;
+  isConsultant: boolean;
   companyDashboardPath: string;
   onNavigate: (path: string) => void;
   onSignOut: () => void;
@@ -31,6 +32,7 @@ export default function UserDropdownMenu({
   canWithdraw,
   canManageMembers,
   isAgent,
+  isConsultant,
   companyDashboardPath,
   onNavigate,
   onSignOut,
@@ -46,7 +48,7 @@ export default function UserDropdownMenu({
           </Avatar>
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56 rounded-xl" align="end" sideOffset={8}>
+      <DropdownMenuContent className="w-56 rounded-ds-md" align="end" sideOffset={8}>
         <div className="px-3 py-2.5">
           <p className="text-sm font-semibold">{isGuest ? "Guest User" : fullName || "User"}</p>
           <p className="text-xs text-muted-foreground mt-0.5">{isGuest ? "Read-only access" : email}</p>
@@ -75,13 +77,19 @@ export default function UserDropdownMenu({
             {canManageMembers && (
               <DropdownMenuItem onClick={() => onNavigate("/company/members")} className="h-10 cursor-pointer">
                 <Building2 className="mr-2 h-4 w-4" />
-                Company Members
+                Company Access
               </DropdownMenuItem>
             )}
             {isAgent && (
               <DropdownMenuItem onClick={() => onNavigate("/agent/dashboard")} className="h-10 cursor-pointer">
                 <LayoutDashboard className="mr-2 h-4 w-4" />
                 Agent Dashboard
+              </DropdownMenuItem>
+            )}
+            {isConsultant && (
+              <DropdownMenuItem onClick={() => onNavigate("/consultant/dashboard")} className="h-10 cursor-pointer">
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                Consultant Dashboard
               </DropdownMenuItem>
             )}
             {canManageMembers && (

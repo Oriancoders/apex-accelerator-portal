@@ -40,7 +40,7 @@ export default function ProgressStepper({ status }: ProgressStepperProps) {
                     ? "bg-primary border-primary text-primary-foreground"
                     : active
                     ? "bg-primary border-primary text-primary-foreground ring-4 ring-primary/20"
-                    : "bg-card border-border text-muted-foreground"
+                    : "bg-card border-border-subtle text-muted-foreground"
                 }`}
               >
                 {done ? <CheckCircle className="h-4 w-4" /> : i + 1}

@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useAgentTenant } from "@/hooks/useAgentTenant";
 
-type GuardPolicy = "admin" | "agent" | "company_dashboard" | "company_manage";
+type GuardPolicy = "admin" | "agent" | "consultant" | "company_dashboard" | "company_manage";
 
 function LoadingScreen() {
   return (
@@ -31,7 +31,12 @@ export default function RoleAccessGuard({ policy, children }: { policy: GuardPol
   }
 
   if (policy === "agent") {
-    if (!isAgent) return <Navigate to="/dashboard" replace />;
+    if (!isAgent || role !== "agent") return <Navigate to="/dashboard" replace />;
+    return <>{children}</>;
+  }
+
+  if (policy === "consultant") {
+    if (role !== "consultant") return <Navigate to="/dashboard" replace />;
     return <>{children}</>;
   }
 

@@ -16,7 +16,7 @@ export default function TicketsStatsRow({
   onStatusClick,
 }: TicketsStatsRowProps) {
   return (
-    <div className="grid grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
       {[
         {
           label: "Submitted",
@@ -53,7 +53,7 @@ export default function TicketsStatsRow({
       ].map(({ label, count, color, bg, icon, status }) => (
         <div
           key={label}
-          className={`p-3 rounded-xl border ${bg} text-center cursor-pointer hover:opacity-80 transition-opacity`}
+          className={`p-3 rounded-ds-md border ${bg} text-center cursor-pointer hover:opacity-80 transition-opacity`}
           onClick={() => onStatusClick(status)}
         >
           <div className={`flex justify-center mb-1 ${color}`}>{icon}</div>

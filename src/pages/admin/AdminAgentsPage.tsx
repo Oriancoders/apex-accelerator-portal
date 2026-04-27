@@ -33,6 +33,7 @@ export default function AdminAgentsPage() {
     assignments,
     registerMutation,
     toggleActiveMutation,
+    deleteAgentMutation,
     createAssignmentMutation,
     updateAssignmentCommissionMutation,
     updateAssignmentStatusMutation,
@@ -46,7 +47,7 @@ export default function AdminAgentsPage() {
             <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">Agent Management</h1>
             <p className="text-sm text-muted-foreground mt-1">Register and manage sales/service agents</p>
           </div>
-          <Button className="h-11 rounded-xl" onClick={() => setOpen(true)}>
+          <Button className="h-11 rounded-ds-md" onClick={() => setOpen(true)}>
             <UserPlus className="h-4 w-4 mr-2" />
             Register Agent
           </Button>
@@ -64,6 +65,12 @@ export default function AdminAgentsPage() {
             setAssignCommissionPercent("");
           }}
           onToggleActive={(agent) => toggleActiveMutation.mutate({ id: agent.id, next: !agent.is_active })}
+          onDeleteAgent={(agent) => {
+            const ok = window.confirm("Delete this agent and all related assignments/rules? This cannot be undone.");
+            if (!ok) return;
+            deleteAgentMutation.mutate(agent.id);
+          }}
+          deletePending={deleteAgentMutation.isPending}
         />
       </div>
 

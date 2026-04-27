@@ -7,10 +7,10 @@ type FooterBottomBarProps = {
 
 export default function FooterBottomBar({ bottomLinks }: FooterBottomBarProps) {
   return (
-    <div className="border-t border-border">
+    <div className="border-t border-border-subtle">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
         <p className="text-xs text-muted-foreground">
-          © {new Date().getFullYear()} CustomerPortol. All rights reserved.
+          © {new Date().getFullYear()} Customer Connect. All rights reserved.
         </p>
         <div className="flex items-center gap-4">
           {bottomLinks.map((link) => (

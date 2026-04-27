@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,92 +7,67 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+type WebhookPayload = {
+  type?: "INSERT" | "UPDATE" | "DELETE" | string;
+  table?: string;
+  record?: unknown;
+};
 
-interface TicketRecord {
+type TicketRecord = {
   id: string;
   title: string;
   status: string;
-  priority: string;
+  priority?: string | null;
   user_id: string;
-  contact_email?: string;
-  credit_cost?: number;
-  description?: string;
+};
+
+function bytesToHex(bytes: ArrayBuffer) {
+  return [...new Uint8Array(bytes)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-async function getUserEmail(userId: string): Promise<{ email: string; name: string } | null> {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-
-  try {
-    const res = await fetch(`${supabaseUrl}/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}&select=email,full_name`, {
-      headers: {
-        Authorization: `Bearer ${serviceRoleKey}`,
-        apikey: serviceRoleKey,
-      },
-    });
-    if (!res.ok) return null;
-    const data = await res.json();
-    if (data && data.length > 0) {
-      return { email: data[0].email, name: data[0].full_name || "User" };
-    }
-  } catch (err) {
-    console.error("getUserEmail failed:", err instanceof Error ? err.message : err);
+function timingSafeEqual(a: string, b: string) {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i += 1) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
   }
-  return null;
+  return result === 0;
 }
 
-/**
- * PERFORMANCE FIX: Batch-fetch admin emails in a single query
- * instead of N+1 individual profile lookups.
- */
-async function getAdminEmails(): Promise<string[]> {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+async function verifyWebhookSignature(req: Request, rawBody: string, secret: string) {
+  const timestamp = req.headers.get("x-webhook-timestamp") ?? "";
+  const signatureHeader = req.headers.get("x-webhook-signature") ?? "";
+  const signature = signatureHeader.startsWith("v1=") ? signatureHeader.slice(3) : signatureHeader;
 
-  try {
-    // Step 1: Get admin user IDs
-    const rolesRes = await fetch(`${supabaseUrl}/rest/v1/user_roles?role=eq.admin&select=user_id`, {
-      headers: {
-        Authorization: `Bearer ${serviceRoleKey}`,
-        apikey: serviceRoleKey,
-      },
-    });
-    if (!rolesRes.ok) return [];
-    const roles = await rolesRes.json();
-    if (!roles || roles.length === 0) return [];
-
-    const adminUserIds: string[] = roles.map((r: { user_id: string }) => r.user_id);
-
-    // Step 2: Batch-fetch all admin profiles in ONE query (fixes N+1)
-    const idsFilter = adminUserIds.map((id) => `"${id}"`).join(",");
-    const profilesRes = await fetch(
-      `${supabaseUrl}/rest/v1/profiles?user_id=in.(${idsFilter})&select=email`,
-      {
-        headers: {
-          Authorization: `Bearer ${serviceRoleKey}`,
-          apikey: serviceRoleKey,
-        },
-      }
-    );
-    if (!profilesRes.ok) return [];
-    const profiles = await profilesRes.json();
-    return (profiles || [])
-      .map((p: { email: string | null }) => p.email)
-      .filter((e: string | null): e is string => !!e);
-  } catch (err) {
-    console.error("getAdminEmails failed:", err instanceof Error ? err.message : err);
-    return [];
+  const timestampMs = Number(timestamp) * 1000;
+  if (!Number.isFinite(timestampMs) || Math.abs(Date.now() - timestampMs) > 5 * 60 * 1000) {
+    return false;
   }
+
+  if (!/^[a-f0-9]{64}$/i.test(signature)) return false;
+
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const digest = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(`${timestamp}.${rawBody}`),
+  );
+
+  return timingSafeEqual(bytesToHex(digest), signature.toLowerCase());
 }
 
 function formatStatus(status: string): string {
-  return status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return (status || "").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-// Escape HTML to prevent injection in email templates
 function escapeHtml(str: string): string {
-  return str
+  return (str || "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
@@ -100,49 +75,19 @@ function escapeHtml(str: string): string {
     .replace(/'/g, "&#039;");
 }
 
-async function sendEmail(to: string[], subject: string, html: string) {
-  if (!RESEND_API_KEY) {
-    console.error("RESEND_API_KEY not configured");
-    return;
-  }
-
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: "SF Services <onboarding@resend.dev>",
-        to,
-        subject,
-        html,
-      }),
-    });
-
-    if (!res.ok) {
-      const err = await res.text();
-      console.error("Resend error:", err);
-    }
-  } catch (err) {
-    console.error("sendEmail failed:", err instanceof Error ? err.message : err);
-  }
-}
-
-function ticketEmailTemplate(
-  recipientName: string,
-  ticketTitle: string,
-  ticketId: string,
-  status: string,
-  isNew: boolean,
-  priority?: string,
-): string {
-  const safeTitle = escapeHtml(ticketTitle);
-  const safeName = escapeHtml(recipientName);
-  const statusFormatted = escapeHtml(formatStatus(status));
-  const heading = isNew ? "New Ticket Submitted" : "Ticket Status Updated";
-  const message = isNew
+function ticketEmailTemplate(args: {
+  recipientName: string;
+  ticketTitle: string;
+  ticketId: string;
+  status: string;
+  isNew: boolean;
+  priority?: string | null;
+}) {
+  const safeTitle = escapeHtml(args.ticketTitle);
+  const safeName = escapeHtml(args.recipientName);
+  const statusFormatted = escapeHtml(formatStatus(args.status));
+  const heading = args.isNew ? "New Ticket Submitted" : "Ticket Status Updated";
+  const message = args.isNew
     ? `Your ticket "<strong>${safeTitle}</strong>" has been submitted successfully. Our team will review it shortly.`
     : `The status of your ticket "<strong>${safeTitle}</strong>" has been updated to <strong>${statusFormatted}</strong>.`;
 
@@ -153,7 +98,7 @@ function ticketEmailTemplate(
 <body style="margin:0;padding:0;background:#f4f4f5;font-family:Arial,sans-serif;">
   <div style="max-width:560px;margin:40px auto;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
     <div style="background:#1a1a2e;padding:28px 32px;">
-      <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">☁️ SF Services</h1>
+      <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;">Customer Connect</h1>
     </div>
     <div style="padding:32px;">
       <h2 style="margin:0 0 8px;color:#1a1a2e;font-size:18px;">${heading}</h2>
@@ -170,34 +115,79 @@ function ticketEmailTemplate(
           <td style="padding:10px 14px;font-size:12px;color:#71717a;font-weight:600;border-bottom:1px solid #f4f4f5;">STATUS</td>
           <td style="padding:10px 14px;font-size:13px;color:#1a1a2e;border-bottom:1px solid #f4f4f5;">${statusFormatted}</td>
         </tr>
-        ${priority ? `<tr>
+        ${
+          args.priority
+            ? `<tr>
           <td style="padding:10px 14px;font-size:12px;color:#71717a;font-weight:600;">PRIORITY</td>
-          <td style="padding:10px 14px;font-size:13px;color:#1a1a2e;text-transform:capitalize;">${escapeHtml(priority)}</td>
-        </tr>` : ""}
+          <td style="padding:10px 14px;font-size:13px;color:#1a1a2e;text-transform:capitalize;">${escapeHtml(args.priority)}</td>
+        </tr>`
+            : ""
+        }
       </table>
       <p style="color:#a1a1aa;font-size:12px;margin:0;">
-        You can track your ticket progress in the SF Services portal.
+        You can track your ticket progress in the Customer Connect portal.
       </p>
     </div>
     <div style="background:#f4f4f5;padding:16px 32px;text-align:center;">
-      <p style="margin:0;color:#a1a1aa;font-size:11px;">© ${new Date().getFullYear()} SF Services. All rights reserved.</p>
+      <p style="margin:0;color:#a1a1aa;font-size:11px;">© ${new Date().getFullYear()} Customer Connect. All rights reserved.</p>
     </div>
   </div>
 </body>
 </html>`;
 }
 
+async function sendEmail(to: string[], subject: string, html: string) {
+  const apiKey = Deno.env.get("RESEND_API_KEY") ?? "";
+  if (!apiKey) return;
+
+  const from = Deno.env.get("RESEND_FROM") ?? "Customer Connect <onboarding@resend.dev>";
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ from, to, subject, html }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    console.error("resend-webhook: Resend error:", err);
+  }
+}
+
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
-  const supabaseAdmin = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-  );
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const webhookSecret = Deno.env.get("RESEND_WEBHOOK_SECRET") ?? "";
+  const supabaseAdmin = createClient(supabaseUrl, serviceRole);
 
   try {
+    if (!webhookSecret) {
+      console.error("resend-webhook: RESEND_WEBHOOK_SECRET is not configured");
+      return new Response(JSON.stringify({ error: "Webhook is not configured" }), {
+        status: 503,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const rawBody = await req.text();
+    const signatureOk = await verifyWebhookSignature(req, rawBody, webhookSecret);
+    if (!signatureOk) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const forwardedFor = req.headers.get("x-forwarded-for") || "unknown";
     const sourceKey = forwardedFor.split(",")[0].trim() || "unknown";
 
@@ -222,26 +212,21 @@ serve(async (req) => {
       });
     }
 
-    // This function is called internally by a database trigger via pg_net.
-    // JWT verification is handled at the platform level (config.toml).
+    const payload = JSON.parse(rawBody) as WebhookPayload;
+    const { type, table, record } = payload ?? {};
 
-    const payload = await req.json();
-    const { type, table, record } = payload;
-
-    // Validate payload structure
-    if (!type || !table) {
-      return new Response(JSON.stringify({ ok: true, skipped: true, reason: "invalid payload" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    if (table !== "tickets" || !record) {
+    if (!type || !table || !record) {
       return new Response(JSON.stringify({ ok: true, skipped: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Validate required fields
+    if (table !== "tickets") {
+      return new Response(JSON.stringify({ ok: true, skipped: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const ticket = record as TicketRecord;
     if (!ticket.user_id || !ticket.title || !ticket.id) {
       return new Response(JSON.stringify({ ok: true, skipped: true, reason: "missing fields" }), {
@@ -249,49 +234,63 @@ serve(async (req) => {
       });
     }
 
-    // Validate user_id is a UUID to prevent injection in REST query
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(ticket.user_id)) {
-      return new Response(JSON.stringify({ error: "Invalid user_id" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const isNew = type === "INSERT";
 
-    // Fetch user and admin emails concurrently (performance)
-    const [user, adminEmails] = await Promise.all([
-      getUserEmail(ticket.user_id),
-      getAdminEmails(),
+    const [userRes, rolesRes] = await Promise.all([
+      supabaseAdmin.from("profiles").select("email,full_name").eq("user_id", ticket.user_id).maybeSingle(),
+      supabaseAdmin.from("user_roles").select("user_id").eq("role", "admin"),
     ]);
 
-    const safeTitle = ticket.title.slice(0, 200);
+    if (userRes.error) throw userRes.error;
+    if (rolesRes.error) throw rolesRes.error;
+
+    const userEmail = (userRes.data as any)?.email as string | null | undefined;
+    const userName = ((userRes.data as any)?.full_name as string | null | undefined) ?? "User";
+
+    const adminUserIds = ((rolesRes.data as any[]) ?? [])
+      .map((r) => (r as any)?.user_id as string | undefined)
+      .filter(Boolean) as string[];
+
+    const { data: adminProfiles, error: adminProfilesError } = adminUserIds.length
+      ? await supabaseAdmin.from("profiles").select("email").in("user_id", adminUserIds)
+      : { data: [], error: null };
+    if (adminProfilesError) throw adminProfilesError;
+
+    const adminEmails = ((adminProfiles as any[]) ?? [])
+      .map((p) => (p as any)?.email as string | null | undefined)
+      .filter(Boolean) as string[];
+
+    const safeTitle = (ticket.title || "").slice(0, 200);
     const subject = isNew
       ? `New Ticket: ${safeTitle}`
       : `Ticket Updated: ${safeTitle} → ${formatStatus(ticket.status)}`;
 
-    // Send emails concurrently (performance)
     const emailPromises: Promise<void>[] = [];
 
-    if (user?.email) {
+    if (userEmail) {
       emailPromises.push(
-        sendEmail(
-          [user.email],
-          subject,
-          ticketEmailTemplate(user.name, safeTitle, ticket.id, ticket.status, isNew, ticket.priority),
-        )
+        sendEmail([userEmail], subject, ticketEmailTemplate({
+          recipientName: userName,
+          ticketTitle: safeTitle,
+          ticketId: ticket.id,
+          status: ticket.status,
+          isNew,
+          priority: ticket.priority ?? null,
+        })),
       );
     }
 
-    const adminRecipients = adminEmails.filter((e) => e !== user?.email);
+    const adminRecipients = adminEmails.filter((e) => e && e !== userEmail);
     if (adminRecipients.length > 0) {
       emailPromises.push(
-        sendEmail(
-          adminRecipients,
-          subject,
-          ticketEmailTemplate("Admin", safeTitle, ticket.id, ticket.status, isNew, ticket.priority),
-        )
+        sendEmail(adminRecipients, subject, ticketEmailTemplate({
+          recipientName: "Admin",
+          ticketTitle: safeTitle,
+          ticketId: ticket.id,
+          status: ticket.status,
+          isNew,
+          priority: ticket.priority ?? null,
+        })),
       );
     }
 
@@ -300,11 +299,11 @@ serve(async (req) => {
     return new Response(JSON.stringify({ ok: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
-    console.error("Webhook error:", err instanceof Error ? err.message : err);
-    return new Response(JSON.stringify({ error: "Internal error" }), {
-      status: 500,
+  } catch (error) {
+    console.error("resend-webhook error:", error);
+    return new Response(JSON.stringify({ ok: false }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200,
     });
   }
 });

@@ -52,7 +52,7 @@ export default function TicketTimeline({ events }: TicketTimelineProps) {
                   {formatDistanceToNow(new Date(ev.created_at), { addSuffix: true })}
                 </p>
                 {ev.note && (
-                  <p className="text-xs text-foreground mt-2 bg-muted/60 px-3 py-2 rounded-lg border border-border">
+                  <p className="text-xs text-foreground mt-2 bg-muted/60 px-3 py-2 rounded-lg border border-border-subtle">
                     {ev.note}
                   </p>
                 )}

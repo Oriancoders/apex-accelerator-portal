@@ -3,7 +3,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { adminDeleteEntity } from "@/lib/admin-delete";
 import type { AgentRow, AssignmentLite, CompanyLite, ProfileLite } from "@/pages/admin/agents/types";
+import { boundedNumberSchema, uuidSchema } from "@/lib/validation";
 
 export function useAdminAgentsPage() {
   const { user } = useAuth();
@@ -115,16 +117,16 @@ export function useAdminAgentsPage() {
       const profile = profiles.find((p) => p.user_id === selectedUserId);
       if (!profile) throw new Error("Please select a valid user");
 
-      const commission = Number(commissionPercent);
-      if (Number.isNaN(commission) || commission < 0 || commission > 100) {
+      const commission = boundedNumberSchema(0, 100).safeParse(commissionPercent);
+      if (!commission.success) {
         throw new Error("Commission must be between 0 and 100");
       }
 
       const { error } = await supabase.from("agents").insert({
-        user_id: profile.user_id,
+        user_id: uuidSchema.parse(profile.user_id),
         display_name: profile.full_name,
         email: profile.email,
-        default_commission_percent: commission,
+        default_commission_percent: commission.data,
         onboarded_by: user?.id,
       });
       if (error) throw error;
@@ -151,21 +153,45 @@ export function useAdminAgentsPage() {
     onError: () => toast.error("Operation failed. Please try again."),
   });
 
+  const deleteAgentMutation = useMutation({
+    mutationFn: async (agentId: string) => {
+      await adminDeleteEntity({ entityType: "agent", entityId: agentId });
+    },
+    onSuccess: (_, agentId) => {
+      toast.success("Agent deleted successfully");
+      queryClient.invalidateQueries({ queryKey: ["admin-agents"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-agent-candidates"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-active-partner-assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-agent-assignments-by-agent", agentId] });
+
+      if (manageAgent?.id === agentId) {
+        setManageOpen(false);
+        setManageAgent(null);
+      }
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Operation failed. Please try again.");
+    },
+  });
+
   const createAssignmentMutation = useMutation({
     mutationFn: async () => {
       if (!user?.id) throw new Error("You must be signed in");
       if (!manageAgent?.id) throw new Error("Select an agent first");
       if (!assignCompanyId) throw new Error("Select a company");
 
-      const parsed = assignCommissionPercent.trim() === "" ? null : Number(assignCommissionPercent);
-      if (parsed !== null && (Number.isNaN(parsed) || parsed < 0 || parsed > 100)) {
+      const parsed =
+        assignCommissionPercent.trim() === ""
+          ? null
+          : boundedNumberSchema(0, 100).safeParse(assignCommissionPercent);
+      if (parsed !== null && !parsed.success) {
         throw new Error("Commission must be between 0 and 100");
       }
 
       const { data: existingActive, error: existingErr } = await supabase
         .from("agent_company_assignments")
         .select("id")
-        .eq("company_id", assignCompanyId)
+        .eq("company_id", uuidSchema.parse(assignCompanyId))
         .eq("status", "active")
         .limit(1)
         .maybeSingle();
@@ -174,10 +200,10 @@ export function useAdminAgentsPage() {
       if (existingActive) throw new Error("This company already has an active partner");
 
       const { error } = await supabase.from("agent_company_assignments").insert({
-        company_id: assignCompanyId,
-        agent_id: manageAgent.id,
+        company_id: uuidSchema.parse(assignCompanyId),
+        agent_id: uuidSchema.parse(manageAgent.id),
         status: "active",
-        commission_percent: parsed,
+        commission_percent: parsed === null ? null : parsed.data,
         created_by: user.id,
       });
 
@@ -204,15 +230,15 @@ export function useAdminAgentsPage() {
 
   const updateAssignmentCommissionMutation = useMutation({
     mutationFn: async ({ assignmentId, value }: { assignmentId: string; value: string }) => {
-      const parsed = Number(value);
-      if (Number.isNaN(parsed) || parsed < 0 || parsed > 100) {
+      const parsed = boundedNumberSchema(0, 100).safeParse(value);
+      if (!parsed.success) {
         throw new Error("Commission must be between 0 and 100");
       }
 
       const { error } = await supabase
         .from("agent_company_assignments")
-        .update({ commission_percent: parsed })
-        .eq("id", assignmentId);
+        .update({ commission_percent: parsed.data })
+        .eq("id", uuidSchema.parse(assignmentId));
 
       if (error) throw error;
     },
@@ -225,10 +251,11 @@ export function useAdminAgentsPage() {
 
   const updateAssignmentStatusMutation = useMutation({
     mutationFn: async ({ assignmentId, status }: { assignmentId: string; status: "active" | "paused" | "ended" }) => {
+      if (!["active", "paused", "ended"].includes(status)) throw new Error("Invalid status");
       const { error } = await supabase
         .from("agent_company_assignments")
         .update({ status })
-        .eq("id", assignmentId);
+        .eq("id", uuidSchema.parse(assignmentId));
       if (error) throw error;
     },
     onSuccess: () => {
@@ -271,6 +298,7 @@ export function useAdminAgentsPage() {
     assignments,
     registerMutation,
     toggleActiveMutation,
+    deleteAgentMutation,
     createAssignmentMutation,
     updateAssignmentCommissionMutation,
     updateAssignmentStatusMutation,

@@ -15,4 +15,4 @@ export interface ProposalStep {
   subtasks?: SubTask[];
 }
 
-export type ProposalCategory = "general" | "salesforce";
+export type ProposalCategory = "general";

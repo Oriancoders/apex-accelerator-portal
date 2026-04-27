@@ -39,7 +39,7 @@ export default function TransactionsTableCard({
   onTypeFilterChange,
 }: TransactionsTableCardProps) {
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-ds-xl">
       <CardHeader className="px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
@@ -48,11 +48,11 @@ export default function TransactionsTableCard({
               placeholder="Search by description or user ID..."
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-10 h-11 rounded-xl"
+              className="pl-10 h-11 rounded-ds-md"
             />
           </div>
           <Select value={typeFilter} onValueChange={onTypeFilterChange}>
-            <SelectTrigger className="w-full sm:w-[180px] h-11 rounded-xl">
+            <SelectTrigger className="w-full sm:w-[180px] h-11 rounded-ds-md">
               <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
               <SelectValue placeholder="Filter type" />
             </SelectTrigger>
@@ -137,7 +137,7 @@ export default function TransactionsTableCard({
                   icon: Coins,
                 };
                 return (
-                  <div key={tx.id} className="p-4 rounded-xl border border-border">
+                  <div key={tx.id} className="p-4 rounded-ds-md border border-border-subtle">
                     <div className="flex items-center justify-between">
                       <Badge variant="outline" className={`${typeInfo.color} text-[10px]`}>
                         {typeInfo.label}

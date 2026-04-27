@@ -5,7 +5,7 @@ export function renderContent(text: string) {
     if (part.startsWith("```") && part.endsWith("```")) {
       const code = part.slice(3, -3).replace(/^\w+\n/, "");
       return (
-        <pre key={i} className="bg-background/80 rounded-lg p-3 my-2 text-xs overflow-x-auto border border-border">
+        <pre key={i} className="bg-background/80 rounded-lg p-3 my-2 text-xs overflow-x-auto border border-border-subtle">
           <code>{code}</code>
         </pre>
       );

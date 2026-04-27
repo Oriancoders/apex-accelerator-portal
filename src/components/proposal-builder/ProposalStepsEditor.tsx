@@ -52,7 +52,7 @@ export default function ProposalStepsEditor({
       </div>
       <div className="space-y-3">
         {steps.map((step, i) => (
-          <Card key={i} className="border-dashed rounded-xl">
+          <Card key={i} className="border-dashed rounded-ds-md">
             <CardContent className="p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -73,6 +73,7 @@ export default function ProposalStepsEditor({
                 value={step.title}
                 onChange={(e) => onUpdateStep(i, "title", e.target.value)}
                 className="h-9 rounded-lg text-sm"
+                maxLength={160}
               />
               <Textarea
                 placeholder="Description of work for this hour..."
@@ -80,6 +81,7 @@ export default function ProposalStepsEditor({
                 onChange={(e) => onUpdateStep(i, "description", e.target.value)}
                 rows={2}
                 className="text-sm"
+                maxLength={1200}
               />
 
               <div className="space-y-1">
@@ -106,6 +108,7 @@ export default function ProposalStepsEditor({
                       value={sub.title}
                       onChange={(e) => onUpdateSubtask(i, si, e.target.value)}
                       className="h-7 text-xs rounded-md flex-1"
+                      maxLength={160}
                     />
                     <Button
                       variant="ghost"

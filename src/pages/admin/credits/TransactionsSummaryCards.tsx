@@ -16,7 +16,7 @@ export default function TransactionsSummaryCards({ cards }: TransactionsSummaryC
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.05, duration: 0.3 }}
         >
-          <Card className="rounded-2xl">
+          <Card className="rounded-ds-xl">
             <CardHeader className="flex flex-row items-center justify-between pb-2 px-4 pt-4 sm:px-6 sm:pt-5">
               <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">{card.title}</CardTitle>
               <div className={`p-1.5 sm:p-2 rounded-lg ${card.bg}`}>

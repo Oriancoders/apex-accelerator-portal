@@ -8,6 +8,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const STRIPE_CHECKOUT_SESSION_RE = /^cs_(test|live)_[A-Za-z0-9]{20,}$/;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -59,7 +61,9 @@ serve(async (req) => {
     }
 
     const { sessionId } = await req.json();
-    if (!sessionId || typeof sessionId !== "string") throw new Error("Missing or invalid session ID");
+    if (typeof sessionId !== "string" || !STRIPE_CHECKOUT_SESSION_RE.test(sessionId)) {
+      throw new Error("Missing or invalid session ID");
+    }
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",
@@ -75,11 +79,13 @@ serve(async (req) => {
     }
 
     const userId = session.metadata?.user_id;
-    const totalCredits = parseInt(session.metadata?.total_credits || "0");
+    const totalCredits = parseInt(session.metadata?.total_credits || "0", 10);
     const buyCredits = session.metadata?.buy_credits || "0";
     const bonusCredits = session.metadata?.bonus_credits || "0";
 
-    if (!userId || totalCredits <= 0) throw new Error("Invalid session metadata");
+    if (!userId || !Number.isInteger(totalCredits) || totalCredits <= 0 || totalCredits > 200000) {
+      throw new Error("Invalid session metadata");
+    }
 
     // Verify the requesting user matches the session user
     if (user.id !== userId) throw new Error("User mismatch");

@@ -32,15 +32,15 @@ export default function MembersTableCard({
   onRemoveClick,
 }: MembersTableCardProps) {
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-ds-xl">
       <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
-          <Users className="h-4 w-4 text-primary" /> Current Members
-        </CardTitle>
-        <CardDescription className="flex items-center gap-2">
-          <span>Manage membership roles and access.</span>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Users className="h-4 w-4 text-primary" /> Current Access
+          </CardTitle>
           <Badge variant="outline" className="text-[11px]">{selectedCompany.status}</Badge>
-        </CardDescription>
+        </div>
+        <CardDescription>Manage people and roles for this company.</CardDescription>
       </CardHeader>
       <CardContent>
         {membershipsLoading ? (

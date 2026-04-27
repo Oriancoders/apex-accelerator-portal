@@ -26,7 +26,7 @@ export default function AssignmentsTableCard({
   onUpdateStatus,
 }: AssignmentsTableCardProps) {
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-ds-xl">
       <CardHeader>
         <CardTitle className="text-base">Existing Assignments</CardTitle>
       </CardHeader>

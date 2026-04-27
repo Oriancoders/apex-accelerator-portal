@@ -29,7 +29,7 @@ export default function CompanySwitcher({ memberships, activeCompanyName, isPend
           <span className="max-w-[130px] truncate">{activeCompanyName || "Company"}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64 rounded-xl">
+      <DropdownMenuContent align="end" className="w-64 rounded-ds-md">
         <div className="px-3 py-2 text-xs text-muted-foreground">Switch Active Company</div>
         <DropdownMenuSeparator />
         {memberships.map((m) => (

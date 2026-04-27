@@ -38,7 +38,7 @@ export default function TipTapEditor({ content, onChange, placeholder = "Describ
 
   return (
     <div className="tiptap-editor border border-input rounded-lg overflow-hidden bg-card">
-      <div className="flex items-center gap-0.5 p-2 border-b border-border bg-muted/30">
+      <div className="flex items-center gap-0.5 p-2 border-b border-border-subtle bg-muted/30">
         {tools.map((t, i) => (
           <Button
             key={i}

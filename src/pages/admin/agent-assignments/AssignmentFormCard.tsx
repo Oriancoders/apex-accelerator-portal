@@ -29,7 +29,7 @@ export default function AssignmentFormCard({
   onCreate,
 }: AssignmentFormCardProps) {
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-ds-xl">
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <Handshake className="h-4 w-4 text-primary" />
@@ -41,7 +41,7 @@ export default function AssignmentFormCard({
         <div className="space-y-1.5 md:col-span-2">
           <Label>Company</Label>
           <select
-            className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm"
+            className="w-full h-11 rounded-ds-md border border-input bg-background px-3 text-sm"
             value={companyId}
             onChange={(e) => onCompanyChange(e.target.value)}
           >
@@ -55,7 +55,7 @@ export default function AssignmentFormCard({
         <div className="space-y-1.5 md:col-span-2">
           <Label>Agent</Label>
           <select
-            className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm"
+            className="w-full h-11 rounded-ds-md border border-input bg-background px-3 text-sm"
             value={agentId}
             onChange={(e) => onAgentChange(e.target.value)}
           >
@@ -71,7 +71,7 @@ export default function AssignmentFormCard({
         <div className="space-y-1.5 md:col-span-1">
           <Label>Commission % (optional)</Label>
           <Input
-            className="h-11 rounded-xl"
+            className="h-11 rounded-ds-md"
             type="number"
             min="0"
             max="100"
@@ -83,7 +83,7 @@ export default function AssignmentFormCard({
         </div>
 
         <div className="md:col-span-3 flex items-end justify-end">
-          <Button className="h-11 rounded-xl" onClick={onCreate}>
+          <Button className="h-11 rounded-ds-md" onClick={onCreate}>
             <Link2 className="h-4 w-4 mr-2" />
             Create Assignment
           </Button>

@@ -11,10 +11,10 @@ export default function BrandColumn({ contacts, socialLinks }: BrandColumnProps)
   return (
     <div className="col-span-2 md:col-span-1">
       <Link to="/dashboard" className="flex items-center gap-2.5 mb-4">
-        <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center shadow-sm">
+        <div className="h-9 w-9 rounded-ds-md bg-primary flex items-center justify-center shadow-sm">
           <Cloud className="h-4.5 w-4.5 text-primary-foreground" />
         </div>
-        <span className="font-bold text-foreground text-lg tracking-tight">CustomerPortol</span>
+        <span className="font-bold text-foreground text-lg tracking-tight">Customer Connect</span>
       </Link>
       <p className="text-sm text-muted-foreground leading-relaxed mb-5 max-w-[240px]">
         Expert task delivery with a pay-as-you-go model. No retainers, no monthly contracts.

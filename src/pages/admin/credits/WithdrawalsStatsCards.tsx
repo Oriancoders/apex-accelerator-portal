@@ -13,7 +13,7 @@ export default function WithdrawalsStatsCards({
 }: WithdrawalsStatsCardsProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-      <Card className="rounded-2xl">
+      <Card className="rounded-ds-xl">
         <CardHeader className="pb-2 px-4 pt-4 sm:px-6 sm:pt-5">
           <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Total Requests</CardTitle>
         </CardHeader>
@@ -21,7 +21,7 @@ export default function WithdrawalsStatsCards({
           <div className="text-2xl font-bold text-primary">{totalRequests}</div>
         </CardContent>
       </Card>
-      <Card className="rounded-2xl">
+      <Card className="rounded-ds-xl">
         <CardHeader className="pb-2 px-4 pt-4 sm:px-6 sm:pt-5">
           <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Pending / Approved</CardTitle>
         </CardHeader>
@@ -29,7 +29,7 @@ export default function WithdrawalsStatsCards({
           <div className="text-2xl font-bold text-warning">{pendingCount}</div>
         </CardContent>
       </Card>
-      <Card className="rounded-2xl">
+      <Card className="rounded-ds-xl">
         <CardHeader className="pb-2 px-4 pt-4 sm:px-6 sm:pt-5">
           <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Credits Requested</CardTitle>
         </CardHeader>

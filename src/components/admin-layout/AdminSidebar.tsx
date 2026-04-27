@@ -79,7 +79,7 @@ export default function AdminSidebar() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
-                  <Link to="/dashboard" className="hover:bg-sidebar-accent/50 text-sidebar-foreground/70 min-h-[44px] rounded-xl mx-1 px-3">
+                  <Link to="/dashboard" className="hover:bg-sidebar-accent/50 text-sidebar-foreground/70 min-h-[44px] rounded-ds-md mx-1 px-3">
                     <ArrowLeft className="mr-3 h-4 w-4" />
                     {!collapsed && <span className="text-sm">Back to Portal</span>}
                   </Link>

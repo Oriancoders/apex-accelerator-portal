@@ -298,37 +298,73 @@ export type Database = {
       }
       companies: {
         Row: {
+          address_line1: string | null
+          address_line2: string | null
+          annual_turnover: number | null
+          business_type: string | null
+          city: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          country: string | null
           created_at: string
           created_by: string
           created_via_agent_id: string | null
           id: string
           metadata: Json
           name: string
+          postal_code: string | null
+          state: string | null
           slug: string
           status: string
           updated_at: string
+          website: string | null
         }
         Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          annual_turnover?: number | null
+          business_type?: string | null
+          city?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          country?: string | null
           created_at?: string
           created_by: string
           created_via_agent_id?: string | null
           id?: string
           metadata?: Json
           name: string
+          postal_code?: string | null
+          state?: string | null
           slug: string
           status?: string
           updated_at?: string
+          website?: string | null
         }
         Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          annual_turnover?: number | null
+          business_type?: string | null
+          city?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          country?: string | null
           created_at?: string
           created_by?: string
           created_via_agent_id?: string | null
           id?: string
           metadata?: Json
           name?: string
+          postal_code?: string | null
+          state?: string | null
           slug?: string
           status?: string
           updated_at?: string
+          website?: string | null
         }
         Relationships: [
           {
@@ -336,47 +372,6 @@ export type Database = {
             columns: ["created_via_agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      company_component_visibility: {
-        Row: {
-          company_id: string
-          component_key: string
-          config: Json
-          created_at: string
-          id: string
-          is_enabled: boolean
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          company_id: string
-          component_key: string
-          config?: Json
-          created_at?: string
-          id?: string
-          is_enabled?: boolean
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          company_id?: string
-          component_key?: string
-          config?: Json
-          created_at?: string
-          id?: string
-          is_enabled?: boolean
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "company_component_visibility_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -421,6 +416,96 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      company_signup_requests: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          annual_turnover: number | null
+          business_type: string | null
+          city: string | null
+          company_metadata: Json
+          company_name: string
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          country: string | null
+          created_at: string
+          created_company_id: string | null
+          email: string
+          full_name: string | null
+          id: string
+          phone: string | null
+          postal_code: string | null
+          requested_company_slug: string | null
+          review_notes: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          state: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          website: string | null
+        }
+        Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          annual_turnover?: number | null
+          business_type?: string | null
+          city?: string | null
+          company_metadata?: Json
+          company_name: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          country?: string | null
+          created_at?: string
+          created_company_id?: string | null
+          email: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          postal_code?: string | null
+          requested_company_slug?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          state?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          website?: string | null
+        }
+        Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          annual_turnover?: number | null
+          business_type?: string | null
+          city?: string | null
+          company_metadata?: Json
+          company_name?: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          country?: string | null
+          created_at?: string
+          created_company_id?: string | null
+          email?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          postal_code?: string | null
+          requested_company_slug?: string | null
+          review_notes?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          state?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          website?: string | null
+        }
+        Relationships: []
       }
       credit_settings: {
         Row: {
@@ -655,6 +740,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           auth_provider: string | null
           avatar_url: string | null
           company: string | null
@@ -663,11 +750,14 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          is_approved: boolean
           phone: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           auth_provider?: string | null
           avatar_url?: string | null
           company?: string | null
@@ -676,11 +766,14 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          is_approved?: boolean
           phone?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           auth_provider?: string | null
           avatar_url?: string | null
           company?: string | null
@@ -689,6 +782,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          is_approved?: boolean
           phone?: string | null
           updated_at?: string
           user_id?: string
@@ -814,8 +908,15 @@ export type Database = {
       }
       tickets: {
         Row: {
+          assigned_at: string | null
+          assigned_consultant_id: string | null
+          assignment_status: string | null
+          category: string
+          company_id: string | null
           contact_email: string | null
           contact_phone: string | null
+          consultant_accepted_at: string | null
+          consultant_completed_at: string | null
           created_at: string
           credit_cost: number | null
           description: string
@@ -831,13 +932,21 @@ export type Database = {
           status: Database["public"]["Enums"]["ticket_status"]
           title: string
           uat_attachments: string[] | null
+          uat_feedback: string | null
           uat_notes: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          assigned_at?: string | null
+          assigned_consultant_id?: string | null
+          assignment_status?: string | null
+          category?: string
+          company_id?: string | null
           contact_email?: string | null
           contact_phone?: string | null
+          consultant_accepted_at?: string | null
+          consultant_completed_at?: string | null
           created_at?: string
           credit_cost?: number | null
           description: string
@@ -853,13 +962,21 @@ export type Database = {
           status?: Database["public"]["Enums"]["ticket_status"]
           title: string
           uat_attachments?: string[] | null
+          uat_feedback?: string | null
           uat_notes?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          assigned_at?: string | null
+          assigned_consultant_id?: string | null
+          assignment_status?: string | null
+          category?: string
+          company_id?: string | null
           contact_email?: string | null
           contact_phone?: string | null
+          consultant_accepted_at?: string | null
+          consultant_completed_at?: string | null
           created_at?: string
           credit_cost?: number | null
           description?: string
@@ -875,6 +992,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["ticket_status"]
           title?: string
           uat_attachments?: string[] | null
+          uat_feedback?: string | null
           uat_notes?: string | null
           updated_at?: string
           user_id?: string
@@ -960,7 +1078,14 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user" | "agent"
+      app_role:
+        | "admin"
+        | "moderator"
+        | "user"
+        | "agent"
+        | "company_admin"
+        | "member"
+        | "consultant"
       ticket_difficulty: "easy" | "medium" | "hard" | "expert"
       ticket_priority: "low" | "medium" | "high" | "critical"
       ticket_status:
@@ -1099,7 +1224,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user", "agent"],
+      app_role: ["admin", "moderator", "user", "agent", "company_admin", "member", "consultant"],
       ticket_difficulty: ["easy", "medium", "hard", "expert"],
       ticket_priority: ["low", "medium", "high", "critical"],
       ticket_status: [

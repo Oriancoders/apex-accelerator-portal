@@ -56,7 +56,7 @@ export default function CommissionRulesCard({
   onDeleteRule,
 }: CommissionRulesCardProps) {
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-ds-xl">
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <Settings2 className="h-4 w-4 text-primary" />
@@ -69,7 +69,7 @@ export default function CommissionRulesCard({
           <div className="space-y-1.5 md:col-span-2">
             <Label>Company</Label>
             <select
-              className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm"
+              className="w-full h-11 rounded-ds-md border border-input bg-background px-3 text-sm"
               value={ruleCompanyId}
               onChange={(e) => onRuleCompanyChange(e.target.value)}
             >
@@ -82,18 +82,18 @@ export default function CommissionRulesCard({
 
           <div className="space-y-1.5 md:col-span-1">
             <Label>Rule name</Label>
-            <Input className="h-11 rounded-xl" value={ruleName} onChange={(e) => onRuleNameChange(e.target.value)} />
+            <Input className="h-11 rounded-ds-md" value={ruleName} onChange={(e) => onRuleNameChange(e.target.value)} />
           </div>
 
           <div className="space-y-1.5 md:col-span-1">
             <Label>Priority</Label>
-            <Input className="h-11 rounded-xl" type="number" value={priority} onChange={(e) => onPriorityChange(e.target.value)} />
+            <Input className="h-11 rounded-ds-md" type="number" value={priority} onChange={(e) => onPriorityChange(e.target.value)} />
           </div>
 
           <div className="space-y-1.5 md:col-span-1">
             <Label>Payout model</Label>
             <select
-              className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm"
+              className="w-full h-11 rounded-ds-md border border-input bg-background px-3 text-sm"
               value={payoutModel}
               onChange={(e) => onPayoutModelChange(e.target.value as PayoutModel)}
             >
@@ -105,17 +105,17 @@ export default function CommissionRulesCard({
           {payoutModel === "percentage" ? (
             <div className="space-y-1.5 md:col-span-1">
               <Label>Commission %</Label>
-              <Input className="h-11 rounded-xl" type="number" value={rulePercent} onChange={(e) => onRulePercentChange(e.target.value)} min="0" max="100" step="0.01" />
+              <Input className="h-11 rounded-ds-md" type="number" value={rulePercent} onChange={(e) => onRulePercentChange(e.target.value)} min="0" max="100" step="0.01" />
             </div>
           ) : (
             <div className="space-y-1.5 md:col-span-1">
               <Label>Flat amount</Label>
-              <Input className="h-11 rounded-xl" type="number" value={flatAmount} onChange={(e) => onFlatAmountChange(e.target.value)} min="0" step="0.01" />
+              <Input className="h-11 rounded-ds-md" type="number" value={flatAmount} onChange={(e) => onFlatAmountChange(e.target.value)} min="0" step="0.01" />
             </div>
           )}
 
           <div className="md:col-span-2 flex items-end justify-end">
-            <Button className="h-11 rounded-xl" onClick={onCreateRule}>Create Rule</Button>
+            <Button className="h-11 rounded-ds-md" onClick={onCreateRule}>Create Rule</Button>
           </div>
         </div>
 

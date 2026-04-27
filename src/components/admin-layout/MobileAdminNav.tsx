@@ -24,7 +24,7 @@ export default function MobileAdminNav() {
         </Button>
       </SheetTrigger>
       <SheetContent side="left" className="w-72 p-0">
-        <div className="p-5 border-b border-border">
+        <div className="p-5 border-b border-border-subtle">
           <div className="flex items-center gap-2.5">
             <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center">
               <Shield className="h-4 w-4 text-primary-foreground" />
@@ -49,7 +49,7 @@ export default function MobileAdminNav() {
                       key={item.url}
                       to={item.url}
                       onClick={() => setOpen(false)}
-                      className={`flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium transition-all ${
+                      className={`flex items-center gap-3 w-full h-12 px-4 rounded-ds-md text-sm font-medium transition-all ${
                         isActive(item.url)
                           ? "bg-primary/10 text-primary"
                           : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -69,11 +69,11 @@ export default function MobileAdminNav() {
             ))}
           </Accordion>
         </nav>
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border-subtle">
           <Link
             to="/dashboard"
             onClick={() => setOpen(false)}
-            className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+            className="flex items-center gap-3 w-full h-12 px-4 rounded-ds-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
           >
             <ArrowLeft className="h-5 w-5" />
             Back to Portal

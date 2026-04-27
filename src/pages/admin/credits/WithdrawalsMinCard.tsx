@@ -18,7 +18,7 @@ export default function WithdrawalsMinCard({
   onSave,
 }: WithdrawalsMinCardProps) {
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-ds-xl">
       <CardHeader>
         <CardTitle className="text-base">Minimum Withdrawal Credits</CardTitle>
       </CardHeader>
@@ -32,10 +32,10 @@ export default function WithdrawalsMinCard({
             value={minWithdrawInput}
             onChange={(e) => onInputChange(e.target.value)}
             placeholder={String(effectiveMinWithdraw || 10)}
-            className="h-11 rounded-xl"
+            className="h-11 rounded-ds-md"
           />
         </div>
-        <Button className="h-11 rounded-xl" onClick={onSave} disabled={isPending || !minWithdrawInput.trim()}>
+        <Button className="h-11 rounded-ds-md" onClick={onSave} disabled={isPending || !minWithdrawInput.trim()}>
           Save Minimum
         </Button>
       </CardContent>

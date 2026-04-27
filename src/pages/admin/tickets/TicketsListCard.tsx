@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { AlertCircle, Eye, Filter, Search, Ticket } from "lucide-react";
+import { AlertCircle, Eye, Filter, Paperclip, Search, Ticket } from "lucide-react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,7 +42,7 @@ export default function TicketsListCard({
   onOpenTicket,
 }: TicketsListCardProps) {
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-ds-xl">
       <CardHeader className="px-4 sm:px-6 py-4">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
@@ -51,11 +51,11 @@ export default function TicketsListCard({
               placeholder="Search by title or ID..."
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-10 h-11 rounded-xl"
+              className="pl-10 h-11 rounded-ds-md"
             />
           </div>
           <Select value={statusFilter} onValueChange={onStatusFilterChange}>
-            <SelectTrigger className="w-full sm:w-[180px] h-11 rounded-xl">
+            <SelectTrigger className="w-full sm:w-[180px] h-11 rounded-ds-md">
               <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
               <SelectValue placeholder="Filter status" />
             </SelectTrigger>
@@ -75,7 +75,7 @@ export default function TicketsListCard({
         {isLoading ? (
           <div className="space-y-3 px-4 sm:px-0">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-16 bg-muted rounded-xl animate-pulse" />
+              <div key={i} className="h-16 bg-muted rounded-ds-md animate-pulse" />
             ))}
           </div>
         ) : (
@@ -109,6 +109,13 @@ export default function TicketsListCard({
                             <div className="min-w-0">
                               <p className="font-semibold text-sm text-foreground truncate max-w-[260px]">{ticket.title}</p>
                               <p className="text-[11px] text-muted-foreground">#{ticket.id.slice(0, 8)}</p>
+                              <p className="text-[11px] text-muted-foreground line-clamp-1 max-w-[280px]">
+                                {ticket.description?.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim() || "No description"}
+                              </p>
+                              <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-1">
+                                <Paperclip className="h-3 w-3" />
+                                {ticket.file_urls?.length || 0} attachment{(ticket.file_urls?.length || 0) === 1 ? "" : "s"}
+                              </p>
                             </div>
                           </div>
                         </TableCell>
@@ -146,19 +153,25 @@ export default function TicketsListCard({
                 return (
                   <div
                     key={ticket.id}
-                    className="p-4 rounded-xl border border-border hover:bg-muted/40 transition-colors cursor-pointer active:scale-[0.99]"
+                    className="p-4 rounded-ds-md border border-border-subtle hover:bg-muted/40 transition-colors cursor-pointer active:scale-[0.99]"
                     onClick={() => onOpenTicket(ticket)}
                   >
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <p className="text-sm font-semibold text-foreground line-clamp-2 flex-1">{ticket.title}</p>
                       <StatusBadge status={ticket.status} />
                     </div>
+                    <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                      {ticket.description?.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim() || "No description"}
+                    </p>
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className={`text-[11px] font-semibold capitalize ${PRIORITY_META[ticket.priority]?.color}`}>
                         {ticket.priority}
                       </span>
                       <span className="text-[11px] text-muted-foreground">{format(new Date(ticket.created_at), "MMM d")}</span>
                       {ticket.credit_cost && <span className="text-[11px] font-bold text-accent">{ticket.credit_cost} cr</span>}
+                      <span className="text-[11px] text-muted-foreground flex items-center gap-0.5">
+                        <Paperclip className="h-3 w-3" /> {ticket.file_urls?.length || 0}
+                      </span>
                       {action?.urgent && (
                         <span className="text-[11px] font-semibold text-destructive flex items-center gap-0.5">
                           <AlertCircle className="h-3 w-3" /> Action needed

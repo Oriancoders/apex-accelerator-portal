@@ -25,8 +25,8 @@ export default function NotificationPopoverContent({
   onViewAll,
 }: NotificationPopoverContentProps) {
   return (
-    <PopoverContent align="end" sideOffset={8} className="w-80 sm:w-96 p-0 rounded-xl">
-      <div className="px-4 py-3 border-b border-border">
+    <PopoverContent align="end" sideOffset={8} className="w-[calc(100vw-2rem)] max-w-sm p-0 rounded-ds-md">
+      <div className="px-4 py-3 border-b border-border-subtle">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-foreground">Notifications</h3>
           <div className="flex items-center gap-2">
@@ -52,7 +52,7 @@ export default function NotificationPopoverContent({
         <NotificationList notifications={notifications} onMarkRead={onMarkRead} onOpenDetails={onOpenDetails} />
       </div>
 
-      <div className="px-4 py-2.5 border-t border-border">
+      <div className="px-4 py-2.5 border-t border-border-subtle">
         <Button
           variant="ghost"
           size="sm"

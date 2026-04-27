@@ -1,4 +1,4 @@
-import { Building2, Power, PowerOff, Search, Shield } from "lucide-react";
+import { Building2, Power, PowerOff, Search, Shield, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,8 @@ type AgentsTableCardProps = {
   filteredAgents: AgentRow[];
   onManageCompanies: (agent: AgentRow) => void;
   onToggleActive: (agent: AgentRow) => void;
+  onDeleteAgent: (agent: AgentRow) => void;
+  deletePending: boolean;
 };
 
 export default function AgentsTableCard({
@@ -29,15 +31,17 @@ export default function AgentsTableCard({
   filteredAgents,
   onManageCompanies,
   onToggleActive,
+  onDeleteAgent,
+  deletePending,
 }: AgentsTableCardProps) {
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-ds-xl">
       <CardHeader>
         <CardTitle className="text-sm font-semibold">All Agents</CardTitle>
         <div className="relative max-w-md">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            className="pl-10 h-11 rounded-xl"
+            className="pl-10 h-11 rounded-ds-md"
             placeholder="Search by name or email"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -99,6 +103,15 @@ export default function AgentsTableCard({
                               <Power className="h-4 w-4 mr-1" /> Activate
                             </>
                           )}
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          className="rounded-lg"
+                          onClick={() => onDeleteAgent(agent)}
+                          disabled={deletePending}
+                        >
+                          <Trash2 className="h-4 w-4 mr-1" /> Delete
                         </Button>
                       </div>
                     </TableCell>

@@ -13,7 +13,7 @@ type FinanceTabProps = {
 export default function FinanceTab({ period, stats, summaryCards }: FinanceTabProps) {
   return (
     <div className="space-y-6 outline-none">
-      <DashboardMetricCards cards={[summaryCards[1], summaryCards[2]]} className="grid grid-cols-2 gap-4 border-b pb-6" />
+      <DashboardMetricCards cards={[summaryCards[1], summaryCards[2]]} className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-b pb-6" />
 
       <div className="grid md:grid-cols-2 gap-4">
         <Card>
@@ -25,7 +25,7 @@ export default function FinanceTab({ period, stats, summaryCards }: FinanceTabPr
               <p className="text-xs text-muted-foreground">Total in Circulation</p>
               <p className="text-2xl font-bold text-foreground">{stats?.totalCredits ?? 0}</p>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <p className="text-xs text-muted-foreground">Purchased</p>
                 <p className="text-lg font-bold text-accent">+{stats?.creditsPurchased ?? 0}</p>

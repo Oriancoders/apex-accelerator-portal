@@ -19,6 +19,7 @@ type MobileMenuProps = {
   canWithdraw: boolean;
   canManageMembers: boolean;
   isAgent: boolean;
+  isConsultant: boolean;
   companyDashboardPath: string;
   isAdmin: boolean;
   onNavigate: (path: string) => void;
@@ -40,6 +41,7 @@ export default function MobileMenu({
   canWithdraw,
   canManageMembers,
   isAgent,
+  isConsultant,
   companyDashboardPath,
   isAdmin,
   onNavigate,
@@ -59,7 +61,7 @@ export default function MobileMenu({
         </Button>
       </SheetTrigger>
       <SheetContent side="right" className="w-72 p-0">
-        <div className="p-5 border-b border-border">
+        <div className="p-5 border-b border-border-subtle">
           <div className="flex items-center gap-3">
             <Avatar className="h-11 w-11">
               <AvatarFallback className={`text-sm font-semibold ${isGuest ? "bg-warning/20 text-warning" : "bg-primary/10 text-primary"}`}>
@@ -77,7 +79,7 @@ export default function MobileMenu({
             <button
               key={item.to}
               onClick={() => navigateAndClose(item.to)}
-              className={`flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium transition-all ${
+              className={`flex items-center gap-3 w-full h-12 px-4 rounded-ds-md text-sm font-medium transition-all ${
                 isActive(item.to)
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -105,7 +107,7 @@ export default function MobileMenu({
                         setMobileOpen(false);
                       }}
                       disabled={setPrimaryPending}
-                      className={`flex items-center gap-3 w-full h-11 px-4 rounded-xl text-sm font-medium transition-all ${
+                      className={`flex items-center gap-3 w-full h-11 px-4 rounded-ds-md text-sm font-medium transition-all ${
                         m.is_primary
                           ? "bg-primary/10 text-primary"
                           : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -121,7 +123,7 @@ export default function MobileMenu({
 
               <button
                 onClick={() => navigateAndClose("/credits")}
-                className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                className="flex items-center gap-3 w-full h-12 px-4 rounded-ds-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
               >
                 <Coins className="h-5 w-5" />
                 Buy Credits
@@ -129,7 +131,7 @@ export default function MobileMenu({
               {canWithdraw && (
                 <button
                   onClick={() => navigateAndClose("/credits#withdraw")}
-                  className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                  className="flex items-center gap-3 w-full h-12 px-4 rounded-ds-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
                 >
                   <Wallet className="h-5 w-5" />
                   Withdraw Credits
@@ -137,7 +139,7 @@ export default function MobileMenu({
               )}
               <button
                 onClick={() => navigateAndClose("/pricing")}
-                className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                className="flex items-center gap-3 w-full h-12 px-4 rounded-ds-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
               >
                 <DollarSign className="h-5 w-5" />
                 Pricing Guide
@@ -145,25 +147,34 @@ export default function MobileMenu({
               {canManageMembers && (
                 <button
                   onClick={() => navigateAndClose("/company/members")}
-                  className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                  className="flex items-center gap-3 w-full h-12 px-4 rounded-ds-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
                 >
                   <Building2 className="h-5 w-5" />
-                  Company Members
+                  Company Access
                 </button>
               )}
               {isAgent && (
                 <button
                   onClick={() => navigateAndClose("/agent/dashboard")}
-                  className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                  className="flex items-center gap-3 w-full h-12 px-4 rounded-ds-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
                 >
                   <LayoutDashboard className="h-5 w-5" />
                   Agent Dashboard
                 </button>
               )}
+              {isConsultant && (
+                <button
+                  onClick={() => navigateAndClose("/consultant/dashboard")}
+                  className="flex items-center gap-3 w-full h-12 px-4 rounded-ds-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                >
+                  <LayoutDashboard className="h-5 w-5" />
+                  Consultant Dashboard
+                </button>
+              )}
               {canManageMembers && (
                 <button
                   onClick={() => navigateAndClose(companyDashboardPath)}
-                  className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                  className="flex items-center gap-3 w-full h-12 px-4 rounded-ds-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
                 >
                   <Building2 className="h-5 w-5" />
                   Company Dashboard
@@ -171,7 +182,7 @@ export default function MobileMenu({
               )}
               <button
                 onClick={() => navigateAndClose("/credits#history")}
-                className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+                className="flex items-center gap-3 w-full h-12 px-4 rounded-ds-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
               >
                 <History className="h-5 w-5" />
                 Transaction History
@@ -182,20 +193,20 @@ export default function MobileMenu({
           {isAdmin && !isGuest && (
             <button
               onClick={() => navigateAndClose("/admin")}
-              className="flex items-center gap-3 w-full h-12 px-4 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+              className="flex items-center gap-3 w-full h-12 px-4 rounded-ds-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
             >
               <Shield className="h-5 w-5" />
               Admin Panel
             </button>
           )}
         </nav>
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border-subtle">
           {isGuest ? (
-            <Button className="w-full h-12 rounded-xl font-semibold" onClick={() => navigateAndClose("/auth")}>
+            <Button className="w-full h-12 rounded-ds-md font-semibold" onClick={() => navigateAndClose("/auth")}>
               Sign Up Free <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           ) : (
-            <Button variant="outline" className="w-full h-12 rounded-xl text-destructive border-destructive/20 hover:bg-destructive/5" onClick={onSignOut}>
+            <Button variant="outline" className="w-full h-12 rounded-ds-md text-destructive border-destructive/20 hover:bg-destructive/5" onClick={onSignOut}>
               <LogOut className="mr-2 h-4 w-4" />
               Sign Out
             </Button>

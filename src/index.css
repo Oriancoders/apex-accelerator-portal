@@ -6,26 +6,35 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 215 25% 15%;
+    --surface-base: 222 47% 11%;
+    --surface-elevated: 218 33% 16%;
+    --surface-muted: 217 28% 20%;
+    --text-primary: 210 40% 98%;
+    --text-secondary: 215 20% 65%;
+    --accent-primary: 160 84% 39%;
+    --border-subtle: 217 22% 28%;
+    --border-strong: 216 25% 38%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 215 25% 15%;
+    --background: var(--surface-base);
+    --foreground: var(--text-primary);
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 215 25% 15%;
+    --card: var(--surface-elevated);
+    --card-foreground: var(--text-primary);
 
-    --primary: 207 98% 42%;
-    --primary-foreground: 0 0% 100%;
+    --popover: var(--surface-elevated);
+    --popover-foreground: var(--text-primary);
 
-    --secondary: 210 40% 94%;
-    --secondary-foreground: 215 25% 15%;
+    --primary: var(--accent-primary);
+    --primary-foreground: 210 40% 98%;
 
-    --muted: 210 25% 95%;
-    --muted-foreground: 215 15% 50%;
+    --secondary: var(--surface-muted);
+    --secondary-foreground: var(--text-primary);
 
-    --accent: 25 95% 53%;
-    --accent-foreground: 0 0% 100%;
+    --muted: 217 24% 18%;
+    --muted-foreground: var(--text-secondary);
+
+    --accent: 168 76% 35%;
+    --accent-foreground: 210 40% 98%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
@@ -39,62 +48,78 @@
     --info: 207 98% 42%;
     --info-foreground: 0 0% 100%;
 
-    --border: 214 20% 90%;
-    --input: 214 20% 90%;
-    --ring: 207 98% 42%;
+    --border: var(--border-subtle);
+    --input: var(--border-strong);
+    --ring: var(--accent-primary);
 
-    --radius: 0.625rem;
+    --radius: 0.75rem;
+    --radius-sm: 0.5rem;
+    --radius-md: 0.75rem;
+    --radius-lg: 1rem;
+    --radius-xl: 1.5rem;
 
-    --sidebar-background: 215 25% 15%;
-    --sidebar-foreground: 210 20% 90%;
-    --sidebar-primary: 207 98% 52%;
+    --sidebar-background: 222 42% 9%;
+    --sidebar-foreground: 210 30% 94%;
+    --sidebar-primary: var(--accent-primary);
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 25% 22%;
-    --sidebar-accent-foreground: 210 20% 90%;
-    --sidebar-border: 215 20% 25%;
-    --sidebar-ring: 207 98% 52%;
+    --sidebar-accent: 218 31% 15%;
+    --sidebar-accent-foreground: 210 30% 94%;
+    --sidebar-border: 218 27% 19%;
+    --sidebar-ring: var(--accent-primary);
 
-    --gradient-primary: linear-gradient(135deg, hsl(207, 98%, 42%), hsl(207, 98%, 52%));
-    --gradient-hero: linear-gradient(135deg, hsl(215, 25%, 15%), hsl(207, 98%, 32%));
-    --gradient-accent: linear-gradient(135deg, hsl(25, 95%, 53%), hsl(38, 92%, 50%));
-    --gradient-card: linear-gradient(180deg, hsl(0, 0%, 100%) 0%, hsl(210, 20%, 98%) 100%);
-    --gradient-sidebar: linear-gradient(180deg, hsl(215, 25%, 15%) 0%, hsl(215, 30%, 12%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(160 84% 39%), hsl(166 76% 35%));
+    --gradient-hero: linear-gradient(135deg, hsl(222 47% 11%), hsl(218 33% 16%));
+    --gradient-accent: linear-gradient(135deg, hsl(160 84% 39%), hsl(152 76% 31%));
+    --gradient-card: linear-gradient(180deg, hsl(218 33% 16%) 0%, hsl(217 28% 20%) 100%);
+    --gradient-sidebar: linear-gradient(180deg, hsl(222 42% 9%) 0%, hsl(222 47% 8%) 100%);
 
-    --shadow-sm: 0 1px 2px 0 hsl(215 25% 15% / 0.05);
-    --shadow-md: 0 4px 6px -1px hsl(215 25% 15% / 0.07), 0 2px 4px -2px hsl(215 25% 15% / 0.05);
-    --shadow-lg: 0 10px 15px -3px hsl(215 25% 15% / 0.08), 0 4px 6px -4px hsl(215 25% 15% / 0.04);
-    --shadow-xl: 0 20px 25px -5px hsl(215 25% 15% / 0.1), 0 8px 10px -6px hsl(215 25% 15% / 0.06);
-    --shadow-primary: 0 4px 14px 0 hsl(207 98% 42% / 0.25);
+    --shadow-sm: 0 10px 24px -16px hsl(223 55% 2% / 0.7);
+    --shadow-md: 0 16px 36px -20px hsl(223 55% 2% / 0.75);
+    --shadow-lg: 0 26px 62px -28px hsl(223 55% 2% / 0.82);
+    --shadow-xl: 0 38px 90px -34px hsl(223 55% 2% / 0.9);
+    --shadow-primary: 0 0 0 1px hsl(var(--accent-primary) / 0.25), 0 24px 56px -28px hsl(var(--accent-primary) / 0.55);
+    --shadow-soft: var(--shadow-md);
+    --shadow-glow: var(--shadow-primary);
+    --shadow-deep: var(--shadow-xl);
+
+    --section-pad-y: 3.5rem;
+    --section-pad-y-lg: 6rem;
+    --panel-pad-mobile: 1.25rem;
+    --panel-pad-desktop: 1.5rem;
+
+    --motion-fast: 180ms;
+    --motion-normal: 280ms;
+    --motion-slow: 650ms;
   }
 
   .dark {
-    --background: 215 28% 10%;
-    --foreground: 210 20% 95%;
-    --card: 215 25% 14%;
-    --card-foreground: 210 20% 95%;
-    --popover: 215 25% 14%;
-    --popover-foreground: 210 20% 95%;
-    --primary: 207 98% 52%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 215 20% 20%;
-    --secondary-foreground: 210 20% 95%;
-    --muted: 215 20% 18%;
-    --muted-foreground: 215 15% 55%;
-    --accent: 25 95% 55%;
-    --accent-foreground: 0 0% 100%;
+    --background: var(--surface-base);
+    --foreground: var(--text-primary);
+    --card: var(--surface-elevated);
+    --card-foreground: var(--text-primary);
+    --popover: var(--surface-elevated);
+    --popover-foreground: var(--text-primary);
+    --primary: var(--accent-primary);
+    --primary-foreground: 210 40% 98%;
+    --secondary: var(--surface-muted);
+    --secondary-foreground: var(--text-primary);
+    --muted: 217 24% 18%;
+    --muted-foreground: var(--text-secondary);
+    --accent: 168 76% 35%;
+    --accent-foreground: 210 40% 98%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 215 20% 22%;
-    --input: 215 20% 22%;
-    --ring: 207 98% 52%;
-    --sidebar-background: 215 30% 8%;
-    --sidebar-foreground: 210 20% 90%;
-    --sidebar-primary: 207 98% 52%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 25% 16%;
-    --sidebar-accent-foreground: 210 20% 90%;
-    --sidebar-border: 215 20% 16%;
-    --sidebar-ring: 207 98% 52%;
+    --border: var(--border-subtle);
+    --input: var(--border-strong);
+    --ring: var(--accent-primary);
+    --sidebar-background: 222 42% 9%;
+    --sidebar-foreground: 210 30% 94%;
+    --sidebar-primary: var(--accent-primary);
+    --sidebar-primary-foreground: 210 40% 98%;
+    --sidebar-accent: 218 31% 15%;
+    --sidebar-accent-foreground: 210 30% 94%;
+    --sidebar-border: 218 27% 19%;
+    --sidebar-ring: var(--accent-primary);
   }
 }
 
@@ -108,11 +133,71 @@
 }
 
 @layer components {
+  .surface-base {
+    @apply bg-background;
+  }
+  .surface-elevated {
+    @apply bg-card;
+  }
+  .surface-muted {
+    background-color: hsl(var(--surface-muted));
+  }
+  .text-primary-token {
+    color: hsl(var(--text-primary));
+  }
+  .text-secondary-token {
+    color: hsl(var(--text-secondary));
+  }
+  .accent-primary-token {
+    color: hsl(var(--accent-primary));
+  }
+  .border-subtle-token {
+    border-color: hsl(var(--border-subtle));
+  }
+  .border-strong-token {
+    border-color: hsl(var(--border-strong));
+  }
+  .shadow-soft {
+    box-shadow: var(--shadow-soft);
+  }
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+  .shadow-deep {
+    box-shadow: var(--shadow-deep);
+  }
+  .section-shell {
+    padding-top: var(--section-pad-y);
+    padding-bottom: var(--section-pad-y);
+  }
+  @media (min-width: 1024px) {
+    .section-shell {
+      padding-top: var(--section-pad-y-lg);
+      padding-bottom: var(--section-pad-y-lg);
+    }
+  }
+  .panel-shell {
+    padding: var(--panel-pad-mobile);
+  }
+  @media (min-width: 768px) {
+    .panel-shell {
+      padding: var(--panel-pad-desktop);
+    }
+  }
+  .motion-fast {
+    transition-duration: var(--motion-fast);
+  }
+  .motion-normal {
+    transition-duration: var(--motion-normal);
+  }
+  .motion-slow {
+    transition-duration: var(--motion-slow);
+  }
   .widget-card {
-    @apply bg-card rounded-xl border border-border shadow-sm hover:shadow-md transition-shadow duration-200;
+    @apply bg-card rounded-ds-md border border-border-subtle shadow-soft hover:shadow-md transition-shadow duration-200;
   }
   .widget-card-header {
-    @apply px-5 py-4 border-b border-border flex items-center justify-between;
+    @apply px-5 py-4 border-b border-border-subtle flex items-center justify-between;
   }
   .widget-card-body {
     @apply p-5;

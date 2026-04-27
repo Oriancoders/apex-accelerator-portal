@@ -18,6 +18,7 @@ export default function ChatComposer({ message, disabled, onMessageChange, onSub
         onChange={(e) => onMessageChange(e.target.value)}
         placeholder="Type a message..."
         disabled={disabled}
+        maxLength={2000}
       />
       <Button type="submit" size="icon" disabled={disabled || !message.trim()}>
         <Send className="h-4 w-4" />

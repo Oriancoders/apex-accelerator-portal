@@ -15,6 +15,7 @@ export default function ExpertOpinionField({ value, onChange }: ExpertOpinionFie
         onChange={(e) => onChange(e.target.value)}
         placeholder="Your expert assessment of this request..."
         rows={3}
+        maxLength={4000}
       />
     </div>
   );

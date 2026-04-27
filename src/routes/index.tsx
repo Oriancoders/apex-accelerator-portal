@@ -9,18 +9,19 @@ import RoleAccessGuard from "@/components/RoleAccessGuard";
 // ── Lazy-loaded pages ────────────────────────────────────────────────────────
 const AuthPage = lazy(() => import("@/pages/AuthPage"));
 const ResetPasswordPage = lazy(() => import("@/pages/ResetPasswordPage"));
-const SandboxCallback = lazy(() => import("@/components/sandbox/SandboxCallback"));
 const DashboardPage = lazy(() => import("@/pages/DashboardPage"));
 const TicketsPage = lazy(() => import("@/pages/TicketsPage"));
 const NewTicketPage = lazy(() => import("@/pages/NewTicketPage"));
 const TicketDetailPage = lazy(() => import("@/pages/TicketDetailPage"));
 const CreditsPage = lazy(() => import("@/pages/CreditsPage"));
 const PricingGuidePage = lazy(() => import("@/pages/PricingGuidePage"));
+const HelpCenterPage = lazy(() => import("@/pages/HelpCenterPage"));
 const NotificationsPage = lazy(() => import("@/pages/NotificationsPage"));
 const AboutContactPage = lazy(() => import("@/pages/AboutContactPage"));
 const ProfilePage = lazy(() => import("@/pages/ProfilePage"));
 const CompanyMembersPage = lazy(() => import("@/pages/CompanyMembersPage"));
 const AgentDashboardPage = lazy(() => import("@/pages/AgentDashboardPage"));
+const ConsultantDashboardPage = lazy(() => import("@/pages/ConsultantDashboardPage"));
 const CompanySettingsPage = lazy(() => import("@/pages/CompanySettingsPage"));
 const CompanyDashboardPage = lazy(() => import("@/pages/CompanyDashboardPage"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
@@ -34,8 +35,8 @@ const AdminCreditsPage = lazy(() => import("@/pages/admin/AdminCreditsPage"));
 const AdminNotificationsPage = lazy(() => import("@/pages/admin/AdminNotificationsPage"));
 const AdminContactSubmissionsPage = lazy(() => import("@/pages/admin/AdminContactSubmissionsPage"));
 const AdminAgentsPage = lazy(() => import("@/pages/admin/AdminAgentsPage"));
-const AdminCompanyComponentsPage = lazy(() => import("@/pages/admin/AdminCompanyComponentsPage"));
 const AdminCompanyMembersPage = lazy(() => import("@/pages/admin/AdminCompanyMembersPage"));
+const AdminConsultantsPage = lazy(() => import("@/pages/admin/AdminConsultantsPage"));
 
 export interface RouteConfig {
   path: string;
@@ -45,7 +46,6 @@ export interface RouteConfig {
 export const publicRoutes: RouteConfig[] = [
   { path: "/", element: <Navigate to="/dashboard" replace /> },
   { path: "/auth", element: <AuthPage /> },
-  { path: "/oauth/callback", element: <SandboxCallback /> },
   { path: "/reset-password", element: <ResetPasswordPage /> },
 ];
 
@@ -80,6 +80,7 @@ export const appRoutes: RouteConfig[] = [
   },
   { path: "/credits", element: <CreditsPage /> },
   { path: "/pricing", element: <PricingGuidePage /> },
+  { path: "/help", element: <HelpCenterPage /> },
   { path: "/notifications", element: <NotificationsPage /> },
   { path: "/about", element: <AboutContactPage /> },
   { path: "/profile", element: <ProfilePage /> },
@@ -96,6 +97,14 @@ export const appRoutes: RouteConfig[] = [
     element: (
       <RoleAccessGuard policy="agent">
         <AgentDashboardPage />
+      </RoleAccessGuard>
+    ),
+  },
+  {
+    path: "/consultant/dashboard",
+    element: (
+      <RoleAccessGuard policy="consultant">
+        <ConsultantDashboardPage />
       </RoleAccessGuard>
     ),
   },
@@ -159,6 +168,14 @@ export const adminRoutes: RouteConfig[] = [
     ),
   },
   {
+    path: "/admin/consultants",
+    element: (
+      <RoleAccessGuard policy="admin">
+        <AdminConsultantsPage />
+      </RoleAccessGuard>
+    ),
+  },
+  {
     path: "/admin/agents",
     element: (
       <RoleAccessGuard policy="admin">
@@ -180,14 +197,6 @@ export const adminRoutes: RouteConfig[] = [
     element: (
       <RoleAccessGuard policy="admin">
         <AdminCreditsPage />
-      </RoleAccessGuard>
-    ),
-  },
-  {
-    path: "/admin/company-components",
-    element: (
-      <RoleAccessGuard policy="admin">
-        <AdminCompanyComponentsPage />
       </RoleAccessGuard>
     ),
   },

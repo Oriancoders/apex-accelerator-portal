@@ -64,7 +64,7 @@ export default function TicketDashboardWidget({ companyId, showCompanyWide = fal
         {/* Chunking: 2x2 grid for 4 stats — within Miller's 7±2 */}
         <div className="grid grid-cols-2 gap-2.5">
           {stats.map((s) => (
-            <div key={s.label} className={`flex items-center gap-2.5 p-3 rounded-xl ${s.bg} min-h-[56px]`}>
+            <div key={s.label} className={`flex items-center gap-2.5 p-3 rounded-ds-md ${s.bg} min-h-[56px]`}>
               <s.icon className={`h-4.5 w-4.5 ${s.color} flex-shrink-0`} />
               <div>
                 <p className="text-xl font-bold text-foreground leading-none">{s.value}</p>
@@ -74,7 +74,7 @@ export default function TicketDashboardWidget({ companyId, showCompanyWide = fal
           ))}
         </div>
         {/* Credit balance — Recognition over recall: always visible */}
-        <div className="flex items-center justify-between p-3.5 rounded-xl bg-accent/5 border border-accent/20">
+        <div className="flex items-center justify-between p-3.5 rounded-ds-md bg-accent/5 border border-accent/20">
           <div className="flex items-center gap-2">
             <Coins className="h-4 w-4 text-accent" />
             <span className="text-sm font-medium text-foreground">Credit Balance</span>

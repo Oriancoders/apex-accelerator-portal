@@ -13,6 +13,10 @@ const INTERNAL_ERROR_PATTERNS = [
 ];
 
 const FRIENDLY_ERROR_MAP: Array<[RegExp, string]> = [
+  [
+    /PGRST202|could not find the function|rpc .* not found|function .* does not exist/i,
+    "The credit approval RPC is unavailable in the connected Supabase project. Please sync the database migrations and try again.",
+  ],
   [/invalid login credentials/i, "Invalid email or password."],
   [/email not confirmed/i, "Please confirm your email before signing in."],
   [/already registered/i, "An account with this email already exists."],

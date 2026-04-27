@@ -7,7 +7,7 @@ export default function BrandLink() {
       <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center shadow-sm">
         <CloudIcon className="h-4 w-4 text-primary-foreground" />
       </div>
-      <span className="font-bold text-foreground text-base hidden sm:inline tracking-tight">CustomerPortol</span>
+      <span className="font-bold text-foreground text-base hidden sm:inline tracking-tight">Customer Connect</span>
     </Link>
   );
 }

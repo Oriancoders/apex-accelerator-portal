@@ -122,7 +122,7 @@ export default function NotificationTicketDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg rounded-2xl">
+      <DialogContent className="sm:max-w-lg rounded-ds-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Ticket className="h-4 w-4 text-primary" />
@@ -132,7 +132,7 @@ export default function NotificationTicketDialog({
         </DialogHeader>
 
         <div className="space-y-3">
-          <div className="rounded-xl border border-border bg-muted/20 p-3 space-y-2">
+          <div className="rounded-ds-md border border-border-subtle bg-muted/20 p-3 space-y-2">
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Why this notification came</p>
             <p className="text-sm text-foreground">{notificationReason}</p>
             <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
@@ -142,7 +142,7 @@ export default function NotificationTicketDialog({
           </div>
 
           {(profile || ticket?.contact_email || ticket?.contact_phone) ? (
-            <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-2">
+            <div className="rounded-ds-md border border-border-subtle bg-muted/30 p-3 space-y-2">
               <p className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
                 <UserRound className="h-3.5 w-3.5" />
                 Requester Details
@@ -158,7 +158,7 @@ export default function NotificationTicketDialog({
 
           {ticketId ? (
             <>
-            <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-2">
+            <div className="rounded-ds-md border border-border-subtle bg-muted/30 p-3 space-y-2">
               <p className="text-sm font-semibold text-foreground">{ticket?.title || "Ticket"}</p>
               <div className="flex items-center gap-2 flex-wrap">
                 {ticket?.status && <Badge variant="outline" className="rounded-full text-[11px]">{ticket.status}</Badge>}
@@ -174,7 +174,7 @@ export default function NotificationTicketDialog({
               )}
             </div>
 
-            <div className="flex items-start gap-2 rounded-lg border border-border px-3 py-2">
+            <div className="flex items-start gap-2 rounded-lg border border-border-subtle px-3 py-2">
               <LinkIcon className="h-4 w-4 mt-0.5 text-muted-foreground" />
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Ticket URL</p>
@@ -183,7 +183,7 @@ export default function NotificationTicketDialog({
             </div>
             </>
           ) : (
-            <div className="rounded-xl border border-border bg-muted/30 p-3">
+            <div className="rounded-ds-md border border-border-subtle bg-muted/30 p-3">
               <p className="text-sm text-muted-foreground">This notification has no linked ticket.</p>
             </div>
           )}

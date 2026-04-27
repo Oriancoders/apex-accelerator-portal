@@ -24,7 +24,7 @@ export default function NotificationList({ notifications, onMarkRead, onOpenDeta
       {notifications.map((n) => (
         <div
           key={n.id}
-          className={`px-4 py-3 border-b border-border last:border-0 flex items-start gap-3 transition-colors ${
+          className={`px-4 py-3 border-b border-border-subtle last:border-0 flex items-start gap-3 transition-colors ${
             !n.is_read ? "bg-primary/[0.03]" : ""
           } cursor-pointer hover:bg-muted/40`}
           onClick={() => onOpenDetails(n)}

@@ -60,7 +60,7 @@ export default function ManageAgentCompaniesDialog({
 }: ManageAgentCompaniesDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-2xl sm:max-w-3xl">
+      <DialogContent className="rounded-ds-xl sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>
             Manage Agent Companies: {manageAgent?.display_name || manageAgent?.email || "Agent"}
@@ -72,7 +72,7 @@ export default function ManageAgentCompaniesDialog({
             <div className="space-y-1.5 md:col-span-2">
               <Label>Company</Label>
               <select
-                className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm"
+                className="w-full h-11 rounded-ds-md border border-input bg-background px-3 text-sm"
                 value={assignCompanyId}
                 onChange={(e) => onAssignCompanyChange(e.target.value)}
               >
@@ -88,7 +88,7 @@ export default function ManageAgentCompaniesDialog({
             <div className="space-y-1.5">
               <Label>Commission %</Label>
               <Input
-                className="h-11 rounded-xl"
+                className="h-11 rounded-ds-md"
                 type="number"
                 min="0"
                 max="100"
@@ -101,7 +101,7 @@ export default function ManageAgentCompaniesDialog({
 
             <div className="md:col-span-1 flex items-end">
               <Button
-                className="h-11 rounded-xl w-full"
+                className="h-11 rounded-ds-md w-full"
                 disabled={!assignCompanyId || createAssignmentPending}
                 onClick={onAssign}
               >
@@ -110,7 +110,7 @@ export default function ManageAgentCompaniesDialog({
             </div>
           </div>
 
-          <div className="rounded-xl border border-border overflow-hidden">
+          <div className="rounded-ds-md border border-border-subtle overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -187,7 +187,7 @@ export default function ManageAgentCompaniesDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" className="rounded-xl" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" className="rounded-ds-md" onClick={() => onOpenChange(false)}>
             Close
           </Button>
         </DialogFooter>

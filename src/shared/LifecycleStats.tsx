@@ -28,18 +28,18 @@ export default function LifecycleStats({ events, ticket }: LifecycleStatsProps) 
   return (
     <div className="space-y-5">
       {/* KPI chips */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="p-4 rounded-xl bg-primary/5 border border-primary/15 text-center">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="p-4 rounded-ds-md bg-primary/5 border border-primary/15 text-center">
           <Timer className="h-5 w-5 text-primary mx-auto mb-1" />
           <p className="text-lg font-bold text-foreground">{formatDuration(totalMins)}</p>
           <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Total Time</p>
         </div>
-        <div className="p-4 rounded-xl bg-accent/5 border border-accent/15 text-center">
+        <div className="p-4 rounded-ds-md bg-accent/5 border border-accent/15 text-center">
           <Coins className="h-5 w-5 text-accent mx-auto mb-1" />
           <p className="text-lg font-bold text-foreground">{ticket.credit_cost ?? "—"}</p>
           <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Credits</p>
         </div>
-        <div className="p-4 rounded-xl bg-success/5 border border-success/15 text-center">
+        <div className="p-4 rounded-ds-md bg-success/5 border border-success/15 text-center">
           <Activity className="h-5 w-5 text-success mx-auto mb-1" />
           <p className="text-lg font-bold text-foreground">{events.length}</p>
           <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Events</p>

@@ -8,7 +8,6 @@ type AgentRow = Tables<"agents">;
 type MembershipRow = Tables<"company_memberships"> & {
   companies?: Tables<"companies"> | null;
 };
-type ComponentVisibilityRow = Tables<"company_component_visibility">;
 
 export function useAgentTenant() {
   const { user } = useAuth();
@@ -51,33 +50,11 @@ export function useAgentTenant() {
   }, [memberships]);
 
   const activeCompany = activeMembership?.companies || null;
-
-  const { data: componentVisibility = [], isLoading: componentLoading } = useQuery({
-    queryKey: ["company-component-visibility", activeCompany?.id],
-    queryFn: async () => {
-      if (!activeCompany?.id) return [];
-      const { data, error } = await supabase
-        .from("company_component_visibility")
-        .select("component_key, is_enabled")
-        .eq("company_id", activeCompany.id);
-      if (error) throw error;
-      return (data || []) as ComponentVisibilityRow[];
-    },
-    enabled: !!activeCompany?.id,
-    staleTime: 30_000,
-  });
-
-  const visibilityMap = useMemo(() => {
-    const map: Record<string, boolean> = {};
-    componentVisibility.forEach((row) => {
-      map[row.component_key] = row.is_enabled;
-    });
-    return map;
-  }, [componentVisibility]);
+  const visibilityMap = useMemo(() => ({} as Record<string, boolean>), []);
 
   const isAgent = !!agent?.is_active;
 
-  const isLoading = agentLoading || membershipsLoading || componentLoading;
+  const isLoading = agentLoading || membershipsLoading;
 
   return {
     isLoading,

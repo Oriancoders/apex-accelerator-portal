@@ -1,75 +1,112 @@
-import { UserPlus } from "lucide-react";
+import { UserPlus, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ADD_MEMBER_ROLES, type AddMemberRole, type CompanyRow, type ProfileRow } from "@/pages/admin/company-members/types";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ADD_MEMBER_ROLES, type AddMemberRole, type CompanyRow } from "@/pages/admin/company-members/types";
 
 type AddMemberCardProps = {
   selectedCompany: CompanyRow;
-  newUserId: string;
+  newMemberName: string;
+  newMemberEmail: string;
   newRole: AddMemberRole;
-  addableProfiles: ProfileRow[];
   isPending: boolean;
-  onUserChange: (value: string) => void;
+  onNameChange: (value: string) => void;
+  onEmailChange: (value: string) => void;
   onRoleChange: (value: AddMemberRole) => void;
   onAdd: () => void;
 };
 
 export default function AddMemberCard({
   selectedCompany,
-  newUserId,
+  newMemberName,
+  newMemberEmail,
   newRole,
-  addableProfiles,
   isPending,
-  onUserChange,
+  onNameChange,
+  onEmailChange,
   onRoleChange,
   onAdd,
 }: AddMemberCardProps) {
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-ds-xl border-primary/20 bg-primary/3">
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
-          <UserPlus className="h-4 w-4 text-primary" /> Add Member
+          <UserPlus className="h-4 w-4 text-primary" /> Add Team Member
         </CardTitle>
         <CardDescription>
-          Add a user to {selectedCompany.name}. They will get the selected company role.
+          Invite someone to {selectedCompany.name}. They will receive a password setup email.
         </CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-3 sm:grid-cols-3">
-        <select
-          value={newUserId}
-          onChange={(e) => onUserChange(e.target.value)}
-          className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm sm:col-span-2"
-        >
-          <option value="">Select user...</option>
-          {addableProfiles.map((profile) => (
-            <option key={profile.user_id} value={profile.user_id}>
-              {(profile.full_name || "Unnamed User") + " - " + (profile.email || "no-email")}
-            </option>
-          ))}
-        </select>
+      <CardContent className="space-y-4">
+        {/* Info box */}
+        <div className="p-3 bg-primary/5 border border-primary/20 rounded-ds-md flex gap-3">
+          <Mail className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+          <div className="text-xs text-muted-foreground space-y-1">
+            <p><strong className="text-foreground">New accounts:</strong> Get a secure password setup link by email</p>
+            <p><strong className="text-foreground">Existing accounts:</strong> Receive a reset link before access is saved</p>
+            <p><strong className="text-foreground">Details saved:</strong> Name, email, and role are stored after the email is sent</p>
+          </div>
+        </div>
 
-        <select
-          value={newRole}
-          onChange={(e) => {
-            const role = e.target.value;
-            if (ADD_MEMBER_ROLES.includes(role as AddMemberRole)) {
-              onRoleChange(role as AddMemberRole);
-            }
-          }}
-          className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm"
-        >
-          <option value="member">member</option>
-          <option value="admin">companyAdmin</option>
-        </select>
+        {/* Form */}
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="admin-add-member-name" className="text-xs font-medium">Name *</Label>
+            <Input
+              id="admin-add-member-name"
+              placeholder="Jane Smith"
+              className="h-10 rounded-ds-md"
+              value={newMemberName}
+              onChange={(e) => onNameChange(e.target.value)}
+              disabled={isPending}
+            />
+          </div>
 
-        <div className="sm:col-span-3 flex justify-end">
-          <Button
-            className="h-11 rounded-xl"
-            disabled={isPending || !newUserId}
-            onClick={onAdd}
-          >
-            Add Member
-          </Button>
+          <div className="space-y-1.5">
+            <Label htmlFor="admin-add-member-email" className="text-xs font-medium">Email Address *</Label>
+            <Input
+              id="admin-add-member-email"
+              type="email"
+              placeholder="user@company.com"
+              className="h-10 rounded-ds-md"
+              value={newMemberEmail}
+              onChange={(e) => onEmailChange(e.target.value)}
+              disabled={isPending}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="admin-add-member-role" className="text-xs font-medium">Role</Label>
+            <Select
+              value={newRole}
+              onValueChange={(value) => {
+                if (ADD_MEMBER_ROLES.includes(value as AddMemberRole)) {
+                  onRoleChange(value as AddMemberRole);
+                }
+              }}
+              disabled={isPending}
+            >
+              <SelectTrigger id="admin-add-member-role" className="h-10 rounded-ds-md">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="member">Member</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="sm:col-span-3 flex justify-end">
+            <Button
+              onClick={onAdd}
+              disabled={isPending || !newMemberName.trim() || !newMemberEmail.trim()}
+              className="h-10 rounded-ds-md gap-2"
+            >
+              {isPending ? "Sending reset email..." : "Send Reset Email"}
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

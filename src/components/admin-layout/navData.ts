@@ -3,7 +3,6 @@ import {
   Handshake,
   LayoutDashboard,
   MessageSquare,
-  SlidersHorizontal,
   Ticket,
   UserCog,
   Users,
@@ -27,10 +26,10 @@ export const adminNavGroups: AdminNavGroup[] = [
     label: "Administration",
     items: [
       { title: "Users", url: "/admin/users", icon: Users },
+      { title: "Consultants", url: "/admin/consultants", icon: Handshake },
       { title: "Agents", url: "/admin/agents", icon: UserCog },
-      { title: "Company Members", url: "/admin/company-members", icon: UsersRound },
+      { title: "Company Access", url: "/admin/company-members", icon: UsersRound },
       { title: "Credits", url: "/admin/credits", icon: Coins },
-      { title: "Company Components", url: "/admin/company-components", icon: SlidersHorizontal },
     ],
   },
 ];

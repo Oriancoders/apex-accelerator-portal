@@ -55,7 +55,7 @@ export default function WithdrawalsTableCard({
   onMarkPaid,
 }: WithdrawalsTableCardProps) {
   return (
-    <Card className="rounded-2xl">
+    <Card className="rounded-ds-xl">
       <CardHeader className="px-4 sm:px-6">
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
@@ -64,11 +64,11 @@ export default function WithdrawalsTableCard({
               placeholder="Search by user name, email or user ID..."
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-10 h-11 rounded-xl"
+              className="pl-10 h-11 rounded-ds-md"
             />
           </div>
           <Select value={statusFilter} onValueChange={onStatusFilterChange}>
-            <SelectTrigger className="w-full sm:w-[180px] h-11 rounded-xl">
+            <SelectTrigger className="w-full sm:w-[180px] h-11 rounded-ds-md">
               <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
               <SelectValue placeholder="Filter status" />
             </SelectTrigger>

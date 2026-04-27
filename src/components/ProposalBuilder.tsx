@@ -4,8 +4,8 @@ import { Send } from "lucide-react";
 import { useCreditSettings } from "@/hooks/useCreditSettings";
 import ExpertOpinionField from "@/components/proposal-builder/ExpertOpinionField";
 import ProposalStepsEditor from "@/components/proposal-builder/ProposalStepsEditor";
-import TicketCategoryField from "@/components/proposal-builder/TicketCategoryField";
 import type { Difficulty, Priority, ProposalCategory, ProposalStep } from "@/components/proposal-builder/types";
+import { boundedNumberSchema, safeMultilineTextSchema, safeTextSchema } from "@/lib/validation";
 
 const COMPLEXITY_SEQUENCE: Difficulty[] = ["easy", "medium", "hard", "expert"];
 
@@ -25,7 +25,6 @@ const resequenceSteps = (steps: ProposalStep[]): ProposalStep[] =>
 
 interface ProposalBuilderProps {
   priority: Priority;
-  initialCategory?: ProposalCategory;
   initialSteps?: ProposalStep[];
   initialHours?: number;
   initialCost?: number;
@@ -44,7 +43,6 @@ interface ProposalBuilderProps {
 
 export default function ProposalBuilder({
   priority,
-  initialCategory,
   initialSteps,
   initialHours,
   initialCost,
@@ -67,7 +65,6 @@ export default function ProposalBuilder({
   const [manualOverride, setManualOverride] = useState(false);
   const [manualCost, setManualCost] = useState(initialCost?.toString() || "");
   const [expertOpinion, setExpertOpinion] = useState(initialOpinion || "");
-  const [category, setCategory] = useState<ProposalCategory>(initialCategory || "general");
 
   const priorityRate = settings.priorityRates[priority] ?? 15;
   const difficultyRate = settings.difficultyRates[difficulty] ?? 15;
@@ -81,7 +78,7 @@ export default function ProposalBuilder({
     if (manualOverride && !manualCost) {
       setManualCost(autoCredit.toString());
     }
-  }, [manualOverride]);
+  }, [manualOverride, manualCost, autoCredit]);
 
   const addStep = () => {
     const next = [
@@ -105,7 +102,7 @@ export default function ProposalBuilder({
   const updateStep = (index: number, field: "title" | "description" | "complexity", value: string) => {
     const updated = [...steps];
     if (field === "complexity") {
-      updated[index].complexity = value as Difficulty;
+      updated[index].complexity = COMPLEXITY_SEQUENCE.includes(value as Difficulty) ? (value as Difficulty) : "medium";
     } else {
       updated[index][field] = value;
     }
@@ -132,22 +129,30 @@ export default function ProposalBuilder({
   };
 
   const handleSubmit = () => {
-    if (steps.some((s) => !s.title.trim())) return;
-    if (finalCredit <= 0) return;
+    const safeSteps = steps.slice(0, 40).map((step) => ({
+      ...step,
+      title: safeTextSchema(160, 1).parse(step.title),
+      description: safeMultilineTextSchema(1200, 0).parse(step.description),
+      complexity: COMPLEXITY_SEQUENCE.includes(step.complexity) ? step.complexity : "medium",
+      subtasks: (step.subtasks || []).slice(0, 20).map((subtask) => ({
+        title: safeTextSchema(160, 1).parse(subtask.title),
+      })),
+    }));
+    if (safeSteps.length === 0) return;
+    const safeCredit = boundedNumberSchema(1, 100000).parse(finalCredit);
+    const safeOpinion = safeMultilineTextSchema(4000, 0).parse(expertOpinion);
     onSubmit({
-      category,
-      steps,
-      estimatedHours: totalHours,
-      creditCost: finalCredit,
-      expertOpinion,
+      category: "general",
+      steps: safeSteps,
+      estimatedHours: safeSteps.length,
+      creditCost: safeCredit,
+      expertOpinion: safeOpinion,
       difficultyLevel: difficulty,
     });
   };
 
   return (
     <div className="space-y-5">
-      <TicketCategoryField category={category} onCategoryChange={setCategory} />
-
       <ExpertOpinionField value={expertOpinion} onChange={setExpertOpinion} />
 
       <ProposalStepsEditor
@@ -161,7 +166,7 @@ export default function ProposalBuilder({
         onRemoveSubtask={removeSubtask}
       />
 
-      <Button onClick={handleSubmit} disabled={loading} className="w-full gap-2 rounded-xl" size="lg">
+      <Button onClick={handleSubmit} disabled={loading} className="w-full gap-2 rounded-ds-md" size="lg">
         <Send className="h-4 w-4" />
         {loading ? "Submitting..." : `Submit Proposal (${finalCredit} credits)`}
       </Button>

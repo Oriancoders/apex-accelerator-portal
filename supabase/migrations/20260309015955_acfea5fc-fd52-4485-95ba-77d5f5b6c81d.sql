@@ -1,4 +1,3 @@
-
 CREATE TABLE public.news_items (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   title TEXT NOT NULL,
@@ -20,15 +19,14 @@ CREATE POLICY "Admins can manage news"
   ON public.news_items FOR ALL
   USING (has_role(auth.uid(), 'admin'::app_role));
 
--- Seed with initial data
 INSERT INTO public.news_items (title, summary, url, category) VALUES
-  ('Spring ''26 Release Highlights', 'Salesforce Spring ''26 introduces over 200 new features across Sales Cloud, Service Cloud, and Marketing Cloud including enhanced Einstein AI capabilities.', 'https://www.salesforce.com/news/', 'Release Notes'),
-  ('Einstein AI Copilot Now GA', 'Einstein Copilot is now generally available, bringing conversational AI directly into every Salesforce workflow to help users take action faster.', 'https://www.salesforce.com/news/', 'AI & Einstein'),
-  ('Flow Builder: New Screen Components', 'Salesforce Flow Builder ships with 15 new screen components including rich text, data tables, and location pickers to build richer user experiences.', 'https://www.salesforce.com/news/', 'Automation'),
-  ('Salesforce Acquires Data Cloud Startup', 'Salesforce expands its Data Cloud capabilities with the acquisition of a leading real-time data streaming startup to power unified customer profiles.', 'https://www.salesforce.com/news/', 'Company News'),
-  ('Apex Test Performance Improvements', 'Apex test execution is now up to 40% faster with new parallel test runner infrastructure rolled out across all Salesforce production orgs.', 'https://www.salesforce.com/news/', 'Developer'),
-  ('Agentforce 2.0 Launched', 'Agentforce 2.0 brings autonomous AI agents that can handle complex multi-step tasks across service, sales, and marketing without human intervention.', 'https://www.salesforce.com/news/', 'AI & Einstein'),
-  ('Salesforce Launches Slack AI', 'Slack AI introduces channel recaps, thread summaries, and search answers powered by large language models, rolled out to all paid Slack plans.', 'https://www.salesforce.com/news/', 'Productivity'),
-  ('MuleSoft Integration Templates Expansion', 'MuleSoft adds 50+ new pre-built integration templates for SAP, Workday, and ServiceNow, cutting integration project timelines by half.', 'https://www.salesforce.com/news/', 'Integration'),
-  ('Salesforce Trailhead Adds AI Learning Paths', 'Trailhead expands with 20 new AI-focused learning paths, including hands-on modules for Prompt Builder, Einstein Copilot, and AI model deployment.', 'https://www.salesforce.com/news/', 'Learning'),
-  ('Hyperforce Expansion to New Regions', 'Salesforce Hyperforce now available in 8 new regions including Southeast Asia, Middle East, and South America for data residency compliance.', 'https://www.salesforce.com/news/', 'Infrastructure');
+  ('Service Request Trends', 'Teams are standardizing intake, proposal approval, and delivery review workflows to reduce operational handoff gaps.', 'https://example.com/news/service-request-trends', 'Operations'),
+  ('Credit-Based Delivery Models', 'Pay-as-you-go credit systems help clients control spend while keeping delivery teams accountable to approved work.', 'https://example.com/news/credit-based-delivery', 'Finance'),
+  ('Company Workspace Improvements', 'Multi-tenant workspaces are becoming the default for service teams that support several client organizations.', 'https://example.com/news/company-workspaces', 'Product'),
+  ('Consultant Queue Design', 'Focused assignment queues help delivery teams accept work faster and move completed work into UAT with clearer ownership.', 'https://example.com/news/consultant-queues', 'Delivery'),
+  ('UAT Feedback Loops', 'Structured review stages make it easier for clients to approve delivered work or request specific changes.', 'https://example.com/news/uat-feedback', 'Quality'),
+  ('Member Invite Flows', 'Password setup links and role-aware membership rules simplify onboarding for company teams.', 'https://example.com/news/member-invites', 'Access'),
+  ('Operational AI Assistants', 'Workflow-aware AI assistants can help users understand ticket status, pricing, and next steps without leaving the portal.', 'https://example.com/news/ai-assistants', 'AI'),
+  ('Subscription Delivery Plans', 'Company subscriptions can route work directly to delivery while preserving audit trails and admin control.', 'https://example.com/news/subscription-delivery', 'Subscriptions'),
+  ('Attachment Validation Practices', 'Early validation of uploaded files reduces rework and keeps service requests ready for review.', 'https://example.com/news/attachment-validation', 'Security'),
+  ('Admin Finance Controls', 'Centralized credit settings, withdrawals, and subscription panels give operators a cleaner finance workflow.', 'https://example.com/news/admin-finance-controls', 'Finance');

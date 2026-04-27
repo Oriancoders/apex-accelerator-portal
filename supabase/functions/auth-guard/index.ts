@@ -7,19 +7,25 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-type AuthAction = "signin" | "signup" | "reset";
+const noStoreJsonHeaders = {
+  ...corsHeaders,
+  "Content-Type": "application/json",
+  "Cache-Control": "no-store",
+  "Pragma": "no-cache",
+};
+
+type AuthAction = "signin" | "reset";
 
 type AuthRequest = {
   action: AuthAction;
   email: string;
   password?: string;
-  fullName?: string;
   redirectTo?: string;
+  captchaToken?: string;
 };
 
 const ACTION_LIMITS: Record<AuthAction, { windowSeconds: number; maxRequests: number }> = {
   signin: { windowSeconds: 60, maxRequests: 10 },
-  signup: { windowSeconds: 300, maxRequests: 5 },
   reset: { windowSeconds: 300, maxRequests: 4 },
 };
 
@@ -27,6 +33,8 @@ const SIGNIN_FAILED_ATTEMPT_LIMIT = {
   windowSeconds: 300,
   maxRequests: 5,
 };
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function getClientIp(req: Request) {
   const xff = req.headers.get("x-forwarded-for") ?? "";
@@ -43,14 +51,68 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
-function passwordIsStrong(password: string) {
-  return (
-    password.length >= 10 &&
-    /[A-Z]/.test(password) &&
-    /[a-z]/.test(password) &&
-    /\d/.test(password) &&
-    /[^A-Za-z0-9]/.test(password)
-  );
+function isValidEmail(email: string) {
+  return email.length > 0 && email.length <= 254 && EMAIL_RE.test(email);
+}
+
+async function verifyCaptcha(token: string | undefined, ip: string) {
+  const secret = Deno.env.get("TURNSTILE_SECRET_KEY") ?? "";
+  if (!secret) return true;
+  if (!token || token.length > 2048) return false;
+
+  const formData = new FormData();
+  formData.append("secret", secret);
+  formData.append("response", token);
+  if (ip !== "unknown") formData.append("remoteip", ip);
+
+  const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) return false;
+  const result = (await response.json()) as { success?: boolean };
+  return Boolean(result.success);
+}
+
+function getAllowedRedirectOrigins() {
+  const appUrl = Deno.env.get("APP_URL") ?? "";
+  const extraOrigins = (Deno.env.get("ALLOWED_REDIRECT_ORIGINS") ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  return [
+    appUrl,
+    "http://localhost:8080",
+    "http://localhost:5173",
+    ...extraOrigins,
+  ]
+    .map((origin) => {
+      try {
+        return new URL(origin).origin;
+      } catch {
+        return "";
+      }
+    })
+    .filter(Boolean);
+}
+
+function safeRedirectTo(candidate?: string) {
+  const appUrl = Deno.env.get("APP_URL") ?? "http://localhost:8080";
+  const fallback = `${appUrl.replace(/\/+$/, "")}/reset-password`;
+  if (!candidate) return fallback;
+
+  try {
+    const url = new URL(candidate);
+    if (getAllowedRedirectOrigins().includes(url.origin)) {
+      return url.toString();
+    }
+  } catch {
+    // Ignore invalid URLs and use fallback.
+  }
+
+  return fallback;
 }
 
 async function checkLimit(
@@ -134,7 +196,7 @@ serve(async (req) => {
     const body = (await req.json()) as AuthRequest;
     const action = body?.action;
 
-    if (!action || !["signin", "signup", "reset"].includes(action)) {
+    if (!action || !["signin", "reset"].includes(action)) {
       return new Response(JSON.stringify({ error: "Invalid auth action" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -143,7 +205,7 @@ serve(async (req) => {
 
     const rawEmail = typeof body.email === "string" ? body.email : "";
     const email = normalizeEmail(rawEmail);
-    if (!email || !email.includes("@")) {
+    if (!isValidEmail(email)) {
       return new Response(JSON.stringify({ error: "Invalid email" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -151,6 +213,17 @@ serve(async (req) => {
     }
 
     const clientIp = getClientIp(req);
+    const captchaOk = await verifyCaptcha(
+      typeof body.captchaToken === "string" ? body.captchaToken : undefined,
+      clientIp
+    );
+    if (!captchaOk) {
+      return new Response(JSON.stringify({ error: "Security challenge failed. Please try again." }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const limits = ACTION_LIMITS[action];
 
     const ipLimit = await checkLimit(
@@ -193,7 +266,7 @@ serve(async (req) => {
 
     if (action === "signin") {
       const password = typeof body.password === "string" ? body.password : "";
-      if (!password) {
+      if (!password || password.length > 1024) {
         return new Response(JSON.stringify({ error: "Invalid credentials" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -279,44 +352,13 @@ serve(async (req) => {
         }),
         {
           status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          headers: noStoreJsonHeaders,
         }
       );
     }
 
-    if (action === "signup") {
-      const password = typeof body.password === "string" ? body.password : "";
-      if (!passwordIsStrong(password)) {
-        return new Response(JSON.stringify({ error: "Password does not meet security requirements" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const { error } = await supabaseAnon.auth.signUp({
-        email,
-        password,
-        options: {
-          data: { full_name: (body.fullName ?? "").trim() },
-          emailRedirectTo: body.redirectTo,
-        },
-      });
-
-      if (error) {
-        return new Response(JSON.stringify({ error: "Unable to complete sign up" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      return new Response(JSON.stringify({ success: true }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const { error } = await supabaseAnon.auth.resetPasswordForEmail(email, {
-      redirectTo: body.redirectTo,
+      redirectTo: safeRedirectTo(body.redirectTo),
     });
 
     if (error) {
@@ -326,7 +368,7 @@ serve(async (req) => {
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: noStoreJsonHeaders,
     });
   } catch (error) {
     console.error("auth-guard error:", error);

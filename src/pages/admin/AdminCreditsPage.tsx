@@ -1,7 +1,8 @@
 import AdminLayout from "@/components/AdminLayout";
 import CreditSettingsPanel from "@/components/admin/CreditSettingsPanel";
+import SubscriptionPlansPanel from "@/components/admin/SubscriptionPlansPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Coins, Settings, Wallet } from "lucide-react";
+import { Coins, CreditCard, Settings, Wallet } from "lucide-react";
 import TransactionsSummaryCards from "@/pages/admin/credits/TransactionsSummaryCards";
 import TransactionsTableCard from "@/pages/admin/credits/TransactionsTableCard";
 import WithdrawalsMinCard from "@/pages/admin/credits/WithdrawalsMinCard";
@@ -51,12 +52,15 @@ export default function AdminCreditsPage() {
         </div>
 
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className="grid w-full grid-cols-3 rounded-xl max-w-md">
+          <TabsList className="grid w-full grid-cols-4 rounded-ds-md max-w-2xl">
             <TabsTrigger value="transactions" className="rounded-lg text-xs sm:text-sm gap-1.5">
               <Coins className="h-3.5 w-3.5" /> Transactions
             </TabsTrigger>
             <TabsTrigger value="withdrawals" className="rounded-lg text-xs sm:text-sm gap-1.5">
               <Wallet className="h-3.5 w-3.5" /> Withdrawals
+            </TabsTrigger>
+            <TabsTrigger value="subscriptions" className="rounded-lg text-xs sm:text-sm gap-1.5">
+              <CreditCard className="h-3.5 w-3.5" /> Subscriptions
             </TabsTrigger>
             <TabsTrigger value="settings" className="rounded-lg text-xs sm:text-sm gap-1.5">
               <Settings className="h-3.5 w-3.5" /> Pricing
@@ -116,6 +120,10 @@ export default function AdminCreditsPage() {
                 markPaidMutation.mutate({ id, adminNotes, payoutReference })
               }
             />
+          </TabsContent>
+
+          <TabsContent value="subscriptions" className="mt-4">
+            <SubscriptionPlansPanel />
           </TabsContent>
 
           <TabsContent value="settings" className="mt-4">

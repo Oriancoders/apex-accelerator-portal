@@ -10,6 +10,17 @@ const corsHeaders = {
 // Allowed roles for user messages (prevent system prompt injection)
 const ALLOWED_ROLES = new Set(["user", "assistant"]);
 
+function stripUnsafeControlChars(value: string) {
+  return [...value].filter((char) => {
+    const code = char.charCodeAt(0);
+    return code === 9 || code === 10 || code === 13 || (code > 31 && code !== 127);
+  }).join("");
+}
+
+function normalizeChatContent(value: unknown) {
+  return stripUnsafeControlChars(String(value ?? "")).trim().slice(0, 4000);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -87,8 +98,9 @@ serve(async (req) => {
       .filter((m: any) => ALLOWED_ROLES.has(String(m.role)))
       .map((m: any) => ({
         role: String(m.role),
-        content: String(m.content || "").slice(0, 4000),
-      }));
+        content: normalizeChatContent(m.content),
+      }))
+      .filter((m: any) => m.content.length > 0);
 
     if (sanitizedMessages.length === 0) {
       return new Response(JSON.stringify({ error: "No valid messages" }), {
@@ -108,17 +120,15 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a Salesforce expert AI assistant. You help users with:
-- Salesforce administration, configuration, and best practices
-- Apex code, triggers, and test classes
-- Lightning Web Components (LWC) and Aura
-- Flows, Process Builder, and automation
-- SOQL/SOSL queries
-- Integration patterns and APIs
-- Data management and security
-- Deployment and DevOps
+            content: `You are the Customer Connect AI assistant. You help users with:
+- submitting and tracking service requests
+- understanding ticket statuses, proposals, UAT, and reviews
+- credits, pricing, purchase history, and withdrawal workflows
+- company workspaces, member access, and subscriptions
+- admin, agent, and consultant delivery workflows
+- clear operational next steps inside the portal
 
-Keep answers clear, concise, and actionable. Use markdown formatting for code snippets and structured responses. If you're unsure about something, say so honestly.`,
+Keep answers clear, concise, and actionable. Use markdown formatting for structured responses. If you're unsure about something, say so honestly.`,
           },
           ...sanitizedMessages,
         ],

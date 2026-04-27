@@ -45,7 +45,7 @@ export default function EditRuleDialog({
 }: EditRuleDialogProps) {
   return (
     <Dialog open={!!editingRule} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-2xl">
+      <DialogContent className="rounded-ds-xl">
         <DialogHeader>
           <DialogTitle>Edit Commission Rule</DialogTitle>
         </DialogHeader>
@@ -53,18 +53,18 @@ export default function EditRuleDialog({
         <div className="space-y-4">
           <div className="space-y-1.5">
             <Label>Rule name</Label>
-            <Input className="h-11 rounded-xl" value={editRuleName} onChange={(e) => onEditRuleNameChange(e.target.value)} />
+            <Input className="h-11 rounded-ds-md" value={editRuleName} onChange={(e) => onEditRuleNameChange(e.target.value)} />
           </div>
 
           <div className="space-y-1.5">
             <Label>Priority</Label>
-            <Input className="h-11 rounded-xl" type="number" value={editPriority} onChange={(e) => onEditPriorityChange(e.target.value)} />
+            <Input className="h-11 rounded-ds-md" type="number" value={editPriority} onChange={(e) => onEditPriorityChange(e.target.value)} />
           </div>
 
           <div className="space-y-1.5">
             <Label>Payout model</Label>
             <select
-              className="w-full h-11 rounded-xl border border-input bg-background px-3 text-sm"
+              className="w-full h-11 rounded-ds-md border border-input bg-background px-3 text-sm"
               value={editPayoutModel}
               onChange={(e) => onEditPayoutModelChange(e.target.value as PayoutModel)}
             >
@@ -76,19 +76,19 @@ export default function EditRuleDialog({
           {editPayoutModel === "percentage" ? (
             <div className="space-y-1.5">
               <Label>Commission %</Label>
-              <Input className="h-11 rounded-xl" type="number" min="0" max="100" step="0.01" value={editRulePercent} onChange={(e) => onEditRulePercentChange(e.target.value)} />
+              <Input className="h-11 rounded-ds-md" type="number" min="0" max="100" step="0.01" value={editRulePercent} onChange={(e) => onEditRulePercentChange(e.target.value)} />
             </div>
           ) : (
             <div className="space-y-1.5">
               <Label>Flat amount</Label>
-              <Input className="h-11 rounded-xl" type="number" min="0" step="0.01" value={editFlatAmount} onChange={(e) => onEditFlatAmountChange(e.target.value)} />
+              <Input className="h-11 rounded-ds-md" type="number" min="0" step="0.01" value={editFlatAmount} onChange={(e) => onEditFlatAmountChange(e.target.value)} />
             </div>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" className="rounded-xl" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button className="rounded-xl" onClick={onSave} disabled={isSaving}>Save Changes</Button>
+          <Button variant="outline" className="rounded-ds-md" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button className="rounded-ds-md" onClick={onSave} disabled={isSaving}>Save Changes</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

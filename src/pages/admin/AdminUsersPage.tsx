@@ -19,6 +19,7 @@ export default function AdminUsersPage() {
     isLoading,
     roleByUserId,
     updateRoleMutation,
+    deleteUserMutation,
     adjustCreditsMutation,
     filtered,
     getCompanyLabel,
@@ -64,6 +65,11 @@ export default function AdminUsersPage() {
         onCreditAdjustChange={setCreditAdjust}
         onCreditReasonChange={setCreditReason}
         onAdjustCredits={handleAdjustCredits}
+        deleteUserPending={deleteUserMutation.isPending}
+        onDeleteUser={() => {
+          if (!selectedUser) return;
+          deleteUserMutation.mutate(selectedUser.user_id);
+        }}
         getCompanyLabel={getCompanyLabel}
       />
     </AdminLayout>

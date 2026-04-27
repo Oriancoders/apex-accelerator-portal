@@ -8,16 +8,13 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
-    headers: {
-      "Content-Security-Policy": "frame-ancestors 'none'",
-    },
     hmr: {
       overlay: false,
     },
   },
   preview: {
     headers: {
-      "Content-Security-Policy": "frame-ancestors 'none'",
+      "Content-Security-Policy": "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.supabase.in wss://*.supabase.in https://api.stripe.com https://checkout.stripe.com https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com https://checkout.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests",
     },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),

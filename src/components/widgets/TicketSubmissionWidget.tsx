@@ -20,7 +20,7 @@ export default function TicketSubmissionWidget() {
     <div className="widget-card border-2 border-primary/20 relative overflow-hidden h-full">
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 pointer-events-none" />
       <div className="relative p-5 sm:p-6 text-center space-y-4 flex flex-col items-center justify-center h-full">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-ds-lg bg-primary/10">
           <PlusCircle className="h-7 w-7 text-primary" />
         </div>
         <div className="space-y-1.5">
@@ -35,7 +35,7 @@ export default function TicketSubmissionWidget() {
               size="lg"
               variant="secondary"
               onClick={() => navigate("/auth")}
-              className="gap-2 h-12 rounded-xl w-full sm:w-auto"
+              className="gap-2 h-12 rounded-ds-md w-full sm:w-auto"
             >
               Sign In to Create Tickets
               <ArrowRight className="h-4 w-4" />
@@ -50,7 +50,7 @@ export default function TicketSubmissionWidget() {
             <Button
               size="lg"
               onClick={() => navigate(newTicketPath)}
-              className="gap-2 h-12 rounded-xl w-full sm:w-auto shadow-[var(--shadow-primary)] font-semibold"
+              className="gap-2 h-12 rounded-ds-md w-full sm:w-auto shadow-glow font-semibold"
             >
               Create Ticket
               <ArrowRight className="h-4 w-4" />

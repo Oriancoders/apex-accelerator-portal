@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Coins, Info, Ticket } from "lucide-react";
+import { ArrowRight, Coins, HelpCircle, Info, Ticket } from "lucide-react";
 import { useState } from "react";
 import NotificationBell from "@/components/NotificationBell";
 import { toast } from "sonner";
@@ -95,15 +95,18 @@ export default function Navbar() {
   // Hick's Law: fewer nav items for guests
   const navItems: NavItem[] = [
     ...(isGuest ? [] : [{ label: "My Tickets", to: ticketListPath, icon: Ticket }]),
+    { label: "Help Center", to: "/help", icon: HelpCircle },
     { label: "Get to Know Us", to: "/about", icon: Info },
   ];
 
   const isActive = (path: string) => location.pathname === path;
   const canManageMembers = !isGuest && (isAdmin || activeMembership?.role === "owner" || activeMembership?.role === "admin");
   const canWithdraw = !isGuest && (role === "agent" || role === "company_admin" || role === "member");
+  const isConsultant = role === "consultant";
+  const isAgentRole = role === "agent" && isAgent;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
+    <header className="sticky top-0 z-50 border-b border-border-subtle bg-surface-elevated/90 backdrop-blur-md shadow-soft">
       <div className="flex h-14 sm:h-16 items-center justify-between px-4 sm:px-6 max-w-7xl mx-auto">
         <BrandLink />
 
@@ -138,7 +141,7 @@ export default function Navbar() {
           )}
 
           {profile && !isGuest && (
-            <div className="flex items-center gap-1.5 bg-muted px-3 py-1.5 rounded-full">
+            <div className="flex items-center gap-1.5 bg-surface-muted px-3 py-1.5 rounded-ds-lg border border-border-subtle">
               <Coins className="h-3.5 w-3.5 text-accent" />
               <span className="text-sm font-bold text-foreground">{profile.credits}</span>
               <span className="text-xs text-muted-foreground hidden lg:inline">credits</span>
@@ -155,7 +158,8 @@ export default function Navbar() {
             isAdmin={isAdmin}
             canWithdraw={canWithdraw}
             canManageMembers={canManageMembers}
-            isAgent={isAgent}
+            isAgent={isAgentRole}
+            isConsultant={isConsultant}
             companyDashboardPath={companyDashboardPath}
             onNavigate={navigate}
             onSignOut={handleSignOut}
@@ -174,7 +178,8 @@ export default function Navbar() {
             setPrimaryPending={setPrimaryCompany.isPending}
             canWithdraw={canWithdraw}
             canManageMembers={canManageMembers}
-            isAgent={isAgent}
+            isAgent={isAgentRole}
+            isConsultant={isConsultant}
             companyDashboardPath={companyDashboardPath}
             isAdmin={isAdmin}
             onNavigate={navigate}

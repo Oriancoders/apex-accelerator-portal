@@ -1,7 +1,7 @@
 # Apex Accelerator Portal - Technical Architecture
 
 ## 1. Purpose and Scope
-Apex Accelerator Portal is a multi-role Salesforce service operations platform.
+Apex Accelerator Portal is a multi-role service operations platform.
 
 Primary goals:
 - Provide secure user authentication and role-aware access.

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
@@ -6,8 +6,10 @@ import {
   BarChart3,
   Building2,
   Coins,
+  ExternalLink,
   FileText,
   MessageSquare,
+  Paperclip,
   Star,
   Target,
   Timer,
@@ -19,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { sanitizeTicketHtml } from "@/lib/sanitize";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchActiveSubscription } from "@/lib/subscriptions";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProposalBuilder from "@/components/ProposalBuilder";
@@ -39,8 +42,8 @@ type TicketDetailsPanelProps = {
 };
 
 const STATUS_DEFAULT_TAB: Partial<Record<TicketStatus, string>> = {
-  submitted: "proposal",
-  under_review: "proposal",
+  submitted: "details",
+  under_review: "details",
   approved: "proposal",
   in_progress: "uat",
   uat: "uat",
@@ -50,7 +53,6 @@ const STATUS_DEFAULT_TAB: Partial<Record<TicketStatus, string>> = {
 
 const NEXT_RECOMMENDED_STATUS: Partial<Record<TicketStatus, TicketStatus>> = {
   approved: "in_progress",
-  in_progress: "uat",
   uat: "completed",
 };
 
@@ -62,11 +64,25 @@ const complexityByPosition = (index: number, total: number): "easy" | "medium" |
   return COMPLEXITY_ORDER[Math.max(0, Math.min(scaled, COMPLEXITY_ORDER.length - 1))];
 };
 
+const resolveTicketAttachmentUrl = (rawPath: string): string => {
+  if (!rawPath) return "#";
+  if (/^https?:\/\//i.test(rawPath)) return "#";
+  const { data } = supabase.storage.from("ticket-attachments").getPublicUrl(rawPath);
+  return data.publicUrl;
+};
+
+const getAttachmentDisplayName = (rawPath: string): string => {
+  if (!rawPath) return "Attachment";
+  const filename = rawPath.split("/").pop() || rawPath;
+  return filename;
+};
+
 export default function TicketDetailsPanel({ ticket, onClose, onRefresh }: TicketDetailsPanelProps) {
   const queryClient = useQueryClient();
   const [detailsTab, setDetailsTab] = useState<string>(STATUS_DEFAULT_TAB[ticket.status] || "details");
-  const [focusFilter, setFocusFilter] = useState<"identity" | "process">(ticket.status === "submitted" ? "process" : "identity");
+  const [focusFilter, setFocusFilter] = useState<"identity" | "process">("identity");
   const [showAllStatusOptions, setShowAllStatusOptions] = useState(false);
+  const [selectedConsultantId, setSelectedConsultantId] = useState(ticket.assigned_consultant_id || "");
 
   const { data: events = [], refetch: refetchEvents } = useQuery({
     queryKey: ["admin-ticket-events", ticket.id],
@@ -104,8 +120,76 @@ export default function TicketDetailsPanel({ ticket, onClose, onRefresh }: Ticke
     },
   });
 
+  const { data: activeSubscription } = useQuery({
+    queryKey: ["company-active-subscription", ticket.company_id],
+    queryFn: () => fetchActiveSubscription(ticket.company_id!),
+    enabled: !!ticket.company_id,
+  });
+
+  const { data: consultantRoles = [] } = useQuery({
+    queryKey: ["admin-consultant-roles"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .eq("role", "consultant")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return (data || []) as Array<{ user_id: string; role: string }>;
+    },
+  });
+
+  const consultantUserIds = useMemo(
+    () => Array.from(new Set(consultantRoles.map((row) => row.user_id))),
+    [consultantRoles]
+  );
+
+  const { data: consultantProfiles = [] } = useQuery({
+    queryKey: ["admin-consultant-profiles", consultantUserIds],
+    queryFn: async () => {
+      if (!consultantUserIds.length) return [];
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("user_id, full_name, email")
+        .in("user_id", consultantUserIds);
+
+      if (error) throw error;
+      return (data || []) as Array<{ user_id: string; full_name: string | null; email: string | null }>;
+    },
+    enabled: consultantUserIds.length > 0,
+  });
+
+  const consultantOptions = useMemo(() => {
+    const roleByUserId = new Map<string, string>();
+    consultantRoles.forEach((row) => roleByUserId.set(row.user_id, row.role));
+
+    return consultantProfiles
+      .map((profile) => ({
+        userId: profile.user_id,
+        role: roleByUserId.get(profile.user_id) || "consultant",
+        label: profile.full_name || profile.email || profile.user_id,
+        email: profile.email,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [consultantProfiles, consultantRoles]);
+
+  const currentConsultant = useMemo(
+    () => consultantOptions.find((option) => option.userId === ticket.assigned_consultant_id),
+    [consultantOptions, ticket.assigned_consultant_id]
+  );
+
+  useEffect(() => {
+    setSelectedConsultantId(ticket.assigned_consultant_id || "");
+  }, [ticket.assigned_consultant_id]);
+
   const updateStatusMutation = useMutation({
     mutationFn: async ({ status, note }: { status: TicketStatus; note?: string }) => {
+      if (status === "uat") {
+        throw new Error("Only the assigned consultant can send a ticket to UAT.");
+      }
+
       const { error } = await supabase.from("tickets").update({ status }).eq("id", ticket.id);
       if (error) throw error;
 
@@ -140,36 +224,76 @@ export default function TicketDetailsPanel({ ticket, onClose, onRefresh }: Ticke
       creditCost: number;
       expertOpinion: string;
       difficultyLevel: "easy" | "medium" | "hard" | "expert";
-      category: "general" | "salesforce";
+      category: "general";
     }) => {
-      const { error } = await supabase
+      const basePayload = {
+        solution_roadmap: steps as unknown as TicketType["solution_roadmap"],
+        estimated_hours: estimatedHours,
+        credit_cost: activeSubscription ? 0 : creditCost,
+        expert_opinion: expertOpinion,
+        difficulty_level: difficultyLevel as TicketType["difficulty_level"],
+        status: (activeSubscription ? "approved" : "under_review") as TicketStatus,
+      };
+
+      let { error } = await supabase
         .from("tickets")
         .update({
-          solution_roadmap: steps as unknown as TicketType["solution_roadmap"],
-          estimated_hours: estimatedHours,
-          credit_cost: creditCost,
-          expert_opinion: expertOpinion,
-          difficulty_level: difficultyLevel as TicketType["difficulty_level"],
+          ...basePayload,
           category,
-          status: "under_review" as TicketStatus,
         })
         .eq("id", ticket.id);
+
+      // Some environments may not yet have tickets.category; retry without it.
+      if (error && /column\s+"?category"?\s+of\s+relation\s+"?tickets"?/i.test(error.message)) {
+        ({ error } = await supabase
+          .from("tickets")
+          .update(basePayload)
+          .eq("id", ticket.id));
+      }
+
       if (error) throw error;
 
       await supabase.from("ticket_events").insert({
         ticket_id: ticket.id,
         from_status: ticket.status,
-        to_status: "under_review",
-        note: "Admin submitted proposal. Awaiting client approval.",
+        to_status: activeSubscription ? "approved" : "under_review",
+        note: activeSubscription
+          ? "Admin prepared delivery plan. Company subscription skipped credit approval."
+          : "Admin submitted proposal. Awaiting client approval.",
       });
     },
     onSuccess: () => {
-      toast.success("Proposal submitted! Ticket moved to Under Review.");
+      toast.success(activeSubscription ? "Delivery plan saved. Ticket is approved for consultant assignment." : "Proposal submitted! Ticket moved to Under Review.");
       queryClient.invalidateQueries({ queryKey: ["admin-tickets"] });
       onRefresh();
       onClose?.();
     },
-    onError: () => toast.error("Operation failed. Please try again."),
+    onError: (error: Error) => toast.error(error.message || "Operation failed. Please try again."),
+  });
+
+  const assignConsultantMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedConsultantId) throw new Error("Please select a consultant first.");
+
+      const { error } = await (supabase as any).rpc("assign_ticket_to_consultant", {
+        p_ticket_id: ticket.id,
+        p_consultant_user_id: selectedConsultantId,
+        p_note: "Admin assigned consultant for delivery.",
+      });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Consultant assigned. Waiting for consultant acceptance.");
+      queryClient.invalidateQueries({ queryKey: ["admin-ticket", ticket.id] });
+      queryClient.invalidateQueries({ queryKey: ["admin-tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-ticket-events", ticket.id] });
+      refetchEvents();
+      onRefresh();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Unable to assign consultant.");
+    },
   });
 
   const roadmap = ticket.solution_roadmap as unknown as RoadmapItem[] | null;
@@ -185,6 +309,17 @@ export default function TicketDetailsPanel({ ticket, onClose, onRefresh }: Ticke
   const statusMeta = STATUS_META[ticket.status] || STATUS_META.submitted;
   const priorityMeta = PRIORITY_META[ticket.priority] || PRIORITY_META.medium;
   const recommendedStatus = NEXT_RECOMMENDED_STATUS[ticket.status];
+  const requestChangesHistory = useMemo(
+    () =>
+      events
+        .filter(
+          (ev) =>
+            ev.from_status === "uat" &&
+            ev.to_status === "in_progress"
+        )
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+    [events]
+  );
 
   const tabs = [
     { id: "details", label: "Details", icon: <FileText className="h-3.5 w-3.5" /> },
@@ -209,7 +344,7 @@ export default function TicketDetailsPanel({ ticket, onClose, onRefresh }: Ticke
   }, [detailsTab, visibleTabs]);
 
   return (
-    <div className="rounded-2xl border border-border bg-background overflow-hidden flex flex-col">
+    <div className="rounded-ds-xl border border-border-subtle bg-background overflow-hidden flex flex-col">
 
       <div className={`px-6 py-4 border-b ${statusMeta.bg} ${statusMeta.border} border-b`}>
         <div className="flex items-start justify-between gap-3 pr-6">
@@ -237,11 +372,11 @@ export default function TicketDetailsPanel({ ticket, onClose, onRefresh }: Ticke
         </div>
       </div>
 
-      <div className="px-6 py-3 border-b border-border bg-background/95">
+      <div className="px-6 py-3 border-b border-border-subtle bg-background/95">
         <div className="grid grid-cols-2 gap-2">
           <Button
             variant={focusFilter === "identity" ? "default" : "outline"}
-            className="h-10 rounded-xl justify-start gap-2"
+            className="h-10 rounded-ds-md justify-start gap-2"
             onClick={() => {
               setFocusFilter("identity");
               setDetailsTab("details");
@@ -252,7 +387,7 @@ export default function TicketDetailsPanel({ ticket, onClose, onRefresh }: Ticke
           </Button>
           <Button
             variant={focusFilter === "process" ? "default" : "outline"}
-            className="h-10 rounded-xl justify-start gap-2"
+            className="h-10 rounded-ds-md justify-start gap-2"
             onClick={() => {
               setFocusFilter("process");
               setDetailsTab(STATUS_DEFAULT_TAB[ticket.status] || "proposal");
@@ -269,7 +404,7 @@ export default function TicketDetailsPanel({ ticket, onClose, onRefresh }: Ticke
 
       <div className="flex-1 overflow-y-auto">
         <Tabs value={detailsTab} onValueChange={setDetailsTab} className="h-full flex flex-col">
-          <div className="px-6 pt-3 border-b border-border">
+          <div className="px-6 pt-3 border-b border-border-subtle">
             <TabsList className="h-9 bg-transparent p-0 gap-0 border-none rounded-none">
               {visibleTabs.map((tab) => (
                 <TabsTrigger
@@ -286,7 +421,7 @@ export default function TicketDetailsPanel({ ticket, onClose, onRefresh }: Ticke
 
           <TabsContent value="details" className="flex-1 p-6 space-y-5 mt-0">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-              <div className="p-3 rounded-xl bg-muted/40 border border-border space-y-1.5">
+              <div className="p-3 rounded-ds-md bg-muted/40 border border-border-subtle space-y-1.5">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium flex items-center gap-1.5">
                   <UserRound className="h-3.5 w-3.5" /> Requester
                 </p>
@@ -295,7 +430,7 @@ export default function TicketDetailsPanel({ ticket, onClose, onRefresh }: Ticke
                 <p className="text-xs text-muted-foreground">{requesterProfile?.phone || ticket.contact_phone || "No phone"}</p>
               </div>
 
-              <div className="p-3 rounded-xl bg-muted/40 border border-border space-y-1.5">
+              <div className="p-3 rounded-ds-md bg-muted/40 border border-border-subtle space-y-1.5">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium flex items-center gap-1.5">
                   <Building2 className="h-3.5 w-3.5" /> Company
                 </p>
@@ -305,30 +440,60 @@ export default function TicketDetailsPanel({ ticket, onClose, onRefresh }: Ticke
             </div>
 
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="p-3 rounded-xl bg-muted/50 border border-border space-y-0.5">
+              <div className="p-3 rounded-ds-md bg-muted/50 border border-border-subtle space-y-0.5">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Status</p>
                 <StatusBadge status={ticket.status} />
               </div>
-              <div className="p-3 rounded-xl bg-muted/50 border border-border space-y-0.5">
+              <div className="p-3 rounded-ds-md bg-muted/50 border border-border-subtle space-y-0.5">
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Priority</p>
                 <span className={`text-sm font-semibold capitalize ${priorityMeta.color}`}>{ticket.priority}</span>
               </div>
               {ticket.credit_cost != null && (
-                <div className="p-3 rounded-xl bg-accent/5 border border-accent/15 space-y-0.5">
+                <div className="p-3 rounded-ds-md bg-accent/5 border border-accent/15 space-y-0.5">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Credits</p>
                   <p className="text-lg font-bold text-accent">{ticket.credit_cost}</p>
                 </div>
               )}
               {ticket.estimated_hours != null && (
-                <div className="p-3 rounded-xl bg-primary/5 border border-primary/15 space-y-0.5">
+                <div className="p-3 rounded-ds-md bg-primary/5 border border-primary/15 space-y-0.5">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Est. Hours</p>
                   <p className="text-lg font-bold text-primary">{ticket.estimated_hours}h</p>
                 </div>
               )}
               {ticket.difficulty_level && (
-                <div className="p-3 rounded-xl bg-muted/50 border border-border col-span-2 space-y-0.5">
+                <div className="p-3 rounded-ds-md bg-muted/50 border border-border-subtle col-span-2 space-y-0.5">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Difficulty</p>
                   <p className="text-sm font-semibold capitalize text-foreground">{ticket.difficulty_level}</p>
+                </div>
+              )}
+
+              {ticket.status === "approved" && (
+                <div className="p-3 rounded-ds-md bg-muted/50 border border-border-subtle col-span-2 space-y-2">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Consultant Assignment</p>
+                  <p className="text-xs text-muted-foreground">
+                    Current: {currentConsultant ? `${currentConsultant.label} (${ticket.assignment_status || "pending"})` : "Unassigned"}
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <select
+                      value={selectedConsultantId}
+                      onChange={(event) => setSelectedConsultantId(event.target.value)}
+                      className="h-10 w-full rounded-ds-md border border-input bg-background px-3 text-sm"
+                    >
+                      <option value="">Select consultant</option>
+                      {consultantOptions.map((option) => (
+                        <option key={option.userId} value={option.userId}>
+                          {option.label} ({option.role})
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      className="h-10 rounded-ds-md"
+                      disabled={!selectedConsultantId || assignConsultantMutation.isPending}
+                      onClick={() => assignConsultantMutation.mutate()}
+                    >
+                      {assignConsultantMutation.isPending ? "Assigning..." : "Assign Consultant"}
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -336,26 +501,51 @@ export default function TicketDetailsPanel({ ticket, onClose, onRefresh }: Ticke
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Description</p>
               <div
-                className="prose prose-sm max-w-none bg-muted/30 p-4 rounded-xl border border-border text-sm text-foreground leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: sanitizeTicketHtml(ticket.description) }}
+                className="prose prose-sm max-w-none bg-muted/30 p-4 rounded-ds-md border border-border-subtle text-sm text-foreground leading-relaxed"
+                dangerouslySetInnerHTML={{ __html: sanitizeTicketHtml(ticket.description || "") }}
               />
+            </div>
+
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Attachments</p>
+              {ticket.file_urls && ticket.file_urls.length > 0 ? (
+                <div className="space-y-2">
+                  {ticket.file_urls.map((url, index) => (
+                    <a
+                      key={`${url}-${index}`}
+                      href={resolveTicketAttachmentUrl(url)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2.5 p-3 bg-muted/30 rounded-ds-md border border-border-subtle hover:border-primary/30 hover:bg-primary/5 transition-colors group"
+                    >
+                      <Paperclip className="h-4 w-4 text-primary flex-shrink-0" />
+                      <span className="text-sm text-foreground truncate flex-1">{getAttachmentDisplayName(url)}</span>
+                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground group-hover:text-primary" />
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground bg-muted/30 p-3 rounded-ds-md border border-border-subtle">
+                  No attachments submitted with this ticket.
+                </p>
+              )}
             </div>
 
             {ticket.expert_opinion && (
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Expert Opinion</p>
-                <p className="text-sm text-foreground bg-primary/5 border border-primary/15 p-4 rounded-xl leading-relaxed">
+                <p className="text-sm text-foreground bg-primary/5 border border-primary/15 p-4 rounded-ds-md leading-relaxed">
                   {ticket.expert_opinion}
                 </p>
               </div>
             )}
 
             {ticketReview && (
-              <div className="p-4 rounded-xl bg-success/5 border border-success/20">
+              <div className="p-4 rounded-ds-md bg-success/5 border border-success/20">
                 <p className="text-xs font-semibold text-success uppercase tracking-wide mb-3 flex items-center gap-1.5">
                   <Star className="h-3.5 w-3.5" /> Client Review
                 </p>
-                <div className="grid grid-cols-3 gap-3 mb-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
                   {[
                     { label: "Overall", val: ticketReview.rating_overall },
                     { label: "Timeliness", val: ticketReview.rating_timeliness },
@@ -374,7 +564,7 @@ export default function TicketDetailsPanel({ ticket, onClose, onRefresh }: Ticke
                   )}
                 </div>
                 {ticketReview.comment && (
-                  <p className="text-xs text-foreground bg-background/60 p-3 rounded-lg border border-border italic">
+                  <p className="text-xs text-foreground bg-background/60 p-3 rounded-lg border border-border-subtle italic">
                     "{ticketReview.comment}"
                   </p>
                 )}
@@ -385,7 +575,7 @@ export default function TicketDetailsPanel({ ticket, onClose, onRefresh }: Ticke
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Update Status</p>
               {recommendedStatus ? (
                 <Button
-                  className="h-10 rounded-xl text-sm"
+                  className="h-10 rounded-ds-md text-sm"
                   disabled={updateStatusMutation.isPending}
                   onClick={() => updateStatusMutation.mutate({ status: recommendedStatus })}
                 >
@@ -408,6 +598,7 @@ export default function TicketDetailsPanel({ ticket, onClose, onRefresh }: Ticke
                 {showAllStatusOptions && (
                   <div className="flex gap-2 flex-wrap mt-2">
                     {ALL_STATUSES.map((status) => (
+                      status === "uat" ? null : (
                       <Button
                         key={status}
                         variant={ticket.status === status ? "default" : "outline"}
@@ -418,6 +609,7 @@ export default function TicketDetailsPanel({ ticket, onClose, onRefresh }: Ticke
                       >
                         {STATUS_META[status]?.label || status}
                       </Button>
+                      )
                     ))}
                   </div>
                 )}
@@ -429,7 +621,6 @@ export default function TicketDetailsPanel({ ticket, onClose, onRefresh }: Ticke
             {ticket.status === "submitted" ? (
               <ProposalBuilder
                 priority={ticket.priority}
-                initialCategory={((ticket as unknown as { category?: "general" | "salesforce" }).category as "general" | "salesforce") || "general"}
                 initialSteps={proposalInitialSteps}
                 initialHours={ticket.estimated_hours || undefined}
                 initialCost={ticket.credit_cost || undefined}
@@ -449,18 +640,18 @@ export default function TicketDetailsPanel({ ticket, onClose, onRefresh }: Ticke
               />
             ) : hasProposal ? (
               <div className="space-y-4">
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="p-3 rounded-xl bg-primary/5 border border-primary/15 text-center">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="p-3 rounded-ds-md bg-primary/5 border border-primary/15 text-center">
                     <Timer className="h-5 w-5 text-primary mx-auto mb-1" />
                     <p className="text-lg font-bold">{ticket.estimated_hours}h</p>
                     <p className="text-[10px] text-muted-foreground">Est. Hours</p>
                   </div>
-                  <div className="p-3 rounded-xl bg-accent/5 border border-accent/15 text-center">
+                  <div className="p-3 rounded-ds-md bg-accent/5 border border-accent/15 text-center">
                     <Coins className="h-5 w-5 text-accent mx-auto mb-1" />
                     <p className="text-lg font-bold">{ticket.credit_cost}</p>
                     <p className="text-[10px] text-muted-foreground">Credits</p>
                   </div>
-                  <div className="p-3 rounded-xl bg-muted border border-border text-center capitalize">
+                  <div className="p-3 rounded-ds-md bg-muted border border-border-subtle text-center capitalize">
                     <Zap className="h-5 w-5 text-muted-foreground mx-auto mb-1" />
                     <p className="text-lg font-bold">{ticket.difficulty_level || "—"}</p>
                     <p className="text-[10px] text-muted-foreground">Difficulty</p>
@@ -469,7 +660,7 @@ export default function TicketDetailsPanel({ ticket, onClose, onRefresh }: Ticke
                 {ticket.expert_opinion && (
                   <div>
                     <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Expert Opinion</p>
-                    <p className="text-sm text-foreground bg-muted/50 p-4 rounded-xl border border-border leading-relaxed">{ticket.expert_opinion}</p>
+                    <p className="text-sm text-foreground bg-muted/50 p-4 rounded-ds-md border border-border-subtle leading-relaxed">{ticket.expert_opinion}</p>
                   </div>
                 )}
                 {roadmap && roadmap.length > 0 && (
@@ -493,7 +684,7 @@ export default function TicketDetailsPanel({ ticket, onClose, onRefresh }: Ticke
                             <div className="absolute left-2 top-1 w-5 h-5 rounded-full bg-primary/10 border-2 border-primary flex items-center justify-center">
                               <span className="text-[9px] font-bold text-primary">{i + 1}</span>
                             </div>
-                            <div className="p-3 bg-muted/40 rounded-xl border border-border">
+                            <div className="p-3 bg-muted/40 rounded-ds-md border border-border-subtle">
                               <div className="flex items-center gap-2 mb-1">
                                 <span className="text-xs font-bold text-primary">Hour {item.hour}</span>
                                 <span className="text-sm font-semibold text-foreground">{item.title}</span>
@@ -510,11 +701,10 @@ export default function TicketDetailsPanel({ ticket, onClose, onRefresh }: Ticke
                   </div>
                 )}
                 {ticket.status === "under_review" && (
-                  <div className="pt-2 border-t border-border">
+                  <div className="pt-2 border-t border-border-subtle">
                     <p className="text-xs text-muted-foreground mb-3">Proposal is awaiting client approval. You can edit below:</p>
                     <ProposalBuilder
                       priority={ticket.priority}
-                      initialCategory={((ticket as unknown as { category?: "general" | "salesforce" }).category as "general" | "salesforce") || "general"}
                       initialSteps={proposalInitialSteps}
                       initialHours={ticket.estimated_hours || undefined}
                       initialCost={ticket.credit_cost || undefined}
@@ -546,12 +736,7 @@ export default function TicketDetailsPanel({ ticket, onClose, onRefresh }: Ticke
           <TabsContent value="uat" className="p-6 mt-0">
             <UATPanel
               ticket={ticket}
-              onUpdate={() => {
-                queryClient.invalidateQueries({ queryKey: ["admin-tickets"] });
-                queryClient.invalidateQueries({ queryKey: ["admin-ticket-events", ticket.id] });
-                refetchEvents();
-                onRefresh();
-              }}
+              requestChangesHistory={requestChangesHistory}
             />
           </TabsContent>
 

@@ -18,6 +18,11 @@ const DEFAULTS = {
   ],
 };
 
+function getCheckoutIdempotencyKey(userId: string, packageIndex: number) {
+  const minuteBucket = Math.floor(Date.now() / 60000);
+  return `credit-checkout:${userId}:${packageIndex}:${minuteBucket}`;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -69,7 +74,7 @@ serve(async (req) => {
     }
 
     const { packageIndex } = await req.json();
-    if (typeof packageIndex !== "number" || packageIndex < 0) {
+    if (!Number.isInteger(packageIndex) || packageIndex < 0) {
       throw new Error("Invalid package selection");
     }
 
@@ -85,7 +90,7 @@ serve(async (req) => {
       const map: Record<string, any> = {};
       settingsRows.forEach((row: any) => { map[row.key] = row.value; });
       dollarPerCredit = parseFloat(map.dollar_per_credit) || DEFAULTS.dollarPerCredit;
-      packages = map.credit_packages || DEFAULTS.packages;
+      packages = Array.isArray(map.credit_packages) ? map.credit_packages : DEFAULTS.packages;
     }
 
     if (packageIndex >= packages.length) {
@@ -93,8 +98,17 @@ serve(async (req) => {
     }
 
     const pkg = packages[packageIndex];
-    const buyCredits = pkg.buy;
-    const bonusCredits = pkg.bonus || 0;
+    const buyCredits = Number(pkg.buy);
+    const bonusCredits = Number(pkg.bonus || 0);
+    if (!Number.isInteger(buyCredits) || buyCredits <= 0 || buyCredits > 100000) {
+      throw new Error("Invalid package configuration");
+    }
+    if (!Number.isInteger(bonusCredits) || bonusCredits < 0 || bonusCredits > 100000) {
+      throw new Error("Invalid package configuration");
+    }
+    if (!Number.isFinite(dollarPerCredit) || dollarPerCredit <= 0 || dollarPerCredit > 10000) {
+      throw new Error("Invalid credit price configuration");
+    }
     const totalCredits = buyCredits + bonusCredits;
 
     // Server-computed price — client cannot manipulate this
@@ -141,6 +155,8 @@ serve(async (req) => {
       },
       success_url: `${safeOrigin}/credits?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${safeOrigin}/credits`,
+    }, {
+      idempotencyKey: getCheckoutIdempotencyKey(user.id, packageIndex),
     });
 
     return new Response(JSON.stringify({ url: session.url }), {

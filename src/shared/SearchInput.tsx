@@ -15,7 +15,7 @@ export default function SearchInput({ value, onChange, placeholder = "Search..."
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="pl-10 h-11 rounded-xl"
+        className="pl-10 h-11 rounded-ds-md"
       />
     </div>
   );

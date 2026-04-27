@@ -1,4 +1,5 @@
 create extension if not exists pg_net;
+create extension if not exists pgcrypto;
 create or replace function public.invoke_resend_webhook()
 returns trigger
 language plpgsql
@@ -6,17 +7,30 @@ security definer
 as $$
 declare
   request_id bigint;
+  webhook_secret text := 'CHANGE_ME_TO_RESEND_WEBHOOK_SECRET';
+  webhook_timestamp text := extract(epoch from now())::bigint::text;
+  webhook_body text;
+  webhook_signature text;
 begin
+  webhook_body := jsonb_build_object(
+    'type', TG_OP,
+    'table', TG_TABLE_NAME,
+    'record', row_to_json(NEW)
+  )::text;
+
+  webhook_signature := 'v1=' || encode(
+    hmac(webhook_timestamp || '.' || webhook_body, webhook_secret, 'sha256'),
+    'hex'
+  );
+
   select net.http_post(
     url := 'https://YOUR_PROJECT_ID.supabase.co/functions/v1/resend-webhook',
     headers := jsonb_build_object(
-      'Content-Type','application/json'
+      'Content-Type','application/json',
+      'x-webhook-timestamp', webhook_timestamp,
+      'x-webhook-signature', webhook_signature
     ),
-    body := jsonb_build_object(
-      'type', TG_OP,
-      'table', TG_TABLE_NAME,
-      'record', row_to_json(NEW)
-    )
+    body := webhook_body::jsonb
   )
   into request_id;
 

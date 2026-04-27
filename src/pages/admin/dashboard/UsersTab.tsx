@@ -13,7 +13,7 @@ type UsersTabProps = {
 export default function UsersTab({ period, stats, summaryCards }: UsersTabProps) {
   return (
     <div className="space-y-6 outline-none">
-      <DashboardMetricCards cards={[summaryCards[6]]} className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-6 border-b" />
+      <DashboardMetricCards cards={[summaryCards[6]]} className="grid grid-cols-1 md:grid-cols-4 gap-4 pb-6 border-b" />
 
       <div className="grid md:grid-cols-2 gap-4">
         <Card>
