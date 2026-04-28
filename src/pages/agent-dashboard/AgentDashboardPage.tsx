@@ -17,6 +17,7 @@ import {
   TICKET_OPEN_STATUSES,
   TICKET_RESOLVED_STATUSES
 } from "./constants";
+import { TICKET_PAGE_SIZE } from "@/constants/ticket";
 import {
   daysAgo,
   fmtCredits,
@@ -35,6 +36,7 @@ import type {
   ConsultantTicket
 } from "./types";
 import { renderDashboardUI } from "./renderUI";
+import { usePagination } from "@/hooks/usePagination";
 
 export default function AgentDashboardPage() {
   const navigate = useNavigate();
@@ -329,6 +331,13 @@ export default function AgentDashboardPage() {
     });
   }, [focusedCompany, allTickets]);
 
+  const {
+    page: ticketPage,
+    setPage: setTicketPage,
+    pageSize: ticketPageSize,
+    paginatedItems: visibleFocusedTickets,
+  } = usePagination(focusedTickets, { pageSize: TICKET_PAGE_SIZE, resetKey: focusedCompany?.id || "all" });
+
   const consultantAssignedTickets = useMemo(() => {
     if (!isConsultantRole || !user?.id) return [];
     return (allTickets as ConsultantTicket[]).filter((t) => t.assigned_consultant_id === user.id);
@@ -445,6 +454,10 @@ export default function AgentDashboardPage() {
         focusedCompany,
         focusedStats,
         focusedTickets,
+        visibleFocusedTickets,
+        ticketPage,
+        setTicketPage,
+        ticketPageSize,
         periodIdx,
         periodStats,
         expandCompanyId,

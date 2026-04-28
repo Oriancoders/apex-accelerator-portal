@@ -7,11 +7,14 @@ import { adminDeleteEntity } from "@/lib/admin-delete";
 import type { AgentRow, AssignmentLite, CompanyLite, ProfileLite } from "@/pages/admin/agents/types";
 import { boundedNumberSchema, uuidSchema } from "@/lib/validation";
 
+export type AgentStatusFilter = "all" | "active" | "inactive";
+
 export function useAdminAgentsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<AgentStatusFilter>("all");
   const [open, setOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState("");
   const [commissionPercent, setCommissionPercent] = useState("15");
@@ -92,10 +95,18 @@ export function useAdminAgentsPage() {
 
   const filteredAgents = useMemo(() => {
     const q = search.toLowerCase();
-    return agents.filter(
-      (a) => (a.display_name || "").toLowerCase().includes(q) || (a.email || "").toLowerCase().includes(q)
-    );
-  }, [agents, search]);
+    return agents.filter((a) => {
+      const matchesSearch =
+        (a.display_name || "").toLowerCase().includes(q) ||
+        (a.email || "").toLowerCase().includes(q);
+      const matchesStatus =
+        statusFilter === "all" ||
+        (statusFilter === "active" && a.is_active) ||
+        (statusFilter === "inactive" && !a.is_active);
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [agents, search, statusFilter]);
 
   const activeCompanyIdsForManagedAgent = useMemo(
     () => new Set(assignments.filter((a) => a.status === "active").map((a) => a.company_id)),
@@ -275,6 +286,8 @@ export function useAdminAgentsPage() {
   return {
     search,
     setSearch,
+    statusFilter,
+    setStatusFilter,
     open,
     setOpen,
     selectedUserId,

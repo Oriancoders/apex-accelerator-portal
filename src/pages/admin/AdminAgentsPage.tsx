@@ -10,6 +10,8 @@ export default function AdminAgentsPage() {
   const {
     search,
     setSearch,
+    statusFilter,
+    setStatusFilter,
     open,
     setOpen,
     selectedUserId,
@@ -56,6 +58,8 @@ export default function AdminAgentsPage() {
         <AgentsTableCard
           search={search}
           onSearchChange={setSearch}
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
           isLoading={isLoading}
           filteredAgents={filteredAgents}
           onManageCompanies={(agent) => {

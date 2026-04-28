@@ -1,15 +1,19 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Filter, Search } from "lucide-react";
+import { toast } from "sonner";
 import AdminLayout from "@/components/AdminLayout";
-import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { getUserFacingError } from "@/lib/errors";
-import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { adminDeleteEntity } from "@/lib/admin-delete";
+import { getUserFacingError } from "@/lib/errors";
+import { usePagination } from "@/hooks/usePagination";
+import PaginationControls from "@/shared/PaginationControls";
 
 type ConsultantProfile = {
   user_id: string;
@@ -20,13 +24,15 @@ type ConsultantProfile = {
 };
 
 type TicketRow = { id: string; assigned_consultant_id: string | null; status: string };
-
+type ConsultantWorkloadFilter = "all" | "active" | "available" | "never_assigned";
 type ConsultantsData = { profiles: ConsultantProfile[]; tickets: TicketRow[] };
 
 const EMPTY_CONSULTANTS: ConsultantsData = { profiles: [], tickets: [] };
+const CONSULTANT_PAGE_SIZE = 5;
 
 export default function AdminConsultantsPage() {
   const [search, setSearch] = useState("");
+  const [workloadFilter, setWorkloadFilter] = useState<ConsultantWorkloadFilter>("all");
   const queryClient = useQueryClient();
 
   const deleteConsultantMutation = useMutation({
@@ -82,28 +88,47 @@ export default function AdminConsultantsPage() {
   const rows = useMemo(() => {
     const activeStatuses = new Set(["approved", "in_progress", "uat", "under_review"]);
     const ticketCounts = new Map<string, { total: number; active: number }>();
-    (consultants?.tickets ?? []).forEach((t) => {
-      const userId = t.assigned_consultant_id;
+
+    (consultants?.tickets ?? []).forEach((ticket) => {
+      const userId = ticket.assigned_consultant_id;
       if (!userId) return;
       const prev = ticketCounts.get(userId) ?? { total: 0, active: 0 };
       prev.total += 1;
-      if (activeStatuses.has(t.status)) prev.active += 1;
+      if (activeStatuses.has(ticket.status)) prev.active += 1;
       ticketCounts.set(userId, prev);
     });
 
-    const q = search.trim().toLowerCase();
+    const query = search.trim().toLowerCase();
     return (consultants?.profiles ?? [])
-      .map((p) => ({
-        ...p,
-        totalTickets: ticketCounts.get(p.user_id)?.total ?? 0,
-        activeTickets: ticketCounts.get(p.user_id)?.active ?? 0,
+      .map((profile) => ({
+        ...profile,
+        totalTickets: ticketCounts.get(profile.user_id)?.total ?? 0,
+        activeTickets: ticketCounts.get(profile.user_id)?.active ?? 0,
       }))
-      .filter((p) => {
-        if (!q) return true;
-        return [p.full_name ?? "", p.email ?? "", p.phone ?? ""].join(" ").toLowerCase().includes(q);
+      .filter((profile) => {
+        const matchesSearch =
+          !query ||
+          [profile.full_name ?? "", profile.email ?? "", profile.phone ?? ""]
+            .join(" ")
+            .toLowerCase()
+            .includes(query);
+        const matchesWorkload =
+          workloadFilter === "all" ||
+          (workloadFilter === "active" && profile.activeTickets > 0) ||
+          (workloadFilter === "available" && profile.activeTickets === 0) ||
+          (workloadFilter === "never_assigned" && profile.totalTickets === 0);
+
+        return matchesSearch && matchesWorkload;
       })
       .sort((a, b) => b.activeTickets - a.activeTickets);
-  }, [consultants.profiles, consultants.tickets, search]);
+  }, [consultants.profiles, consultants.tickets, search, workloadFilter]);
+
+  const {
+    page,
+    setPage,
+    pageSize,
+    paginatedItems: visibleRows,
+  } = usePagination(rows, { pageSize: CONSULTANT_PAGE_SIZE, resetKey: `${search}:${workloadFilter}` });
 
   return (
     <AdminLayout>
@@ -113,15 +138,35 @@ export default function AdminConsultantsPage() {
             <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">Consultants</h1>
             <p className="text-sm text-muted-foreground mt-1">View consultants and their assigned workload.</p>
           </div>
-          <div className="w-full sm:w-[340px]">
-            <Label htmlFor="consultant-search" className="text-xs text-muted-foreground">Search</Label>
-            <Input
-              id="consultant-search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Name, email, phone..."
-              className="h-11 rounded-ds-md mt-1"
-            />
+          <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-[340px_190px]">
+            <div>
+              <Label htmlFor="consultant-search" className="text-xs text-muted-foreground">Search</Label>
+              <div className="relative mt-1">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="consultant-search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Name, email, phone..."
+                  className="h-11 rounded-ds-md pl-10"
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Workload</Label>
+              <Select value={workloadFilter} onValueChange={(value) => setWorkloadFilter(value as ConsultantWorkloadFilter)}>
+                <SelectTrigger className="mt-1 h-11 rounded-ds-md">
+                  <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <SelectValue placeholder="Filter workload" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Workloads</SelectItem>
+                  <SelectItem value="active">Active Workload</SelectItem>
+                  <SelectItem value="available">Available</SelectItem>
+                  <SelectItem value="never_assigned">Never Assigned</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
@@ -148,13 +193,13 @@ export default function AdminConsultantsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {rows.map((c) => (
-                      <TableRow key={c.user_id}>
-                        <TableCell className="font-medium">{c.full_name || "—"}</TableCell>
-                        <TableCell className="text-muted-foreground">{c.email || "—"}</TableCell>
-                        <TableCell className="text-muted-foreground">{c.phone || "—"}</TableCell>
-                        <TableCell className="text-right">{c.activeTickets}</TableCell>
-                        <TableCell className="text-right">{c.totalTickets}</TableCell>
+                    {visibleRows.map((consultant) => (
+                      <TableRow key={consultant.user_id}>
+                        <TableCell className="font-medium">{consultant.full_name || "-"}</TableCell>
+                        <TableCell className="text-muted-foreground">{consultant.email || "-"}</TableCell>
+                        <TableCell className="text-muted-foreground">{consultant.phone || "-"}</TableCell>
+                        <TableCell className="text-right">{consultant.activeTickets}</TableCell>
+                        <TableCell className="text-right">{consultant.totalTickets}</TableCell>
                         <TableCell className="text-right">
                           <Button
                             variant="destructive"
@@ -163,7 +208,7 @@ export default function AdminConsultantsPage() {
                             onClick={() => {
                               const ok = window.confirm("Delete this consultant account permanently? This cannot be undone.");
                               if (!ok) return;
-                              deleteConsultantMutation.mutate(c.user_id);
+                              deleteConsultantMutation.mutate(consultant.user_id);
                             }}
                           >
                             Delete
@@ -173,6 +218,14 @@ export default function AdminConsultantsPage() {
                     ))}
                   </TableBody>
                 </Table>
+                <PaginationControls
+                  page={page}
+                  totalItems={rows.length}
+                  pageSize={pageSize}
+                  onPageChange={setPage}
+                  itemLabel="consultants"
+                  className="mt-4"
+                />
               </div>
             )}
           </CardContent>

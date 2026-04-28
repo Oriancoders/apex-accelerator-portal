@@ -15,6 +15,7 @@ import {
   CheckCircle, XCircle, Send, Paperclip, CreditCard, UserCog, Users
 } from "lucide-react";
 import { PERIODS } from "./constants";
+import PaginationControls from "@/shared/PaginationControls";
 
 // This file contains the UI rendering logic separated from business logic
 // It accepts all props needed and returns the JSX structure
@@ -35,6 +36,10 @@ export function renderDashboardUI(props: any) {
     focusedCompany,
     focusedStats,
     focusedTickets,
+    visibleFocusedTickets,
+    ticketPage,
+    setTicketPage,
+    ticketPageSize,
     periodIdx,
     periodStats,
     expandCompanyId,
@@ -155,6 +160,92 @@ export function renderDashboardUI(props: any) {
           <p>Company Portfolio: {allCompanies.length} companies configured</p>
           <p className="text-xs mt-1">Full company cards and ticket management available in detailed view</p>
         </div>
+      )}
+
+      {!isConsultantRole && (
+        <Card className="rounded-ds-xl">
+          <CardHeader className="pb-3">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Ticket className="h-4 w-4 text-primary" />
+                  {focusedCompany ? `${focusedCompany.name} Tickets` : "Latest Partner Tickets"}
+                </CardTitle>
+                <CardDescription>Partner-visible request queue.</CardDescription>
+              </div>
+              <Badge variant="outline" className="w-fit text-xs">
+                {focusedTickets.length} total
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {focusedTickets.length === 0 ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                No tickets available yet.
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border-subtle">
+                        <th className="text-left px-3 py-2.5 text-xs font-semibold text-muted-foreground">Ticket</th>
+                        <th className="text-left px-3 py-2.5 text-xs font-semibold text-muted-foreground">Status</th>
+                        <th className="text-left px-3 py-2.5 text-xs font-semibold text-muted-foreground hidden sm:table-cell">Priority</th>
+                        <th className="text-right px-3 py-2.5 text-xs font-semibold text-muted-foreground">Credits</th>
+                        <th className="text-right px-3 py-2.5 text-xs font-semibold text-muted-foreground">Open</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibleFocusedTickets.map((ticket: any) => (
+                        <tr key={ticket.id} className="border-b border-border-subtle last:border-0 hover:bg-muted/30 transition-colors">
+                          <td className="px-3 py-3">
+                            <p className="font-medium text-foreground truncate max-w-[260px]">{ticket.title}</p>
+                            <p className="text-[10px] text-muted-foreground mt-1">
+                              #{ticket.id.slice(0, 8)} - {new Date(ticket.created_at).toLocaleDateString()}
+                            </p>
+                          </td>
+                          <td className="px-3 py-3">
+                            <Badge variant="outline" className="text-[10px] capitalize">
+                              {ticket.status.replace("_", " ")}
+                            </Badge>
+                          </td>
+                          <td className="px-3 py-3 hidden sm:table-cell">
+                            <Badge variant="secondary" className="text-[10px] capitalize">
+                              {ticket.priority}
+                            </Badge>
+                          </td>
+                          <td className="px-3 py-3 text-right font-medium text-foreground">
+                            {ticket.credit_cost != null ? ticket.credit_cost : "-"}
+                          </td>
+                          <td className="px-3 py-3 text-right">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 rounded-ds-md px-2"
+                              onClick={() => setDetailsTicketId(ticket.id)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <PaginationControls
+                  page={ticketPage}
+                  totalItems={focusedTickets.length}
+                  pageSize={ticketPageSize}
+                  onPageChange={setTicketPage}
+                  itemLabel="tickets"
+                  className="mt-4"
+                />
+              </>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* Details Dialog */}

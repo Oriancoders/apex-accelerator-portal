@@ -1,9 +1,16 @@
 import { format } from "date-fns";
-import { Coins, Edit, Search, Users } from "lucide-react";
+import { Coins, Edit, Filter, Search, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -14,37 +21,75 @@ import {
 } from "@/components/ui/table";
 import { roleBadgeVariant, roleLabel } from "@/pages/admin/users/roleUtils";
 import type { AppRole, Profile } from "@/pages/admin/users/types";
+import { usePagination } from "@/hooks/usePagination";
+import PaginationControls from "@/shared/PaginationControls";
+
+const USER_PAGE_SIZE = 5;
+const USER_ROLE_FILTERS: { value: AppRole | "all"; label: string }[] = [
+  { value: "all", label: "All Roles" },
+  { value: "admin", label: "Admin" },
+  { value: "company_admin", label: "Company Admin" },
+  { value: "agent", label: "Partner" },
+  { value: "consultant", label: "Consultant" },
+  { value: "member", label: "Member" },
+];
 
 type UsersListCardProps = {
   search: string;
+  roleFilter: AppRole | "all";
   isLoading: boolean;
   users: Profile[];
   roleByUserId: Map<string, AppRole>;
   onSearchChange: (value: string) => void;
+  onRoleFilterChange: (value: AppRole | "all") => void;
   onOpenUser: (user: Profile) => void;
   getCompanyLabel: (user: Profile) => string;
 };
 
 export default function UsersListCard({
   search,
+  roleFilter,
   isLoading,
   users,
   roleByUserId,
   onSearchChange,
+  onRoleFilterChange,
   onOpenUser,
   getCompanyLabel,
 }: UsersListCardProps) {
+  const {
+    page,
+    setPage,
+    pageSize,
+    paginatedItems: visibleUsers,
+  } = usePagination(users, { pageSize: USER_PAGE_SIZE, resetKey: `${search}:${roleFilter}` });
+
   return (
     <Card className="rounded-ds-xl">
       <CardHeader className="px-4 sm:px-6">
-        <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by name, email, or company..."
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10 h-11 rounded-ds-md"
-          />
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name, email, or company..."
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="pl-10 h-11 rounded-ds-md"
+            />
+          </div>
+          <Select value={roleFilter} onValueChange={(value) => onRoleFilterChange(value as AppRole | "all")}>
+            <SelectTrigger className="h-11 rounded-ds-md sm:w-[190px]">
+              <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+              <SelectValue placeholder="Filter role" />
+            </SelectTrigger>
+            <SelectContent>
+              {USER_ROLE_FILTERS.map((role) => (
+                <SelectItem key={role.value} value={role.value}>
+                  {role.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </CardHeader>
       <CardContent className="px-0 sm:px-6">
@@ -67,7 +112,7 @@ export default function UsersListCard({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map((user) => (
+                  {visibleUsers.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">{user.full_name || "—"}</TableCell>
                       <TableCell className="text-sm">{user.email || "—"}</TableCell>
@@ -109,7 +154,7 @@ export default function UsersListCard({
             </div>
 
             <div className="md:hidden space-y-2 px-4">
-              {users.map((user) => (
+              {visibleUsers.map((user) => (
                 <div
                   key={user.id}
                   className="p-4 rounded-ds-md border border-border-subtle hover:bg-muted/50 transition-colors cursor-pointer"
@@ -139,6 +184,15 @@ export default function UsersListCard({
                 </div>
               )}
             </div>
+
+            <PaginationControls
+              page={page}
+              totalItems={users.length}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              itemLabel="users"
+              className="mx-4 mt-4 sm:mx-0"
+            />
           </>
         )}
       </CardContent>

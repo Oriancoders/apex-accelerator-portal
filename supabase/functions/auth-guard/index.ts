@@ -14,7 +14,7 @@ const noStoreJsonHeaders = {
   "Pragma": "no-cache",
 };
 
-type AuthAction = "signin" | "reset";
+type AuthAction = "signin" | "reset" | "admin_register";
 
 type AuthRequest = {
   action: AuthAction;
@@ -22,9 +22,12 @@ type AuthRequest = {
   password?: string;
   redirectTo?: string;
   captchaToken?: string;
+  fullName?: string;
+  role?: "admin" | "agent" | "consultant" | "member";
+  commissionPercent?: number;
 };
 
-const ACTION_LIMITS: Record<AuthAction, { windowSeconds: number; maxRequests: number }> = {
+const ACTION_LIMITS: Record<Exclude<AuthAction, "admin_register">, { windowSeconds: number; maxRequests: number }> = {
   signin: { windowSeconds: 60, maxRequests: 10 },
   reset: { windowSeconds: 300, maxRequests: 4 },
 };
@@ -51,8 +54,42 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+function stripControlChars(value: string) {
+  return [...value].filter((char) => {
+    const code = char.charCodeAt(0);
+    return code > 31 && code !== 127;
+  }).join("");
+}
+
+function normalizeName(name: string) {
+  return stripControlChars(name).trim().replace(/\s+/g, " ");
+}
+
 function isValidEmail(email: string) {
   return email.length > 0 && email.length <= 254 && EMAIL_RE.test(email);
+}
+
+async function findAuthUserIdByEmail(supabaseAdmin: ReturnType<typeof createClient>, email: string) {
+  const perPage = 1000;
+
+  for (let page = 1; page <= 10; page++) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+    if (error) throw error;
+
+    const foundUser = data?.users?.find((user) => user.email?.toLowerCase() === email);
+    if (foundUser?.id) return foundUser.id;
+    if (!data?.users || data.users.length < perPage) break;
+  }
+
+  return "";
+}
+
+function toPublicResetError(err: unknown) {
+  const message = err instanceof Error ? err.message : String(err);
+  if (message.toLowerCase().includes("rate")) {
+    return "Password reset email is rate limited. Please try again later.";
+  }
+  return "Password setup email could not be sent.";
 }
 
 async function verifyCaptcha(token: string | undefined, ip: string) {
@@ -200,7 +237,7 @@ serve(async (req) => {
     const body = (await req.json()) as AuthRequest;
     const action = body?.action;
 
-    if (!action || !["signin", "reset"].includes(action)) {
+    if (!action || !["signin", "reset", "admin_register"].includes(action)) {
       return new Response(JSON.stringify({ error: "Invalid auth action" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -213,6 +250,181 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Invalid email" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (action === "admin_register") {
+      const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization") ?? "";
+      const supabaseAuth = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
+        global: { headers: authHeader ? { Authorization: authHeader } : {} },
+      });
+
+      const { data: authData, error: authError } = await supabaseAuth.auth.getUser();
+      if (authError || !authData?.user?.id) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: isAdmin, error: adminRoleError } = await supabaseAdmin.rpc("has_role", {
+        _user_id: authData.user.id,
+        _role: "admin",
+      });
+      if (adminRoleError) throw adminRoleError;
+      if (!isAdmin) {
+        return new Response(JSON.stringify({ error: "Admin role required" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const fullName = normalizeName(typeof body.fullName === "string" ? body.fullName : "");
+      const role = body.role;
+      const commissionPercent = Number(body.commissionPercent ?? 15);
+
+      if (!fullName || fullName.length > 120) {
+        return new Response(JSON.stringify({ error: "Name is required and must be 120 characters or less" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (!role || !["admin", "agent", "consultant", "member"].includes(role)) {
+        return new Response(JSON.stringify({ error: "Invalid role" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      if (role === "agent" && (!Number.isFinite(commissionPercent) || commissionPercent < 0 || commissionPercent > 100)) {
+        return new Response(JSON.stringify({ error: "Commission must be between 0 and 100" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: profileRow, error: profileError } = await supabaseAdmin
+        .from("profiles")
+        .select("user_id")
+        .ilike("email", email)
+        .limit(1)
+        .maybeSingle();
+      if (profileError) throw profileError;
+
+      let userId = (profileRow as { user_id?: string } | null)?.user_id ?? "";
+      let created = false;
+
+      if (!userId) {
+        userId = await findAuthUserIdByEmail(supabaseAdmin, email);
+      }
+
+      if (!userId) {
+        const { data: createdUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+          email,
+          email_confirm: true,
+          user_metadata: { full_name: fullName },
+        });
+
+        if (createError) {
+          return new Response(JSON.stringify({ error: createError.message || "User creation failed" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        userId = createdUser.user?.id ?? "";
+        created = true;
+      }
+
+      if (!userId) {
+        return new Response(JSON.stringify({ error: "Unable to resolve user" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      try {
+        const { error } = await supabaseAnon.auth.resetPasswordForEmail(email, {
+          redirectTo: safeRedirectTo(body.redirectTo),
+        });
+        if (error) throw error;
+      } catch (resetErr) {
+        if (created) {
+          await supabaseAdmin.auth.admin.deleteUser(userId);
+        }
+
+        return new Response(JSON.stringify({ error: toPublicResetError(resetErr), resetEmailSent: false }), {
+          status: 502,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: existingProfile, error: existingProfileError } = await supabaseAdmin
+        .from("profiles")
+        .select("user_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (existingProfileError) throw existingProfileError;
+
+      if (existingProfile) {
+        const { error } = await supabaseAdmin
+          .from("profiles")
+          .update({ email, full_name: fullName, updated_at: new Date().toISOString() })
+          .eq("user_id", userId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabaseAdmin.from("profiles").insert({
+          user_id: userId,
+          email,
+          full_name: fullName,
+        });
+        if (error) throw error;
+      }
+
+      const { error: roleError } = await supabaseAdmin
+        .from("user_roles")
+        .upsert({ user_id: userId, role }, { onConflict: "user_id" });
+      if (roleError) throw roleError;
+
+      let agentCreated = false;
+      if (role === "agent") {
+        const agentPayload = {
+          user_id: userId,
+          display_name: fullName,
+          email,
+          default_commission_percent: commissionPercent,
+          is_active: true,
+          onboarded_by: authData.user.id,
+        };
+
+        const { data: existingAgent, error: existingAgentError } = await supabaseAdmin
+          .from("agents")
+          .select("id")
+          .eq("user_id", userId)
+          .maybeSingle();
+        if (existingAgentError) throw existingAgentError;
+
+        if (existingAgent) {
+          const { error } = await supabaseAdmin.from("agents").update(agentPayload).eq("user_id", userId);
+          if (error) throw error;
+        } else {
+          const { error } = await supabaseAdmin.from("agents").insert(agentPayload);
+          if (error) throw error;
+          agentCreated = true;
+        }
+      }
+
+      return new Response(JSON.stringify({
+        success: true,
+        userId,
+        created,
+        role,
+        agentCreated,
+        resetEmailSent: true,
+      }), {
+        status: 200,
+        headers: noStoreJsonHeaders,
       });
     }
 

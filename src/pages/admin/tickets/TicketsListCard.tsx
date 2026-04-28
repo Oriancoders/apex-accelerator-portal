@@ -19,8 +19,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ALL_STATUSES, type TicketType } from "@/pages/admin/tickets/types";
-import { PRIORITY_META, STATUS_ACTION, STATUS_META } from "@/constants/ticket";
+import { PRIORITY_META, STATUS_ACTION, STATUS_META, TICKET_PAGE_SIZE } from "@/constants/ticket";
 import StatusBadge from "@/shared/StatusBadge";
+import { usePagination } from "@/hooks/usePagination";
+import PaginationControls from "@/shared/PaginationControls";
 
 type TicketsListCardProps = {
   search: string;
@@ -41,6 +43,13 @@ export default function TicketsListCard({
   onStatusFilterChange,
   onOpenTicket,
 }: TicketsListCardProps) {
+  const {
+    page,
+    setPage,
+    pageSize,
+    paginatedItems: visibleTickets,
+  } = usePagination(tickets, { pageSize: TICKET_PAGE_SIZE, resetKey: `${search}:${statusFilter}` });
+
   return (
     <Card className="rounded-ds-xl">
       <CardHeader className="px-4 sm:px-6 py-4">
@@ -93,7 +102,7 @@ export default function TicketsListCard({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {tickets.map((ticket) => {
+                  {visibleTickets.map((ticket) => {
                     const action = STATUS_ACTION[ticket.status];
                     return (
                       <TableRow
@@ -148,7 +157,7 @@ export default function TicketsListCard({
             </div>
 
             <div className="sm:hidden space-y-2 px-4">
-              {tickets.map((ticket) => {
+              {visibleTickets.map((ticket) => {
                 const action = STATUS_ACTION[ticket.status];
                 return (
                   <div
@@ -188,6 +197,15 @@ export default function TicketsListCard({
                 </div>
               )}
             </div>
+
+            <PaginationControls
+              page={page}
+              totalItems={tickets.length}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              itemLabel="tickets"
+              className="mx-4 mt-4 sm:mx-0"
+            />
           </>
         )}
       </CardContent>

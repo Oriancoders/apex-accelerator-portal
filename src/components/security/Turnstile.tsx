@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 declare global {
   interface Window {
@@ -7,6 +7,7 @@ declare global {
         element: HTMLElement,
         options: {
           sitekey: string;
+          size?: "flexible" | "compact";
           callback: (token: string) => void;
           "expired-callback": () => void;
           "error-callback": () => void;
@@ -19,6 +20,7 @@ declare global {
 }
 
 const TURNSTILE_SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+const COMPACT_WIDTH_THRESHOLD = 300;
 
 function loadTurnstileScript() {
   const existing = document.querySelector<HTMLScriptElement>(`script[src="${TURNSTILE_SRC}"]`);
@@ -33,8 +35,25 @@ function loadTurnstileScript() {
 
 export function Turnstile({ onToken, resetKey = 0 }: { onToken: (token: string) => void; resetKey?: number }) {
   const siteKey = (import.meta.env.VITE_TURNSTILE_SITE_KEY as string | undefined)?.trim();
+  const shellRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
+  const [widgetSize, setWidgetSize] = useState<"flexible" | "compact">(() => {
+    if (typeof window === "undefined") return "flexible";
+    return window.innerWidth < 380 ? "compact" : "flexible";
+  });
+
+  useEffect(() => {
+    if (!siteKey || !shellRef.current || typeof ResizeObserver === "undefined") return;
+
+    const observer = new ResizeObserver(([entry]) => {
+      const nextSize = entry.contentRect.width < COMPACT_WIDTH_THRESHOLD ? "compact" : "flexible";
+      setWidgetSize((currentSize) => currentSize === nextSize ? currentSize : nextSize);
+    });
+
+    observer.observe(shellRef.current);
+    return () => observer.disconnect();
+  }, [siteKey]);
 
   useEffect(() => {
     if (!siteKey) return;
@@ -46,6 +65,7 @@ export function Turnstile({ onToken, resetKey = 0 }: { onToken: (token: string) 
       if (cancelled || !containerRef.current || !window.turnstile || widgetIdRef.current) return;
       widgetIdRef.current = window.turnstile.render(containerRef.current, {
         sitekey: siteKey,
+        size: widgetSize,
         callback: onToken,
         "expired-callback": () => onToken(""),
         "error-callback": () => onToken(""),
@@ -62,7 +82,7 @@ export function Turnstile({ onToken, resetKey = 0 }: { onToken: (token: string) 
       widgetIdRef.current = null;
       onToken("");
     };
-  }, [onToken, siteKey]);
+  }, [onToken, siteKey, widgetSize]);
 
   useEffect(() => {
     onToken("");
@@ -74,8 +94,12 @@ export function Turnstile({ onToken, resetKey = 0 }: { onToken: (token: string) 
   if (!siteKey) return null;
 
   return (
-    <div className="flex min-h-[65px] items-center justify-center rounded-ds-md border border-border-subtle bg-card/70">
-      <div ref={containerRef} />
+    <div
+      ref={shellRef}
+      className="flex w-full max-w-full items-center justify-center overflow-hidden rounded-ds-md border border-border-subtle bg-card/70 px-2 py-3"
+      style={{ minHeight: widgetSize === "compact" ? 164 : 89 }}
+    >
+      <div ref={containerRef} className="max-w-full" />
     </div>
   );
 }

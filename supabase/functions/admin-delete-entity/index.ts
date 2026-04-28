@@ -116,44 +116,137 @@ async function cleanupRestrictiveUserReferences(
   actorId: string,
 ) {
   console.log(`[cleanup] Starting cleanup for user ${targetUserId}`);
+  const cleanupErrors: string[] = [];
 
-  const { error: companyReassignErr } = await supabaseAdmin
-    .from("companies")
-    .update({ created_by: actorId })
-    .eq("created_by", targetUserId);
-  if (companyReassignErr) {
-    console.error(`[cleanup] Company reassign failed:`, companyReassignErr);
-    throw companyReassignErr;
+  const ignoreMissingRelation = (error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    return message.includes("Could not find the table") ||
+      message.includes("does not exist") ||
+      message.includes("schema cache");
+  };
+
+  const runOptionalCleanup = async (label: string, action: () => any) => {
+    const { error } = await action();
+    if (!error) return;
+    if (ignoreMissingRelation(error)) {
+      console.warn(`[cleanup] Optional cleanup skipped for ${label}:`, error);
+      return;
+    }
+    console.error(`[cleanup] ${label} failed:`, error);
+    cleanupErrors.push(`${label}: ${error instanceof Error ? error.message : String(error)}`);
+  };
+
+  await runOptionalCleanup("reassign companies", () =>
+    supabaseAdmin
+      .from("companies")
+      .update({ created_by: actorId })
+      .eq("created_by", targetUserId)
+  );
+
+  await runOptionalCleanup("reassign assignments", () =>
+    supabaseAdmin
+      .from("agent_company_assignments")
+      .update({ created_by: actorId })
+      .eq("created_by", targetUserId)
+  );
+
+  await runOptionalCleanup("reassign commission rules", () =>
+    supabaseAdmin
+      .from("commission_rules")
+      .update({ created_by: actorId })
+      .eq("created_by", targetUserId)
+  );
+
+  await runOptionalCleanup("clear ticket updates user", () =>
+    supabaseAdmin
+      .from("ticket_updates")
+      .update({ user_id: null })
+      .eq("user_id", targetUserId)
+  );
+
+  await runOptionalCleanup("clear ticket assignment", () =>
+    supabaseAdmin
+      .from("tickets")
+      .update({
+        assigned_consultant_id: null,
+        assignment_status: null,
+        assigned_at: null,
+        consultant_accepted_at: null,
+        consultant_completed_at: null,
+      })
+      .eq("assigned_consultant_id", targetUserId)
+  );
+
+  await runOptionalCleanup("clear notifications user", () =>
+    supabaseAdmin
+      .from("notifications")
+      .update({ user_id: null })
+      .eq("user_id", targetUserId)
+  );
+
+  await runOptionalCleanup("clear chat messages user", () =>
+    supabaseAdmin
+      .from("chat_messages")
+      .update({ user_id: null })
+      .eq("user_id", targetUserId)
+  );
+
+  await runOptionalCleanup("clear ticket events actor", () =>
+    supabaseAdmin
+      .from("ticket_events")
+      .update({ changed_by: null })
+      .eq("changed_by", targetUserId)
+  );
+
+  await runOptionalCleanup("delete ticket reviews", () =>
+    supabaseAdmin
+      .from("ticket_reviews")
+      .delete()
+      .eq("user_id", targetUserId)
+  );
+
+  await runOptionalCleanup("clear invited memberships", () =>
+    supabaseAdmin
+      .from("company_memberships")
+      .update({ invited_by: null })
+      .eq("invited_by", targetUserId)
+  );
+
+  await runOptionalCleanup("clear onboarded agents", () =>
+    supabaseAdmin
+      .from("agents")
+      .update({ onboarded_by: null })
+      .eq("onboarded_by", targetUserId)
+  );
+
+  await runOptionalCleanup("clear component visibility updater", () =>
+    supabaseAdmin
+      .from("company_component_visibility")
+      .update({ updated_by: null })
+      .eq("updated_by", targetUserId)
+  );
+
+  await runOptionalCleanup("clear withdrawal processor", () =>
+    supabaseAdmin
+      .from("credit_withdrawal_requests")
+      .update({ processed_by: null })
+      .eq("processed_by", targetUserId)
+  );
+
+  await runOptionalCleanup("clear subscription purchaser", () =>
+    supabaseAdmin
+      .from("company_subscriptions")
+      .update({ purchased_by: null })
+      .eq("purchased_by", targetUserId)
+  );
+
+  if (cleanupErrors.length > 0) {
+    console.warn(`[cleanup] Cleanup completed with warnings:`, cleanupErrors);
+  } else {
+    console.log(`[cleanup] Cleanup completed successfully`);
   }
 
-  const { error: assignmentReassignErr } = await supabaseAdmin
-    .from("agent_company_assignments")
-    .update({ created_by: actorId })
-    .eq("created_by", targetUserId);
-  if (assignmentReassignErr) {
-    console.error(`[cleanup] Assignment reassign failed:`, assignmentReassignErr);
-    throw assignmentReassignErr;
-  }
-
-  const { error: rulesReassignErr } = await supabaseAdmin
-    .from("commission_rules")
-    .update({ created_by: actorId })
-    .eq("created_by", targetUserId);
-  if (rulesReassignErr) {
-    console.error(`[cleanup] Rules reassign failed:`, rulesReassignErr);
-    throw rulesReassignErr;
-  }
-
-  const { error: ticketUpdatesUserClearErr } = await supabaseAdmin
-    .from("ticket_updates")
-    .update({ user_id: null })
-    .eq("user_id", targetUserId);
-  if (ticketUpdatesUserClearErr) {
-    console.error(`[cleanup] Ticket updates clear failed:`, ticketUpdatesUserClearErr);
-    throw ticketUpdatesUserClearErr;
-  }
-
-  console.log(`[cleanup] Cleanup completed successfully`);
+  return cleanupErrors;
 }
 
 async function ensureLastAdminNotDeleted(
@@ -181,6 +274,37 @@ async function ensureLastAdminNotDeleted(
   if (targetAdminRole && (adminCount ?? 0) <= 1) {
     throw new Error("Cannot delete the last admin account");
   }
+}
+
+async function cleanupDeletedUserSurface(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  targetUserId: string,
+) {
+  const cleanupErrors: string[] = [];
+  const cleanupSteps = [
+    {
+      label: "delete profile",
+      run: () => supabaseAdmin.from("profiles").delete().eq("user_id", targetUserId),
+    },
+    {
+      label: "delete role",
+      run: () => supabaseAdmin.from("user_roles").delete().eq("user_id", targetUserId),
+    },
+    {
+      label: "delete company memberships",
+      run: () => supabaseAdmin.from("company_memberships").delete().eq("user_id", targetUserId),
+    },
+  ];
+
+  for (const step of cleanupSteps) {
+    const { error } = await step.run();
+    if (error) {
+      console.error(`[delete-surface] ${step.label} failed:`, error);
+      cleanupErrors.push(`${step.label}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  return cleanupErrors;
 }
 
 serve(async (req) => {
@@ -300,25 +424,74 @@ serve(async (req) => {
       .eq("user_id", targetUserId);
     if (linkedAgentsErr) throw linkedAgentsErr;
 
+    const linkedAgentCleanupErrors: string[] = [];
     if (linkedAgents && linkedAgents.length > 0) {
       console.log(`[delete] Found ${linkedAgents.length} linked agents, deleting them...`);
       for (const row of linkedAgents) {
-        await deleteAgentEntity(supabaseAdmin, row.id);
+        try {
+          await deleteAgentEntity(supabaseAdmin, row.id);
+        } catch (agentDeleteErr) {
+          const agentDeleteMessage = agentDeleteErr instanceof Error ? agentDeleteErr.message : String(agentDeleteErr);
+          console.error(`[delete] Linked agent cleanup failed for ${row.id}:`, agentDeleteErr);
+          linkedAgentCleanupErrors.push(`linked agent ${row.id}: ${agentDeleteMessage}`);
+        }
       }
     }
 
+    console.log(`[delete] Removing user from admin-visible app tables...`);
+    const surfaceCleanupErrors = await cleanupDeletedUserSurface(supabaseAdmin, targetUserId);
+
     console.log(`[delete] Cleaning up user references...`);
-    await cleanupRestrictiveUserReferences(supabaseAdmin, targetUserId, actorId);
+    const referenceCleanupErrors = await cleanupRestrictiveUserReferences(supabaseAdmin, targetUserId, actorId);
 
     console.log(`[delete] Attempting to delete auth user ${targetUserId}...`);
     const { error: deleteUserErr } = await supabaseAdmin.auth.admin.deleteUser(targetUserId);
     if (deleteUserErr) {
       console.error(`[delete] Auth deletion failed:`, deleteUserErr);
-      throw deleteUserErr;
+
+      const deleteMessage = deleteUserErr.message || String(deleteUserErr);
+      if (deleteMessage.toLowerCase().includes("not found")) {
+        return jsonResponse({
+          ok: true,
+          message: entityType === "consultant" ? "Consultant deleted" : "User deleted",
+          deletionMode: "local-cleanup",
+          warnings: [...linkedAgentCleanupErrors, ...surfaceCleanupErrors, ...referenceCleanupErrors],
+        });
+      }
+
+      console.warn(`[delete] Falling back to soft delete for auth user ${targetUserId}...`);
+      const { error: softDeleteErr } = await supabaseAdmin.auth.admin.deleteUser(targetUserId, true);
+      if (softDeleteErr) {
+        console.error(`[delete] Auth soft deletion failed:`, softDeleteErr);
+        return jsonResponse({
+          ok: true,
+          message: entityType === "consultant" ? "Consultant removed from app" : "User removed from app",
+          deletionMode: "app-cleanup-only",
+          warnings: [
+            ...surfaceCleanupErrors,
+            ...linkedAgentCleanupErrors,
+            ...referenceCleanupErrors,
+            `hard auth delete failed: ${deleteMessage}`,
+            `soft auth delete failed: ${softDeleteErr.message || String(softDeleteErr)}`,
+          ],
+        });
+      }
+
+      return jsonResponse({
+        ok: true,
+        message: entityType === "consultant" ? "Consultant deleted" : "User deleted",
+        deletionMode: "soft-delete",
+        warnings: [...linkedAgentCleanupErrors, ...surfaceCleanupErrors, ...referenceCleanupErrors, `hard auth delete failed: ${deleteMessage}`],
+      });
     }
 
     console.log(`[delete] User ${targetUserId} successfully deleted`);
-    return jsonResponse({ ok: true, message: entityType === "consultant" ? "Consultant deleted" : "User deleted" });
+    return jsonResponse({
+      ok: true,
+      message: entityType === "consultant" ? "Consultant deleted" : "User deleted",
+      deletionMode: "hard-delete",
+      warnings: [...linkedAgentCleanupErrors, ...surfaceCleanupErrors, ...referenceCleanupErrors],
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     const lower = message.toLowerCase();

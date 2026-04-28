@@ -1,8 +1,15 @@
-import { Building2, Power, PowerOff, Search, Shield, Trash2 } from "lucide-react";
+import { Building2, Filter, Power, PowerOff, Search, Shield, Trash2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -12,10 +19,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { AgentRow } from "@/pages/admin/agents/types";
+import { usePagination } from "@/hooks/usePagination";
+import PaginationControls from "@/shared/PaginationControls";
+import type { AgentStatusFilter } from "@/pages/admin/agents/useAdminAgentsPage";
+
+const AGENT_PAGE_SIZE = 5;
 
 type AgentsTableCardProps = {
   search: string;
   onSearchChange: (value: string) => void;
+  statusFilter: AgentStatusFilter;
+  onStatusFilterChange: (value: AgentStatusFilter) => void;
   isLoading: boolean;
   filteredAgents: AgentRow[];
   onManageCompanies: (agent: AgentRow) => void;
@@ -27,6 +41,8 @@ type AgentsTableCardProps = {
 export default function AgentsTableCard({
   search,
   onSearchChange,
+  statusFilter,
+  onStatusFilterChange,
   isLoading,
   filteredAgents,
   onManageCompanies,
@@ -34,18 +50,38 @@ export default function AgentsTableCard({
   onDeleteAgent,
   deletePending,
 }: AgentsTableCardProps) {
+  const {
+    page,
+    setPage,
+    pageSize,
+    paginatedItems: visibleAgents,
+  } = usePagination(filteredAgents, { pageSize: AGENT_PAGE_SIZE, resetKey: `${search}:${statusFilter}` });
+
   return (
     <Card className="rounded-ds-xl">
       <CardHeader>
         <CardTitle className="text-sm font-semibold">All Agents</CardTitle>
-        <div className="relative max-w-md">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            className="pl-10 h-11 rounded-ds-md"
-            placeholder="Search by name or email"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              className="pl-10 h-11 rounded-ds-md"
+              placeholder="Search by name or email"
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+            />
+          </div>
+          <Select value={statusFilter} onValueChange={(value) => onStatusFilterChange(value as AgentStatusFilter)}>
+            <SelectTrigger className="h-11 rounded-ds-md sm:w-[180px]">
+              <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+              <SelectValue placeholder="Filter status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </CardHeader>
       <CardContent>
@@ -62,7 +98,7 @@ export default function AgentsTableCard({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAgents.map((agent) => (
+                {visibleAgents.map((agent) => (
                   <TableRow key={agent.id}>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -126,6 +162,14 @@ export default function AgentsTableCard({
                 )}
               </TableBody>
             </Table>
+            <PaginationControls
+              page={page}
+              totalItems={filteredAgents.length}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              itemLabel="agents"
+              className="mt-4"
+            />
           </div>
         )}
       </CardContent>

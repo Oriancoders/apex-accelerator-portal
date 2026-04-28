@@ -8,12 +8,14 @@ import { PlusCircle, Lock, ClipboardCheck, Activity, CheckCircle, Coins } from "
 import { useState } from "react";
 import { useAgentTenant } from "@/hooks/useAgentTenant";
 import { useUserRole } from "@/hooks/useUserRole";
-import { FILTER_TABS, isActiveStatus } from "@/constants/ticket";
+import { FILTER_TABS, isActiveStatus, TICKET_PAGE_SIZE } from "@/constants/ticket";
 import { useTicketsList, useRealtimeTickets } from "./hooks";
 import { filterTickets, getTicketPaths } from "./utils";
 import { TicketCard } from "./components/TicketCard";
 import { useQuery } from "@tanstack/react-query";
 import { fetchActiveSubscription } from "@/lib/subscriptions";
+import { usePagination } from "@/hooks/usePagination";
+import PaginationControls from "@/shared/PaginationControls";
 
 export default function TicketsPage() {
   const { user, isGuest } = useAuth();
@@ -46,6 +48,16 @@ export default function TicketsPage() {
     }
   }, [tickets, prevStatusRef]);
 
+  const filtered = filterTickets(tickets, filter);
+  const activeCount = tickets.filter(t => isActiveStatus(t.status)).length;
+  const doneCount = tickets.filter(t => t.status === "completed").length;
+  const {
+    page,
+    setPage,
+    pageSize,
+    paginatedItems: visibleTickets,
+  } = usePagination(filtered, { pageSize: TICKET_PAGE_SIZE, resetKey: filter });
+
   if (isGuest) {
     return (
       <ProtectedLayout>
@@ -62,10 +74,6 @@ export default function TicketsPage() {
       </ProtectedLayout>
     );
   }
-
-  const filtered = filterTickets(tickets, filter);
-  const activeCount = tickets.filter(t => isActiveStatus(t.status)).length;
-  const doneCount = tickets.filter(t => t.status === "completed").length;
 
   return (
     <ProtectedLayout>
@@ -162,7 +170,7 @@ export default function TicketsPage() {
           </Card>
         ) : (
           <div className="space-y-3">
-            {filtered.map((ticket) => (
+            {visibleTickets.map((ticket) => (
               <TicketCard
                 key={ticket.id}
                 ticket={ticket}
@@ -170,6 +178,14 @@ export default function TicketsPage() {
                 onClick={() => navigate(`${ticketListPath}/${ticket.id}`)}
               />
             ))}
+            <PaginationControls
+              page={page}
+              totalItems={filtered.length}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              itemLabel="tickets"
+              className="mt-2"
+            />
           </div>
         )}
       </div>

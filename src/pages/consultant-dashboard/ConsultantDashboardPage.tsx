@@ -7,6 +7,87 @@ import { useAssignedTickets, useProfiles, useCompanies, useRequestChangeEvents, 
 import { useRespondAssignmentMutation, useSendToUatMutation } from "./hooks/useConsultantDashboardMutations";
 import { TicketsTable } from "./components/TicketsTable";
 import { TicketDetailsDialog } from "./components/TicketDetailsDialog";
+import { TICKET_PAGE_SIZE } from "@/constants/ticket";
+import { usePagination } from "@/hooks/usePagination";
+import PaginationControls from "@/shared/PaginationControls";
+import type { CompanyRow, ConsultantTicket, ProfileRow, TicketEventRow } from "./types";
+
+type ConsultantTicketSectionProps = {
+  section: {
+    key: string;
+    title: string;
+    subtitle: string;
+    rows: ConsultantTicket[];
+  };
+  profilesById: Map<string, ProfileRow>;
+  companiesById: Map<string, CompanyRow>;
+  requestChangesByTicketId: Record<string, TicketEventRow[]>;
+  userId: string | undefined;
+  respondAssignmentMutation: any;
+  sendToUatMutation: any;
+  onViewDetails: (ticketId: string) => void;
+};
+
+function ConsultantTicketSection({
+  section,
+  profilesById,
+  companiesById,
+  requestChangesByTicketId,
+  userId,
+  respondAssignmentMutation,
+  sendToUatMutation,
+  onViewDetails,
+}: ConsultantTicketSectionProps) {
+  const {
+    page,
+    setPage,
+    pageSize,
+    paginatedItems: visibleRows,
+  } = usePagination(section.rows, { pageSize: TICKET_PAGE_SIZE, resetKey: section.key });
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">{section.title}</h2>
+          <p className="text-xs text-muted-foreground mt-1">{section.subtitle}</p>
+        </div>
+        <span className="text-xs text-muted-foreground">{section.rows.length} tickets</span>
+      </div>
+
+      {section.rows.length === 0 ? (
+        <Card className="rounded-ds-xl border-border-subtle">
+          <CardContent className="py-8 text-center text-sm text-muted-foreground">
+            No tickets in this section yet.
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="rounded-ds-xl">
+          <CardContent className="p-0">
+            <TicketsTable
+              tickets={visibleRows}
+              profilesById={profilesById}
+              companiesById={companiesById}
+              requestChangesByTicketId={requestChangesByTicketId}
+              userId={userId}
+              respondMutation={respondAssignmentMutation}
+              sendToUatMutation={sendToUatMutation}
+              onViewDetails={onViewDetails}
+            />
+            <PaginationControls
+              page={page}
+              totalItems={section.rows.length}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              itemLabel="tickets"
+              className="mx-4 pb-4"
+            />
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
 
 export default function ConsultantDashboardPage() {
   const { user } = useAuth();
@@ -126,38 +207,17 @@ export default function ConsultantDashboardPage() {
           </Card>
         ) : (
           sections.map((section) => (
-            <div key={section.key} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-semibold text-foreground">{section.title}</h2>
-                  <p className="text-xs text-muted-foreground mt-1">{section.subtitle}</p>
-                </div>
-                <span className="text-xs text-muted-foreground">{section.rows.length} tickets</span>
-              </div>
-
-              {section.rows.length === 0 ? (
-                <Card className="rounded-ds-xl border-border-subtle">
-                  <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                    No tickets in this section yet.
-                  </CardContent>
-                </Card>
-              ) : (
-                <Card className="rounded-ds-xl">
-                  <CardContent className="p-0">
-                    <TicketsTable
-                      tickets={section.rows}
-                      profilesById={profilesById}
-                      companiesById={companiesById}
-                      requestChangesByTicketId={requestChangesByTicketId}
-                      userId={user?.id}
-                      respondMutation={respondAssignmentMutation}
-                      sendToUatMutation={sendToUatMutation}
-                      onViewDetails={setDetailsTicketId}
-                    />
-                  </CardContent>
-                </Card>
-              )}
-            </div>
+            <ConsultantTicketSection
+              key={section.key}
+              section={section}
+              profilesById={profilesById}
+              companiesById={companiesById}
+              requestChangesByTicketId={requestChangesByTicketId}
+              userId={user?.id}
+              respondAssignmentMutation={respondAssignmentMutation}
+              sendToUatMutation={sendToUatMutation}
+              onViewDetails={setDetailsTicketId}
+            />
           ))
         )}
 

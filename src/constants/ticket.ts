@@ -142,6 +142,8 @@ export const FILTER_TABS = [
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
+export const TICKET_PAGE_SIZE = 5;
+
 export function isActiveStatus(status: string): boolean {
   return ["submitted", "under_review", "approved", "in_progress", "uat"].includes(status);
 }

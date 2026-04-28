@@ -2,6 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  adminRegisterUser,
+  getAdminRegisterUserMessage,
+  type AdminRegisterUserRole,
+} from "@/lib/admin-register-user";
 import { adminDeleteEntity } from "@/lib/admin-delete";
 import {
   ASSIGNABLE_ROLES,
@@ -14,10 +19,16 @@ import {
 export function useAdminUsersPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState<AppRole | "all">("all");
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [selectedRole, setSelectedRole] = useState<AppRole | "">("");
   const [creditAdjust, setCreditAdjust] = useState("");
   const [creditReason, setCreditReason] = useState("");
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [newUserName, setNewUserName] = useState("");
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserRole, setNewUserRole] = useState<AdminRegisterUserRole>("member");
+  const [newUserCommissionPercent, setNewUserCommissionPercent] = useState("15");
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["admin-users"],
@@ -161,16 +172,48 @@ export function useAdminUsersPage() {
 
   const filtered = users.filter((user) => {
     const query = search.toLowerCase();
-    return (
+    const effectiveRole = roleByUserId.get(user.user_id) || "member";
+    const matchesSearch =
       (user.full_name || "").toLowerCase().includes(query) ||
       (user.email || "").toLowerCase().includes(query) ||
-      getCompanyLabel(user).toLowerCase().includes(query)
-    );
+      getCompanyLabel(user).toLowerCase().includes(query);
+    const matchesRole = roleFilter === "all" || effectiveRole === roleFilter;
+    return matchesSearch && matchesRole;
+  });
+
+  const addUserMutation = useMutation({
+    mutationFn: async () => {
+      if (!newUserName.trim()) throw new Error("Enter a name");
+      if (!newUserEmail.trim()) throw new Error("Enter an email address");
+
+      return adminRegisterUser({
+        fullName: newUserName.trim(),
+        email: newUserEmail.trim(),
+        role: newUserRole,
+        commissionPercent: newUserCommissionPercent,
+      });
+    },
+    onSuccess: (data) => {
+      toast.success(getAdminRegisterUserMessage(data));
+      setNewUserName("");
+      setNewUserEmail("");
+      setNewUserRole("member");
+      setNewUserCommissionPercent("15");
+      setIsAddUserOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user-roles"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user-company-memberships"] });
+    },
+    onError: (err: unknown) => {
+      toast.error(err instanceof Error ? err.message : "Operation failed. Please try again.");
+    },
   });
 
   return {
     search,
     setSearch,
+    roleFilter,
+    setRoleFilter,
     selectedUser,
     setSelectedUser,
     selectedRole,
@@ -179,9 +222,20 @@ export function useAdminUsersPage() {
     setCreditAdjust,
     creditReason,
     setCreditReason,
+    isAddUserOpen,
+    setIsAddUserOpen,
+    newUserName,
+    setNewUserName,
+    newUserEmail,
+    setNewUserEmail,
+    newUserRole,
+    setNewUserRole,
+    newUserCommissionPercent,
+    setNewUserCommissionPercent,
     users,
     isLoading,
     roleByUserId,
+    addUserMutation,
     updateRoleMutation,
     deleteUserMutation,
     adjustCreditsMutation,

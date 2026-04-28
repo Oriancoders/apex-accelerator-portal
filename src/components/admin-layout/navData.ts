@@ -16,7 +16,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     items: [{ title: "Dashboard", url: "/admin", icon: LayoutDashboard }],
   },
   {
-    label: "Communications",
+    label: "Client Requests",
     items: [
       { title: "Tickets", url: "/admin/tickets", icon: Ticket },
       { title: "Contacts", url: "/admin/contacts", icon: MessageSquare },
