@@ -46,12 +46,12 @@ export default function AdminAgentsPage() {
       <div className="space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">Agent Management</h1>
-            <p className="text-sm text-muted-foreground mt-1">Register and manage sales/service agents</p>
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground tracking-tight">Partner Management</h1>
+            <p className="text-sm text-muted-foreground mt-1">Register and manage sales/service partners</p>
           </div>
           <Button className="h-11 rounded-ds-md" onClick={() => setOpen(true)}>
             <UserPlus className="h-4 w-4 mr-2" />
-            Register Agent
+            Register Partner
           </Button>
         </div>
 
@@ -70,7 +70,7 @@ export default function AdminAgentsPage() {
           }}
           onToggleActive={(agent) => toggleActiveMutation.mutate({ id: agent.id, next: !agent.is_active })}
           onDeleteAgent={(agent) => {
-            const ok = window.confirm("Delete this agent and all related assignments/rules? This cannot be undone.");
+            const ok = window.confirm("Remove partner access and related assignments/rules? The user account will remain until deleted from Admin Users.");
             if (!ok) return;
             deleteAgentMutation.mutate(agent.id);
           }}

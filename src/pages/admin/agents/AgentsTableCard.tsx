@@ -60,7 +60,7 @@ export default function AgentsTableCard({
   return (
     <Card className="rounded-ds-xl">
       <CardHeader>
-        <CardTitle className="text-sm font-semibold">All Agents</CardTitle>
+        <CardTitle className="text-sm font-semibold">All Partners</CardTitle>
         <div className="flex flex-col gap-3 sm:flex-row">
           <div className="relative flex-1">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -86,13 +86,13 @@ export default function AgentsTableCard({
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">Loading agents...</p>
+          <p className="text-sm text-muted-foreground py-8 text-center">Loading partners...</p>
         ) : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Agent</TableHead>
+                  <TableHead>Partner</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -147,7 +147,7 @@ export default function AgentsTableCard({
                           onClick={() => onDeleteAgent(agent)}
                           disabled={deletePending}
                         >
-                          <Trash2 className="h-4 w-4 mr-1" /> Delete
+                          <Trash2 className="h-4 w-4 mr-1" /> Remove Access
                         </Button>
                       </div>
                     </TableCell>
@@ -156,7 +156,7 @@ export default function AgentsTableCard({
                 {filteredAgents.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={3} className="py-10 text-center text-muted-foreground">
-                      No agents found
+                      No partners found
                     </TableCell>
                   </TableRow>
                 )}
@@ -167,7 +167,7 @@ export default function AgentsTableCard({
               totalItems={filteredAgents.length}
               pageSize={pageSize}
               onPageChange={setPage}
-              itemLabel="agents"
+              itemLabel="partners"
               className="mt-4"
             />
           </div>

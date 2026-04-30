@@ -57,6 +57,7 @@ async function assertAdminOrThrow(
 async function deleteAgentEntity(
   supabaseAdmin: ReturnType<typeof createClient>,
   agentId: string,
+  options: { removeUserRole?: boolean } = {},
 ) {
   const { data: agentRow, error: agentErr } = await supabaseAdmin
     .from("agents")
@@ -107,7 +108,64 @@ async function deleteAgentEntity(
     .eq("id", agentId);
   if (deleteAgentErr) throw deleteAgentErr;
 
+  const userId = agentRow.user_id as string | null;
+  if (options.removeUserRole && userId) {
+    const { error: deleteRoleErr } = await supabaseAdmin
+      .from("user_roles")
+      .delete()
+      .eq("user_id", userId)
+      .eq("role", "agent");
+    if (deleteRoleErr) throw deleteRoleErr;
+  }
+
   return agentRow.user_id as string;
+}
+
+async function detachConsultantEntity(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  consultantUserId: string,
+) {
+  const { data: consultantRole, error: consultantRoleErr } = await supabaseAdmin
+    .from("user_roles")
+    .select("user_id")
+    .eq("user_id", consultantUserId)
+    .eq("role", "consultant")
+    .limit(1)
+    .maybeSingle();
+
+  if (consultantRoleErr) throw consultantRoleErr;
+  if (!consultantRole) throw new Error("Consultant not found");
+
+  const cleanupErrors: string[] = [];
+  const runCleanup = async (label: string, action: () => any) => {
+    const { error } = await action();
+    if (!error) return;
+    console.error(`[consultant-detach] ${label} failed:`, error);
+    cleanupErrors.push(`${label}: ${error instanceof Error ? error.message : String(error)}`);
+  };
+
+  await runCleanup("clear assigned tickets", () =>
+    supabaseAdmin
+      .from("tickets")
+      .update({
+        assigned_consultant_id: null,
+        assignment_status: null,
+        assigned_at: null,
+        consultant_accepted_at: null,
+        consultant_completed_at: null,
+      })
+      .eq("assigned_consultant_id", consultantUserId)
+  );
+
+  await runCleanup("delete consultant role", () =>
+    supabaseAdmin
+      .from("user_roles")
+      .delete()
+      .eq("user_id", consultantUserId)
+      .eq("role", "consultant")
+  );
+
+  return cleanupErrors;
 }
 
 async function cleanupRestrictiveUserReferences(
@@ -341,8 +399,8 @@ serve(async (req) => {
     }
 
     if (entityType === "agent") {
-      await deleteAgentEntity(supabaseAdmin, entityId);
-      return jsonResponse({ ok: true, message: "Agent deleted" });
+      await deleteAgentEntity(supabaseAdmin, entityId, { removeUserRole: true });
+      return jsonResponse({ ok: true, message: "Partner access removed", deletionMode: "detached" });
     }
 
     if (entityType === "company") {
@@ -396,18 +454,13 @@ serve(async (req) => {
     const targetUserId = entityId;
 
     if (entityType === "consultant") {
-      console.log(`[delete] Checking consultant role for ${entityId}`);
-      const { data: consultantRole, error: consultantRoleErr } = await supabaseAdmin
-        .from("user_roles")
-        .select("user_id")
-        .eq("user_id", entityId)
-        .eq("role", "consultant")
-        .limit(1)
-        .maybeSingle();
-
-      if (consultantRoleErr) throw consultantRoleErr;
-      if (!consultantRole) return jsonResponse({ error: "Consultant not found" }, 404);
-      console.log(`[delete] Consultant role verified`);
+      const warnings = await detachConsultantEntity(supabaseAdmin, targetUserId);
+      return jsonResponse({
+        ok: true,
+        message: "Consultant access removed",
+        deletionMode: "detached",
+        warnings,
+      });
     }
 
     if (targetUserId === actorId) {

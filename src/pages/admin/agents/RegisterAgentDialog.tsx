@@ -37,7 +37,7 @@ export default function RegisterAgentDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="rounded-ds-xl">
         <DialogHeader>
-          <DialogTitle>Register New Agent</DialogTitle>
+          <DialogTitle>Register New Partner</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -76,7 +76,7 @@ export default function RegisterAgentDialog({
             Cancel
           </Button>
           <Button className="rounded-ds-md" disabled={!selectedUserId || isPending} onClick={onCreate}>
-            Create Agent
+            Create Partner
           </Button>
         </DialogFooter>
       </DialogContent>

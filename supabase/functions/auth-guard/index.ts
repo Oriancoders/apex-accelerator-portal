@@ -116,9 +116,9 @@ async function verifyCaptcha(token: string | undefined, ip: string) {
   return { ok: Boolean(result.success), codes: result["error-codes"] ?? [] };
 }
 
-function getAllowedRedirectOrigins() {
+function getAllowedRedirectOrigins(extraOrigins: string[] = []) {
   const appUrl = Deno.env.get("APP_URL") ?? "";
-  const extraOrigins = (Deno.env.get("ALLOWED_REDIRECT_ORIGINS") ?? "")
+  const configuredExtraOrigins = (Deno.env.get("ALLOWED_REDIRECT_ORIGINS") ?? "")
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
@@ -127,6 +127,7 @@ function getAllowedRedirectOrigins() {
     appUrl,
     "http://localhost:8080",
     "http://localhost:5173",
+    ...configuredExtraOrigins,
     ...extraOrigins,
   ]
     .map((origin) => {
@@ -139,14 +140,29 @@ function getAllowedRedirectOrigins() {
     .filter(Boolean);
 }
 
-function safeRedirectTo(candidate?: string) {
+function getRequestOrigin(req: Request) {
+  for (const headerName of ["origin", "referer"]) {
+    const value = req.headers.get(headerName);
+    if (!value) continue;
+    try {
+      return new URL(value).origin;
+    } catch {
+      // Ignore malformed origin headers.
+    }
+  }
+
+  return "";
+}
+
+function safeRedirectTo(candidate?: string, trustedOrigin?: string) {
   const appUrl = Deno.env.get("APP_URL") ?? "http://localhost:8080";
   const fallback = `${appUrl.replace(/\/+$/, "")}/reset-password`;
   if (!candidate) return fallback;
 
   try {
     const url = new URL(candidate);
-    if (getAllowedRedirectOrigins().includes(url.origin)) {
+    const extraOrigins = trustedOrigin ? [trustedOrigin] : [];
+    if (getAllowedRedirectOrigins(extraOrigins).includes(url.origin)) {
       return url.toString();
     }
   } catch {
@@ -345,8 +361,9 @@ serve(async (req) => {
       }
 
       try {
+        console.log("auth-guard: admin register reset redirect target:", safeRedirectTo(body.redirectTo, getRequestOrigin(req)));
         const { error } = await supabaseAnon.auth.resetPasswordForEmail(email, {
-          redirectTo: safeRedirectTo(body.redirectTo),
+          redirectTo: safeRedirectTo(body.redirectTo, getRequestOrigin(req)),
         });
         if (error) throw error;
       } catch (resetErr) {
@@ -578,9 +595,9 @@ serve(async (req) => {
       );
     }
 
-    const { error } = await supabaseAnon.auth.resetPasswordForEmail(email, {
-      redirectTo: safeRedirectTo(body.redirectTo),
-    });
+    const redirectTo = safeRedirectTo(body.redirectTo, getRequestOrigin(req));
+    console.log("auth-guard: reset redirect target:", redirectTo);
+    const { error } = await supabaseAnon.auth.resetPasswordForEmail(email, { redirectTo });
 
     if (error) {
       // Keep response generic to avoid account enumeration.

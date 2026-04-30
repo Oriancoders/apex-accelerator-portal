@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useRef } from "react";
 import { User, Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { RECOVERY_INTENT_KEY, supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Profile = Tables<"profiles">;
@@ -60,8 +60,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let isSubscribed = true;
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         if (!isSubscribed) return;
+
+        if (event === "PASSWORD_RECOVERY") {
+          try {
+            sessionStorage.setItem(RECOVERY_INTENT_KEY, "true");
+          } catch {
+            // Session storage can be unavailable in strict browser privacy modes.
+          }
+
+          if (window.location.pathname !== "/reset-password") {
+            window.location.replace("/reset-password");
+            return;
+          }
+        }
 
         setSession(session);
         setUser(session?.user ?? null);

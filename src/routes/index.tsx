@@ -5,6 +5,7 @@
 import { lazy } from "react";
 import { Navigate } from "react-router-dom";
 import RoleAccessGuard from "@/components/RoleAccessGuard";
+import { RECOVERY_INTENT_KEY, hasAuthRecoveryParams } from "@/integrations/supabase/client";
 
 // ── Lazy-loaded pages ────────────────────────────────────────────────────────
 const AuthPage = lazy(() => import("@/pages/AuthPage"));
@@ -43,8 +44,22 @@ export interface RouteConfig {
   element: React.ReactNode;
 }
 
+function HomeRedirect() {
+  if (hasAuthRecoveryParams(window.location.href)) {
+    try {
+      sessionStorage.setItem(RECOVERY_INTENT_KEY, "true");
+    } catch {
+      // Session storage can be unavailable in strict browser privacy modes.
+    }
+
+    return <Navigate to={`/reset-password${window.location.search}${window.location.hash}`} replace />;
+  }
+
+  return <Navigate to="/dashboard" replace />;
+}
+
 export const publicRoutes: RouteConfig[] = [
-  { path: "/", element: <Navigate to="/dashboard" replace /> },
+  { path: "/", element: <HomeRedirect /> },
   { path: "/auth", element: <AuthPage /> },
   { path: "/reset-password", element: <ResetPasswordPage /> },
 ];

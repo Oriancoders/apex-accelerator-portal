@@ -4,11 +4,61 @@ import type { Database } from './types';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const RECOVERY_INTENT_KEY = "auth-recovery-intent";
+
+function hasAuthRecoveryParams(url: string) {
+  try {
+    const parsedUrl = new URL(url);
+    const hashParams = new URLSearchParams(parsedUrl.hash.replace(/^#/, ""));
+    return (
+      parsedUrl.searchParams.get("type") === "recovery" ||
+      hashParams.get("type") === "recovery" ||
+      parsedUrl.searchParams.has("code") ||
+      parsedUrl.searchParams.has("token_hash") ||
+      hashParams.has("access_token")
+    );
+  } catch {
+    return false;
+  }
+}
+
+function getRecoveryUrlDebugInfo(url: string) {
+  try {
+    const parsedUrl = new URL(url);
+    const hashParams = new URLSearchParams(parsedUrl.hash.replace(/^#/, ""));
+
+    return {
+      path: parsedUrl.pathname,
+      searchKeys: Array.from(parsedUrl.searchParams.keys()).sort(),
+      hashKeys: Array.from(hashParams.keys()).sort(),
+      hasRecoveryParams: hasAuthRecoveryParams(url),
+      hasCode: parsedUrl.searchParams.has("code") || hashParams.has("code"),
+      hasTokenHash: parsedUrl.searchParams.has("token_hash") || hashParams.has("token_hash"),
+      hasAccessToken: parsedUrl.searchParams.has("access_token") || hashParams.has("access_token"),
+      type: parsedUrl.searchParams.get("type") || hashParams.get("type") || null,
+    };
+  } catch {
+    return {
+      path: "invalid-url",
+      searchKeys: [],
+      hashKeys: [],
+      hasRecoveryParams: false,
+      hasCode: false,
+      hasTokenHash: false,
+      hasAccessToken: false,
+      type: null,
+    };
+  }
+}
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
 try {
+  if (hasAuthRecoveryParams(window.location.href)) {
+    sessionStorage.setItem(RECOVERY_INTENT_KEY, "true");
+  }
+
   Object.keys(localStorage)
     .filter((key) => /^sb-.+-auth-token$/.test(key))
     .forEach((key) => localStorage.removeItem(key));
@@ -16,11 +66,13 @@ try {
   // Storage can be unavailable in strict browser privacy modes.
 }
 
+export { RECOVERY_INTENT_KEY, getRecoveryUrlDebugInfo, hasAuthRecoveryParams };
+
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     storage: sessionStorage,
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true,
+    detectSessionInUrl: false,
   }
 });

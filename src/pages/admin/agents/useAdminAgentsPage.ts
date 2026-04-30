@@ -143,7 +143,7 @@ export function useAdminAgentsPage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Agent registered successfully");
+      toast.success("Partner registered successfully");
       setOpen(false);
       setSelectedUserId("");
       setCommissionPercent("15");
@@ -169,7 +169,7 @@ export function useAdminAgentsPage() {
       await adminDeleteEntity({ entityType: "agent", entityId: agentId });
     },
     onSuccess: (_, agentId) => {
-      toast.success("Agent deleted successfully");
+      toast.success("Partner access removed");
       queryClient.invalidateQueries({ queryKey: ["admin-agents"] });
       queryClient.invalidateQueries({ queryKey: ["admin-agent-candidates"] });
       queryClient.invalidateQueries({ queryKey: ["admin-active-partner-assignments"] });
@@ -188,7 +188,7 @@ export function useAdminAgentsPage() {
   const createAssignmentMutation = useMutation({
     mutationFn: async () => {
       if (!user?.id) throw new Error("You must be signed in");
-      if (!manageAgent?.id) throw new Error("Select an agent first");
+      if (!manageAgent?.id) throw new Error("Select a partner first");
       if (!assignCompanyId) throw new Error("Select a company");
 
       const parsed =
@@ -221,7 +221,7 @@ export function useAdminAgentsPage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Company assigned to agent");
+      toast.success("Company assigned to partner");
       setAssignCompanyId("");
       setAssignCommissionPercent("");
       queryClient.invalidateQueries({ queryKey: ["admin-agent-assignments-by-agent", manageAgent?.id] });

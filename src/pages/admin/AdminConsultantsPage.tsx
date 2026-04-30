@@ -40,7 +40,7 @@ export default function AdminConsultantsPage() {
       await adminDeleteEntity({ entityType: "consultant", entityId: userId });
     },
     onSuccess: () => {
-      toast.success("Consultant deleted successfully");
+      toast.success("Consultant access removed");
       queryClient.invalidateQueries({ queryKey: ["admin-consultants"] });
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       queryClient.invalidateQueries({ queryKey: ["admin-user-roles"] });
@@ -206,12 +206,12 @@ export default function AdminConsultantsPage() {
                             size="sm"
                             disabled={deleteConsultantMutation.isPending}
                             onClick={() => {
-                              const ok = window.confirm("Delete this consultant account permanently? This cannot be undone.");
+                              const ok = window.confirm("Remove consultant access and unassign their tickets? The user account will remain until deleted from Admin Users.");
                               if (!ok) return;
                               deleteConsultantMutation.mutate(consultant.user_id);
                             }}
                           >
-                            Delete
+                            Remove Access
                           </Button>
                         </TableCell>
                       </TableRow>

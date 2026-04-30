@@ -63,7 +63,7 @@ export default function ManageAgentCompaniesDialog({
       <DialogContent className="rounded-ds-xl sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>
-            Manage Agent Companies: {manageAgent?.display_name || manageAgent?.email || "Agent"}
+            Manage Partner Companies: {manageAgent?.display_name || manageAgent?.email || "Partner"}
           </DialogTitle>
         </DialogHeader>
 
@@ -124,7 +124,7 @@ export default function ManageAgentCompaniesDialog({
                 {assignments.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="py-8 text-center text-muted-foreground">
-                      No company assignments for this agent
+                      No company assignments for this partner
                     </TableCell>
                   </TableRow>
                 ) : (

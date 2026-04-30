@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Lock, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
+import { RECOVERY_INTENT_KEY, supabase } from "@/integrations/supabase/client";
 import { getUserFacingError } from "@/lib/errors";
 import { getPasswordRules, isPasswordStrong } from "../utils";
 import { PASSWORD_RULES } from "../constants";
@@ -38,6 +38,11 @@ export function ResetPasswordForm({ onSuccess }: ResetPasswordFormProps) {
     if (error) {
       toast.error(getUserFacingError(error, "Unable to update password right now."));
     } else {
+      try {
+        sessionStorage.removeItem(RECOVERY_INTENT_KEY);
+      } catch {
+        // Session storage can be unavailable in strict browser privacy modes.
+      }
       toast.success("Password updated successfully!");
       onSuccess();
     }

@@ -59,7 +59,7 @@ export default function AdminCompanyMembersPage() {
           deleteCompanyPending={deleteCompanyMutation.isPending}
           onCompanyChange={setCompanyId}
           onDeleteCompany={(targetCompanyId) => {
-            const ok = window.confirm("Delete this company and related memberships/assignments/subscriptions? This cannot be undone.");
+            const ok = window.confirm("Delete this company and detach its memberships, partner assignments, subscriptions, and ticket links? User accounts will remain.");
             if (!ok) return;
             deleteCompanyMutation.mutate(targetCompanyId);
           }}

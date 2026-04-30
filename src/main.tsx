@@ -3,6 +3,70 @@ import App from "./App.tsx";
 import "./index.css";
 
 const CHUNK_RELOAD_KEY = "chunk-reload-attempted";
+const RECOVERY_INTENT_KEY = "auth-recovery-intent";
+
+function hasAuthRecoveryParams(url: string) {
+	try {
+		const parsedUrl = new URL(url);
+		const hashParams = new URLSearchParams(parsedUrl.hash.replace(/^#/, ""));
+		return (
+			parsedUrl.searchParams.get("type") === "recovery" ||
+			hashParams.get("type") === "recovery" ||
+			parsedUrl.searchParams.has("code") ||
+			parsedUrl.searchParams.has("token_hash") ||
+			hashParams.has("access_token")
+		);
+	} catch {
+		return false;
+	}
+}
+
+function logRecoveryDebug(stage: string) {
+	try {
+		const parsedUrl = new URL(window.location.href);
+		const hashParams = new URLSearchParams(parsedUrl.hash.replace(/^#/, ""));
+		console.info("[password-reset-debug]", {
+			stage,
+			path: parsedUrl.pathname,
+			searchKeys: Array.from(parsedUrl.searchParams.keys()).sort(),
+			hashKeys: Array.from(hashParams.keys()).sort(),
+			hasRecoveryParams: hasAuthRecoveryParams(window.location.href),
+			type: parsedUrl.searchParams.get("type") || hashParams.get("type") || null,
+		});
+	} catch {
+		console.info("[password-reset-debug]", { stage, path: "invalid-url" });
+	}
+}
+
+function redirectRecoveryToResetPage() {
+	if (window.location.pathname === "/reset-password") return;
+
+	let hasStoredRecoveryIntent = false;
+	try {
+		hasStoredRecoveryIntent = sessionStorage.getItem(RECOVERY_INTENT_KEY) === "true";
+	} catch {
+		hasStoredRecoveryIntent = false;
+	}
+
+	if (!hasAuthRecoveryParams(window.location.href) && !(hasStoredRecoveryIntent && window.location.pathname === "/auth")) {
+		if (window.location.pathname === "/auth") {
+			logRecoveryDebug("auth-page-no-recovery-params");
+		}
+		return;
+	}
+
+	try {
+		sessionStorage.setItem(RECOVERY_INTENT_KEY, "true");
+	} catch {
+		// Session storage can be unavailable in strict browser privacy modes.
+	}
+
+	const nextUrl = `/reset-password${window.location.search}${window.location.hash}`;
+	logRecoveryDebug("redirecting-to-reset-password");
+	window.history.replaceState(window.history.state, "", nextUrl);
+}
+
+redirectRecoveryToResetPage();
 
 function isChunkLoadError(reason: unknown): boolean {
 	const message =

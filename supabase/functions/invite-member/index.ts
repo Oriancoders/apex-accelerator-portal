@@ -50,6 +50,44 @@ function normalizeAppUrl(appUrl: string) {
   return appUrl.replace(/\/+$/, "");
 }
 
+function getAllowedRedirectOrigins() {
+  const appUrl = Deno.env.get("APP_URL") ?? "";
+  const extraOrigins = (Deno.env.get("ALLOWED_REDIRECT_ORIGINS") ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  return [appUrl, ...extraOrigins]
+    .map((origin) => {
+      try {
+        return new URL(origin).origin;
+      } catch {
+        return "";
+      }
+    })
+    .filter(Boolean);
+}
+
+function resolveAppUrlForRequest(req: Request) {
+  const fallback = normalizeAppUrl(Deno.env.get("APP_URL") ?? "http://localhost:8080");
+  const allowedOrigins = getAllowedRedirectOrigins();
+  const originHeaders = [
+    req.headers.get("origin"),
+    req.headers.get("referer"),
+  ].filter(Boolean) as string[];
+
+  for (const candidate of originHeaders) {
+    try {
+      const origin = new URL(candidate).origin;
+      if (allowedOrigins.includes(origin)) return origin;
+    } catch {
+      // Ignore malformed origin headers.
+    }
+  }
+
+  return fallback;
+}
+
 function isRoleAllowedForRequester(kind: RequesterKind, membershipRole: InviteRequest["membershipRole"]) {
   if (kind === "platform_admin") return ["owner", "admin", "member", "billing"].includes(membershipRole);
   if (kind === "company_manager") return ["admin", "member"].includes(membershipRole);
@@ -67,6 +105,7 @@ function toPublicResetError(err: unknown) {
 async function sendResetPasswordEmail(supabaseUrl: string, anonKey: string, email: string, appUrl: string) {
   const supabasePublic = createClient(supabaseUrl, anonKey);
   const redirectTo = `${normalizeAppUrl(appUrl)}/reset-password`;
+  console.log("invite-member: reset redirect target:", redirectTo);
   const { error } = await supabasePublic.auth.resetPasswordForEmail(email, { redirectTo });
 
   if (error) {
@@ -263,7 +302,7 @@ serve(async (req) => {
       return jsonResponse({ error: "Unable to resolve user" }, 500);
     }
 
-    const appUrl = Deno.env.get("APP_URL") ?? "http://localhost:8080";
+    const appUrl = resolveAppUrlForRequest(req);
 
     try {
       console.log(`invite-member: Sending reset password email to ${email}`);

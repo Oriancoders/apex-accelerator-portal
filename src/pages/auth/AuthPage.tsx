@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { RECOVERY_INTENT_KEY, getRecoveryUrlDebugInfo, hasAuthRecoveryParams, supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { AnimatePresence, motion } from "framer-motion";
@@ -36,6 +36,31 @@ export default function AuthPage() {
     setCaptchaToken("");
     setCaptchaResetKey((key) => key + 1);
   };
+
+  useEffect(() => {
+    let hasStoredRecoveryIntent = false;
+    try {
+      hasStoredRecoveryIntent = sessionStorage.getItem(RECOVERY_INTENT_KEY) === "true";
+    } catch {
+      hasStoredRecoveryIntent = false;
+    }
+
+    if (!hasAuthRecoveryParams(window.location.href) && !hasStoredRecoveryIntent) return;
+
+    console.info("[password-reset-debug]", {
+      stage: "auth-page-recovery-redirect",
+      ...getRecoveryUrlDebugInfo(window.location.href),
+      hasStoredRecoveryIntent,
+    });
+
+    try {
+      sessionStorage.setItem(RECOVERY_INTENT_KEY, "true");
+    } catch {
+      // Session storage can be unavailable in strict browser privacy modes.
+    }
+
+    navigate(`/reset-password${window.location.search}${window.location.hash}`, { replace: true });
+  }, [navigate]);
 
   useEffect(() => {
     const signinStatus = getRateLimitStatus("signin");
