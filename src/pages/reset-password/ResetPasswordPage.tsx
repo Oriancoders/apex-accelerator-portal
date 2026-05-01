@@ -19,6 +19,8 @@ function getRecoveryParams() {
     tokenHash: searchParams.get("token_hash") || hashParams.get("token_hash"),
     accessToken: searchParams.get("access_token") || hashParams.get("access_token"),
     refreshToken: searchParams.get("refresh_token") || hashParams.get("refresh_token"),
+    errorCode: searchParams.get("error_code") || hashParams.get("error_code"),
+    errorDescription: searchParams.get("error_description") || hashParams.get("error_description"),
     hasRecoveryParams:
       searchParams.get("type") === "recovery" ||
       hashParams.get("type") === "recovery" ||
@@ -31,6 +33,7 @@ function getRecoveryParams() {
 export default function ResetPasswordPage() {
   const navigate = useNavigate();
   const [recoveryStatus, setRecoveryStatus] = useState<RecoveryStatus>("checking");
+  const [errorMessage, setErrorMessage] = useState("This reset link is invalid, expired, or already used. Please request a new password reset email.");
 
   useEffect(() => {
     const rememberRecovery = () => {
@@ -59,6 +62,16 @@ export default function ResetPasswordPage() {
       });
 
       try {
+        if (recoveryParams.errorCode) {
+          setErrorMessage(
+            recoveryParams.errorCode === "otp_expired"
+              ? "This reset link is expired or was already opened. Please request a new password reset email and use the newest message."
+              : recoveryParams.errorDescription || "This reset link could not be used. Please request a new password reset email."
+          );
+          setRecoveryStatus("invalid");
+          return;
+        }
+
         if (recoveryParams.accessToken && recoveryParams.refreshToken) {
           const { error } = await supabase.auth.setSession({
             access_token: recoveryParams.accessToken,
@@ -153,7 +166,7 @@ export default function ResetPasswordPage() {
             ) : recoveryStatus === "invalid" ? (
               <div className="text-center py-4 space-y-2">
                 <p className="text-sm text-muted-foreground">
-                  This reset link is invalid, expired, or already used. Please request a new password reset email.
+                  {errorMessage}
                 </p>
                 <Button variant="outline" onClick={goToSignIn}>
                   Back to Sign In
